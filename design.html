@@ -6,7 +6,7 @@
 <title>Deloo Style Sheet</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@200..800&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
   /* ---------- Tokens: light (default) ---------- */
   :root {
@@ -28,10 +28,12 @@
     --crop: #12161C;
 
     --font-display: "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
-    --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+    --font-body: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
     --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
-    --radius: 6px;
+    --radius: 5px;
+    --ring: 2px solid color-mix(in srgb, var(--marigold) 70%, transparent);
+    --control-h: 38px;
     --gutter: clamp(16px, 4vw, 48px);
     color-scheme: light;
   }
@@ -58,7 +60,7 @@
     margin: 0;
     background: var(--paper);
     color: var(--ink);
-    font: 16px/1.55 var(--font-body);
+    font: 400 15px/1.55 var(--font-body);
     -webkit-font-smoothing: antialiased;
   }
   .page { max-width: 1120px; margin: 0 auto; padding-inline: var(--gutter); padding-block: 40px 72px; }
@@ -68,31 +70,31 @@
     display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px;
     padding-bottom: 28px; border-bottom: 2px solid var(--ink);
   }
-  .wordmark { font: 800 clamp(48px, 9vw, 88px)/0.9 var(--font-display); letter-spacing: -0.035em; margin: 0; }
+  .wordmark { font: 600 clamp(40px, 7vw, 68px)/0.9 var(--font-display); letter-spacing: -0.035em; margin: 0; }
   .wordmark .dot { color: var(--marigold); }
-  .etym { margin: 10px 0 0; color: var(--slate); font-size: 15px; }
-  .etym b { color: var(--ink); font-weight: 700; }
+  .etym { margin: 8px 0 0; color: var(--slate); font-size: 14px; }
+  .etym b { color: var(--ink); font-weight: 500; }
   .meta { display: grid; gap: 10px; justify-items: end; }
-  .meta-line { font: 500 12px/1.4 var(--font-mono); color: var(--slate); text-align: right; }
+  .meta-line { font: 400 11px/1.4 var(--font-mono); color: var(--slate); text-align: right; }
 
   .theme-switch { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
   .theme-switch button {
-    font: 500 12px var(--font-mono); padding: 7px 12px; border: 0; background: transparent; color: var(--slate); cursor: pointer;
+    font: 400 11px var(--font-mono); padding: 6px 10px; border: 0; background: transparent; color: var(--slate); cursor: pointer;
   }
   .theme-switch button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
-  .theme-switch button:focus-visible { outline: 3px solid var(--marigold); outline-offset: -3px; }
+  .theme-switch button:focus-visible { outline: var(--ring); outline-offset: -2px; }
 
   /* ---------- Sections ---------- */
-  section { padding-top: 48px; }
+  section { padding-top: 40px; }
   .section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; margin-bottom: 24px; }
-  h2 { font: 700 28px/1.15 var(--font-display); letter-spacing: -0.015em; margin: 0; text-wrap: balance; }
-  .section-note { color: var(--slate); font-size: 14px; margin: 0; max-width: 56ch; }
+  h2 { font: 500 22px/1.2 var(--font-display); letter-spacing: -0.015em; margin: 0; text-wrap: balance; }
+  .section-note { color: var(--slate); font-size: 13px; margin: 0; max-width: 56ch; }
   .label {
-    font: 700 12px/1.2 var(--font-body); text-transform: uppercase; letter-spacing: 0.08em; color: var(--slate);
+    font: 500 11px/1.2 var(--font-body); text-transform: uppercase; letter-spacing: 0.08em; color: var(--slate);
   }
 
   /* ---------- Colour ---------- */
-  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 28px 20px; }
+  .swatches { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px 16px; }
   .swatch { display: grid; gap: 10px; align-content: start; }
   /* Printer crop marks around every chip */
   .crop {
@@ -107,126 +109,131 @@
       linear-gradient(var(--crop), var(--crop)) right 0 bottom 10px / 7px 1px no-repeat,
       linear-gradient(var(--crop), var(--crop)) right 10px bottom 0 / 1px 7px no-repeat;
   }
-  .chip { height: 104px; border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); }
+  .chip { height: 72px; border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); }
   .swatch-name { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-inline: 10px; }
-  .swatch-name strong { font: 700 17px var(--font-display); }
-  .ratio { font: 500 11px var(--font-mono); color: var(--slate); white-space: nowrap; }
+  .swatch-name strong { font: 500 15px var(--font-display); }
+  .ratio { font: 400 11px var(--font-mono); color: var(--slate); white-space: nowrap; }
   .ratio.pass { color: var(--approve); }
-  .swatch-role { margin: 0; padding-inline: 10px; font-size: 14px; color: var(--slate); line-height: 1.4; }
+  .swatch-role { margin: 0; padding-inline: 10px; font-size: 13px; color: var(--slate); line-height: 1.4; }
   .hexes { display: flex; flex-wrap: wrap; gap: 6px; padding-inline: 10px; }
   .hex {
-    font: 500 12px var(--font-mono); color: var(--ink); background: transparent;
+    font: 400 11px var(--font-mono); color: var(--ink); background: transparent;
     border: 1px solid var(--line); border-radius: 4px; padding: 3px 7px; cursor: pointer;
   }
   .hex span { color: var(--slate); margin-right: 4px; }
   .hex:hover { border-color: var(--ink); }
-  .hex:focus-visible { outline: 3px solid var(--marigold); outline-offset: 1px; }
+  .hex:focus-visible { outline: var(--ring); outline-offset: 1px; }
 
   /* ---------- Typography ---------- */
   .type-scale { border-top: 1px solid var(--line); }
   .type-row {
     display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 8px 32px; align-items: baseline;
-    padding-block: 18px; border-bottom: 1px solid var(--line);
+    padding-block: 14px; border-bottom: 1px solid var(--line);
   }
   .type-row .spec { font: 400 12px/1.6 var(--font-mono); color: var(--slate); }
-  .type-row .spec b { display: block; font-weight: 500; color: var(--ink); }
-  .t-display { font: 800 56px/1.0 var(--font-display); letter-spacing: -0.03em; margin: 0; text-wrap: balance; }
-  .t-h1 { font: 700 40px/1.1 var(--font-display); letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
-  .t-h2 { font: 700 28px/1.15 var(--font-display); letter-spacing: -0.015em; margin: 0; }
-  .t-h3 { font: 600 20px/1.3 var(--font-display); margin: 0; }
-  .t-body { font: 400 16px/1.55 var(--font-body); margin: 0; max-width: 65ch; }
-  .t-small { font: 400 14px/1.5 var(--font-body); color: var(--slate); margin: 0; }
-  .t-mono { font: 400 13px/1.5 var(--font-mono); margin: 0; }
+  .type-row .spec b { display: block; font-weight: 400; color: var(--ink); }
+  .t-display { font: 600 44px/1.05 var(--font-display); letter-spacing: -0.025em; margin: 0; text-wrap: balance; }
+  .t-h1 { font: 500 32px/1.15 var(--font-display); letter-spacing: -0.015em; margin: 0; text-wrap: balance; }
+  .t-h2 { font: 500 24px/1.2 var(--font-display); letter-spacing: -0.01em; margin: 0; }
+  .t-h3 { font: 500 18px/1.3 var(--font-display); margin: 0; }
+  .t-body { font: 400 15px/1.6 var(--font-body); margin: 0; max-width: 65ch; }
+  .t-small { font: 400 13px/1.5 var(--font-body); color: var(--slate); margin: 0; }
+  .t-mono { font: 400 12px/1.5 var(--font-mono); margin: 0; }
   .highlight { background: linear-gradient(transparent 58%, color-mix(in srgb, var(--marigold) 55%, transparent) 58%); }
 
   /* ---------- Buttons ---------- */
   .btn {
     --bg: var(--lagoon); --fg: var(--on-lagoon); --bd: var(--lagoon);
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    font: 700 15px/1 var(--font-body); letter-spacing: 0.005em;
-    padding: 12px 18px; min-height: 44px; white-space: nowrap;
-    color: var(--fg); background: var(--bg); border: 1.5px solid var(--bd); border-radius: var(--radius);
+    font: 500 14px/1 var(--font-body); letter-spacing: 0.005em;
+    padding: 9px 14px; min-height: var(--control-h); white-space: nowrap;
+    color: var(--fg); background: var(--bg); border: 1px solid var(--bd); border-radius: var(--radius);
     cursor: pointer; transition: background-color .15s, border-color .15s, transform .08s;
   }
   .btn:hover, .btn.is-hover { --bg: var(--lagoon-strong); --bd: var(--lagoon-strong); }
   .btn:active { transform: translateY(1px); }
-  .btn:focus-visible, .btn.is-focus { outline: 3px solid var(--marigold); outline-offset: 2px; }
+  .btn:focus-visible, .btn.is-focus { outline: var(--ring); outline-offset: 2px; }
   .btn:disabled { cursor: not-allowed; opacity: .45; }
   .btn-generate { --bg: var(--marigold); --fg: var(--on-marigold); --bd: var(--marigold); }
   .btn-generate:hover, .btn-generate.is-hover { --bg: var(--marigold-strong); --bd: var(--marigold-strong); }
-  .btn-generate:focus-visible, .btn-generate.is-focus { outline-color: var(--ink); }
+  .btn-generate:focus-visible, .btn-generate.is-focus { outline: 2px solid color-mix(in srgb, var(--ink) 45%, transparent); }
   .btn-secondary { --bg: transparent; --fg: var(--ink); --bd: var(--ink); }
   .btn-secondary:hover, .btn-secondary.is-hover { --bg: var(--ink); --fg: var(--paper); --bd: var(--ink); }
-  .btn-quiet { --bg: transparent; --fg: var(--lagoon); --bd: transparent; padding-inline: 10px; }
+  .btn-quiet { --bg: transparent; --fg: var(--lagoon); --bd: transparent; padding-inline: 8px; }
   .btn-quiet:hover, .btn-quiet.is-hover { --bg: var(--lagoon-tint); --bd: var(--lagoon-tint); }
   .btn-danger { --bg: transparent; --fg: var(--proof-red); --bd: var(--proof-red); }
   .btn-danger:hover, .btn-danger.is-hover { --bg: var(--proof-red); --fg: var(--surface); --bd: var(--proof-red); }
-  .btn-sm { min-height: 34px; padding: 8px 12px; font-size: 13px; }
-  .btn-lg { min-height: 52px; padding: 15px 24px; font-size: 17px; }
-  .spinner { width: 15px; height: 15px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
+  .btn-sm { min-height: 30px; padding: 6px 10px; font-size: 12px; }
+  .btn-lg { min-height: 44px; padding: 11px 18px; font-size: 15px; }
+  .spinner { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .btn-table { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
   .btn-table table { border-collapse: collapse; width: 100%; min-width: 640px; }
-  .btn-table th, .btn-table td { padding: 16px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--line); }
+  .btn-table th, .btn-table td { padding: 12px 14px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--line); }
   .btn-table tr:last-child td { border-bottom: 0; }
-  .btn-table thead th { font: 500 11px var(--font-mono); color: var(--slate); text-transform: uppercase; letter-spacing: .06em; }
-  .btn-table tbody th { font: 700 14px var(--font-body); white-space: nowrap; }
-  .btn-table tbody th small { display: block; font-weight: 400; color: var(--slate); font-size: 12px; margin-top: 2px; }
+  .btn-table thead th { font: 400 10px var(--font-mono); color: var(--slate); text-transform: uppercase; letter-spacing: .06em; }
+  .btn-table tbody th { font: 500 13px var(--font-body); white-space: nowrap; }
+  .btn-table tbody th small { display: block; font-weight: 400; color: var(--slate); font-size: 11px; margin-top: 2px; }
   .sizes { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 20px; }
 
   /* ---------- Form ---------- */
   .form-wrap { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 32px; align-items: start; }
-  .brief-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: clamp(18px, 3vw, 28px); display: grid; gap: 20px; }
-  .brief-card h3 { font: 700 22px/1.2 var(--font-display); margin: 0; }
-  .field { display: grid; gap: 7px; }
+  .brief-card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: clamp(16px, 2.5vw, 22px); display: grid; gap: 16px; }
+  .brief-card h3 { font: 500 18px/1.25 var(--font-display); margin: 0; }
+  .field { display: grid; gap: 5px; }
   .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .field-label { font: 700 14px var(--font-body); display: flex; justify-content: space-between; gap: 8px; }
-  .field-label .count { font: 400 12px var(--font-mono); color: var(--slate); }
+  .field-label { font: 500 13px var(--font-body); display: flex; justify-content: space-between; gap: 8px; }
+  .field-label .count { font: 400 11px var(--font-mono); color: var(--slate); }
   .control {
-    font: 400 16px/1.4 var(--font-body); color: var(--ink); background: var(--surface);
-    border: 1.5px solid var(--line); border-radius: var(--radius); padding: 11px 13px; width: 100%;
+    font: 400 14px/1.4 var(--font-body); color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; min-height: var(--control-h); width: 100%;
     transition: border-color .15s, box-shadow .15s;
   }
-  textarea.control { resize: vertical; min-height: 104px; }
+  textarea.control { resize: vertical; min-height: 84px; }
   .control::placeholder { color: color-mix(in srgb, var(--slate) 75%, transparent); }
   .control:hover { border-color: color-mix(in srgb, var(--ink) 45%, var(--line)); }
-  .control:focus, .control.is-focus { outline: none; border-color: var(--lagoon); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lagoon) 25%, transparent); }
+  .control:focus, .control.is-focus { outline: none; border-color: var(--lagoon); box-shadow: 0 0 0 2px color-mix(in srgb, var(--lagoon) 18%, transparent); }
   .control[aria-invalid="true"] { border-color: var(--proof-red); background: var(--proof-red-tint); }
   .control:disabled { background: color-mix(in srgb, var(--paper) 70%, var(--surface)); color: var(--slate); cursor: not-allowed; }
-  .hint { font-size: 13px; color: var(--slate); margin: 0; }
-  .error { font-size: 13px; color: var(--proof-red); margin: 0; font-weight: 700; }
+  .hint { font-size: 12px; color: var(--slate); margin: 0; }
+  .error { font-size: 12px; color: var(--proof-red); margin: 0; font-weight: 500; }
   .locked { display: inline-flex; align-items: center; gap: 6px; font: 500 11px var(--font-mono); color: var(--slate); }
   .locked svg { width: 12px; height: 12px; }
 
   .chips { display: flex; flex-wrap: wrap; gap: 8px; border: 0; padding: 0; margin: 0; }
-  .chips legend { padding: 0; margin-bottom: 7px; font: 700 14px var(--font-body); }
+  .chips legend { padding: 0; margin-bottom: 5px; font: 500 13px var(--font-body); }
   .chip-check { position: relative; }
   .chip-check input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
   .chip-check span {
-    display: inline-flex; align-items: center; gap: 6px; font: 400 14px var(--font-body);
-    padding: 7px 12px; border: 1.5px solid var(--line); border-radius: 999px; color: var(--slate);
+    display: inline-flex; align-items: center; gap: 5px; font: 400 13px var(--font-body);
+    padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--slate);
   }
-  .chip-check span small { font: 400 11px var(--font-mono); }
+  .chip-check span small { font: 400 10px var(--font-mono); }
   .chip-check input:checked + span { border-color: var(--lagoon); background: var(--lagoon-tint); color: var(--ink); }
-  .chip-check input:focus-visible + span { outline: 3px solid var(--marigold); outline-offset: 2px; }
+  .chip-check input:focus-visible + span { outline: var(--ring); outline-offset: 2px; }
 
   .form-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-  .status { font-size: 14px; color: var(--approve); margin: 0; min-height: 1.5em; font-weight: 700; }
+  .status { font-size: 13px; color: var(--approve); margin: 0; min-height: 1.5em; font-weight: 500; }
 
-  .states { display: grid; gap: 18px; }
-  .states h3 { font: 600 20px/1.3 var(--font-display); margin: 0; }
+  .states { display: grid; gap: 14px; }
+  .states h3 { font: 500 18px/1.3 var(--font-display); margin: 0; }
 
   footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--slate); }
   footer code { font: 400 12px var(--font-mono); color: var(--ink); }
 
   @media (max-width: 760px) {
     .form-wrap, .field-row { grid-template-columns: 1fr; }
+    .swatches { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .type-row { grid-template-columns: 1fr; }
-    .t-display { font-size: 42px; }
-    .t-h1 { font-size: 32px; }
+    .t-display { font-size: 36px; }
+    .t-h1 { font-size: 28px; }
+    .control { font-size: 16px; }
     .meta { justify-items: start; }
     .meta-line { text-align: left; }
+  }
+  @media (pointer: coarse) {
+    :root { --control-h: 44px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .spinner { animation-duration: 2.4s; }
@@ -248,7 +255,7 @@
         <button type="button" data-set-theme="light" aria-pressed="false">Light</button>
         <button type="button" data-set-theme="dark" aria-pressed="false">Dark</button>
       </div>
-      <div class="meta-line">App style sheet · v0.1 proposal · 27 Sep 2026<br>Deloo's own interface, not a customer brand kit</div>
+      <div class="meta-line">App style sheet · v0.2 proposal · 27 Sep 2026<br>Deloo's own interface, not a customer brand kit</div>
     </div>
   </header>
 
@@ -265,40 +272,40 @@
   <section aria-labelledby="type-h">
     <div class="section-head">
       <h2 id="type-h">Typography</h2>
-      <p class="section-note">Bricolage Grotesque for headings, posters' big voice. Atkinson Hyperlegible for everything a volunteer reads on a phone. JetBrains Mono for sizes, hex values and print specs.</p>
+      <p class="section-note">Bricolage Grotesque for headings, posters' big voice. Atkinson Hyperlegible Next for everything a volunteer reads on a phone. JetBrains Mono for sizes, hex values and print specs.</p>
     </div>
     <div class="type-scale">
       <div class="type-row">
         <p class="t-display">Make it <span class="highlight">known</span>.</p>
-        <div class="spec"><b>Display</b>Bricolage Grotesque 800<br>56 / 56 · −0.03em</div>
+        <div class="spec"><b>Display</b>Bricolage Grotesque 600<br>44 / 46 · −0.025em</div>
       </div>
       <div class="type-row">
         <p class="t-h1">Youth Conference, 3 October</p>
-        <div class="spec"><b>Heading 1</b>Bricolage Grotesque 700<br>40 / 44 · −0.02em</div>
+        <div class="spec"><b>Heading 1</b>Bricolage Grotesque 500<br>32 / 37 · −0.015em</div>
       </div>
       <div class="type-row">
         <p class="t-h2">Brand kit</p>
-        <div class="spec"><b>Heading 2</b>Bricolage Grotesque 700<br>28 / 32</div>
+        <div class="spec"><b>Heading 2</b>Bricolage Grotesque 500<br>24 / 29</div>
       </div>
       <div class="type-row">
         <p class="t-h3">Occasion categories</p>
-        <div class="spec"><b>Heading 3</b>Bricolage Grotesque 600<br>20 / 26</div>
+        <div class="spec"><b>Heading 3</b>Bricolage Grotesque 500<br>18 / 23</div>
       </div>
       <div class="type-row">
         <p class="t-body">Every church, ministry department, small brand, school and event runs its social media and print on one or two overstretched volunteer designers. Output is late, inconsistent, and depends on whoever has Canva open that week.</p>
-        <div class="spec"><b>Body</b>Atkinson Hyperlegible 400<br>16 / 25 · max 65ch</div>
+        <div class="spec"><b>Body</b>Atkinson Hyperlegible Next 400<br>15 / 24 · max 65ch</div>
       </div>
       <div class="type-row">
         <p class="t-small">HQ set this logo. Ask your org admin to change it.</p>
-        <div class="spec"><b>Small / helper</b>Atkinson Hyperlegible 400<br>14 / 21</div>
+        <div class="spec"><b>Small / helper</b>Atkinson Hyperlegible Next 400<br>13 / 20</div>
       </div>
       <div class="type-row">
         <p class="label">Ministering · Host · Anchor</p>
-        <div class="spec"><b>Label</b>Atkinson Hyperlegible 700<br>12 · uppercase · +0.08em</div>
+        <div class="spec"><b>Label</b>Atkinson Hyperlegible Next 500<br>11 · uppercase · +0.08em</div>
       </div>
       <div class="type-row">
         <p class="t-mono">A5 handbill · 148 × 210 mm + 3 mm bleed · flex 4 × 8 ft</p>
-        <div class="spec"><b>Data / spec</b>JetBrains Mono 400<br>13 / 20</div>
+        <div class="spec"><b>Data / spec</b>JetBrains Mono 400<br>12 / 18</div>
       </div>
     </div>
   </section>
@@ -307,7 +314,7 @@
   <section aria-labelledby="btn-h">
     <div class="section-head">
       <h2 id="btn-h">Buttons</h2>
-      <p class="section-note">Marigold is kept for the one action that makes something: <em>Generate</em>. Lagoon handles every other primary action. Minimum touch height is 44 px.</p>
+      <p class="section-note">Marigold is kept for the one action that makes something: <em>Generate</em>. Lagoon handles every other primary action. Controls are 38 px tall with a mouse and grow to 44 px on touch screens so they stay easy to tap.</p>
     </div>
     <div class="btn-table">
       <table>
@@ -360,9 +367,9 @@
     </div>
     <div class="sizes">
       <span class="label">Sizes</span>
-      <button class="btn btn-sm" type="button">Small · 34</button>
-      <button class="btn" type="button">Medium · 44</button>
-      <button class="btn btn-generate btn-lg" type="button">Large · 52</button>
+      <button class="btn btn-sm" type="button">Small · 30</button>
+      <button class="btn" type="button">Medium · 38</button>
+      <button class="btn btn-generate btn-lg" type="button">Large · 44</button>
     </div>
   </section>
 
