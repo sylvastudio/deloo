@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Deloo Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- App UI fonts (from design.html) + fonts used by the two TEST brand kits -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@200..800&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400;500&family=Oswald:wght@500;700&family=Lato:wght@400;700&family=DM+Serif+Display&family=Work+Sans:wght@400;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
+<style>
+  /* ===== App tokens (mirrors design.html v0.2) ===== */
+  :root {
+    --paper: #F3F5F4; --surface: #FFFFFF; --ink: #12161C; --slate: #4A5560; --line: #D3DADB;
+    --lagoon: #0F6B73; --lagoon-strong: #0B5359; --lagoon-tint: #E0EFEF; --on-lagoon: #FFFFFF;
+    --marigold: #F2A900; --marigold-strong: #D99700; --on-marigold: #12161C;
+    --proof-red: #C23A2E; --proof-red-tint: #FBEAE7; --approve: #1F8A5B;
+    --font-display: "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
+    --font-body: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --radius: 5px;
+    --ring: 2px solid color-mix(in srgb, var(--marigold) 70%, transparent);
+    --control-h: 38px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0E1215; --surface: #161B20; --ink: #E7ECEE; --slate: #9AA7B0; --line: #2A333A;
+      --lagoon: #3AAAB2; --lagoon-strong: #5CC3CA; --lagoon-tint: #12292C; --on-lagoon: #081214;
+      --marigold: #F5B82E; --marigold-strong: #FFC94D; --on-marigold: #12161C;
+      --proof-red: #EE6A5C; --proof-red-tint: #2E1714; --approve: #4CC08A;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0E1215; --surface: #161B20; --ink: #E7ECEE; --slate: #9AA7B0; --line: #2A333A;
+    --lagoon: #3AAAB2; --lagoon-strong: #5CC3CA; --lagoon-tint: #12292C; --on-lagoon: #081214;
+    --marigold: #F5B82E; --marigold-strong: #FFC94D; --on-marigold: #12161C;
+    --proof-red: #EE6A5C; --proof-red-tint: #2E1714; --approve: #4CC08A;
+    color-scheme: dark;
+  }
+  @media (pointer: coarse) { :root { --control-h: 44px; } }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 400 15px/1.55 var(--font-body); -webkit-font-smoothing: antialiased; }
+
+  /* ===== App shell ===== */
+  .topbar {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px;
+    padding-inline: clamp(16px, 3vw, 32px); padding-block: 14px; border-bottom: 1px solid var(--line); background: var(--surface);
+  }
+  .brand { display: flex; align-items: baseline; gap: 12px; }
+  .wordmark { font: 600 26px/1 var(--font-display); letter-spacing: -0.03em; margin: 0; }
+  .wordmark .dot { color: var(--marigold); }
+  .crumb { font-size: 13px; color: var(--slate); }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; }
+  .badge { font: 400 11px/1 var(--font-mono); padding: 5px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--slate); white-space: nowrap; }
+  .badge.test { border-color: color-mix(in srgb, var(--marigold) 60%, transparent); color: var(--ink); background: color-mix(in srgb, var(--marigold) 14%, transparent); }
+
+  .layout {
+    display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: 24px;
+    padding-inline: clamp(16px, 3vw, 32px); padding-block: 24px 48px; max-width: 1440px; margin: 0 auto;
+  }
+  .panel { display: grid; gap: 16px; align-content: start; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px; display: grid; gap: 14px; }
+  .card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .card h2 { font: 500 17px/1.25 var(--font-display); margin: 0; }
+  .card-sub { font-size: 12px; color: var(--slate); margin: 0; }
+
+  /* Brand kit summary */
+  .kit { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; align-items: center; }
+  .kit img { width: 44px; height: 44px; }
+  .kit-name { font-weight: 500; font-size: 14px; line-height: 1.3; }
+  .kit-fonts { font: 400 11px var(--font-mono); color: var(--slate); }
+  .kit-swatches { display: flex; gap: 4px; }
+  .kit-swatches span { width: 22px; height: 22px; border-radius: 3px; border: 1px solid color-mix(in srgb, var(--ink) 15%, transparent); }
+  .lock { display: inline-flex; align-items: center; gap: 5px; font: 400 11px var(--font-mono); color: var(--slate); }
+
+  /* Controls */
+  .field { display: grid; gap: 5px; }
+  .field-label { font: 500 13px var(--font-body); display: flex; justify-content: space-between; gap: 8px; }
+  .field-label .count { font: 400 11px var(--font-mono); color: var(--slate); }
+  .control {
+    font: 400 14px/1.4 var(--font-body); color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; min-height: var(--control-h); width: 100%;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  textarea.control { resize: vertical; min-height: 84px; }
+  .control:hover { border-color: color-mix(in srgb, var(--ink) 45%, var(--line)); }
+  .control:focus { outline: none; border-color: var(--lagoon); box-shadow: 0 0 0 2px color-mix(in srgb, var(--lagoon) 18%, transparent); }
+  .control[aria-invalid="true"] { border-color: var(--proof-red); background: var(--proof-red-tint); }
+  .hint { font-size: 12px; color: var(--slate); margin: 0; }
+  .error { font-size: 12px; color: var(--proof-red); margin: 0; font-weight: 500; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .segmented { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .segmented.two { grid-template-columns: repeat(2, 1fr); }
+  .segmented input { position: absolute; opacity: 0; pointer-events: none; }
+  .segmented label { font: 400 13px/1.2 var(--font-body); text-align: center; padding: 9px 6px; cursor: pointer; color: var(--slate); border-right: 1px solid var(--line); }
+  .segmented label:last-of-type { border-right: 0; }
+  .segmented input:checked + label { background: var(--lagoon-tint); color: var(--ink); font-weight: 500; }
+  .segmented input:focus-visible + label { outline: var(--ring); outline-offset: -2px; }
+
+  .btn {
+    --bg: var(--lagoon); --fg: var(--on-lagoon); --bd: var(--lagoon);
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap;
+    font: 500 14px/1 var(--font-body); padding: 9px 14px; min-height: var(--control-h);
+    color: var(--fg); background: var(--bg); border: 1px solid var(--bd); border-radius: var(--radius);
+    cursor: pointer; transition: background-color .15s, border-color .15s;
+  }
+  .btn:hover { --bg: var(--lagoon-strong); --bd: var(--lagoon-strong); }
+  .btn:focus-visible { outline: var(--ring); outline-offset: 2px; }
+  .btn:disabled { cursor: not-allowed; opacity: .5; }
+  .btn-generate { --bg: var(--marigold); --fg: var(--on-marigold); --bd: var(--marigold); width: 100%; }
+  .btn-generate:hover { --bg: var(--marigold-strong); --bd: var(--marigold-strong); }
+  .btn-generate:focus-visible { outline: 2px solid color-mix(in srgb, var(--ink) 45%, transparent); }
+  .btn-secondary { --bg: transparent; --fg: var(--ink); --bd: var(--line); }
+  .btn-secondary:hover { --bg: var(--paper); --bd: var(--ink); }
+  .btn-sm { min-height: 30px; padding: 6px 10px; font-size: 12px; }
+  .spinner { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Copy editor */
+  .roles { display: grid; gap: 8px; }
+  .role-row { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 8px; }
+  .ai-note { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--slate); background: var(--paper); border-radius: var(--radius); padding: 8px 10px; margin: 0; }
+  .ai-note b { color: var(--ink); font-weight: 500; }
+
+  /* Previews */
+  .stage { display: grid; gap: 16px; align-content: start; }
+  .stage-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+  .stage-head h2 { font: 500 20px/1.2 var(--font-display); margin: 0; }
+  .stage-status { font-size: 13px; color: var(--slate); margin: 0; }
+  .stage-status.ok { color: var(--approve); }
+  .previews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+  .preview { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 10px; }
+  .preview.wide { grid-column: 1 / -1; }
+  .preview-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .preview-name { font-weight: 500; font-size: 13px; }
+  .preview-dims { font: 400 11px var(--font-mono); color: var(--slate); }
+  .frame { position: relative; overflow: hidden; background: repeating-conic-gradient(color-mix(in srgb, var(--ink) 6%, transparent) 0 25%, transparent 0 50%) 0 0 / 16px 16px; border-radius: 3px; max-width: 100%; }
+  .frame.busy .poster { filter: blur(3px) saturate(.6); opacity: .6; transition: filter .2s, opacity .2s; }
+  .frame > .poster { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+
+  /* ===== POSTER TEMPLATES =====
+     Rendered at real pixel size, scaled down for preview.
+     Only brand tokens (--k-*) and slot data are used: no hard-coded colours or fonts. */
+  .poster { container-type: size; overflow: hidden; position: relative; }
+  /* The template lives one level down so its own padding can use the poster's cq units */
+  .tpl { width: 100%; height: 100%; overflow: hidden; background: var(--k-bg); color: var(--k-text); font-family: var(--k-body); }
+  .poster * { margin: 0; }
+  .p-logo { display: flex; align-items: center; gap: 2.2cqmin; }
+  .p-logo img { width: 9cqmin; height: 9cqmin; display: block; }
+  .p-org { font: 700 2.6cqmin/1.15 var(--k-body); letter-spacing: .12em; text-transform: uppercase; }
+  .p-eyebrow { font: 700 2.8cqmin/1.2 var(--k-body); letter-spacing: .18em; text-transform: uppercase; color: var(--k-accent); }
+  .p-title { font-family: var(--k-head); font-size: 10.5cqmin; line-height: .98; text-transform: var(--k-head-case); letter-spacing: var(--k-head-track); overflow-wrap: anywhere; }
+  .p-theme { font: 400 3.6cqmin/1.3 var(--k-body); }
+  .p-theme em { font-style: normal; font-weight: 700; color: var(--k-accent); }
+  .p-roles { display: grid; gap: 1.2cqmin; }
+  .p-role { font: 400 3.2cqmin/1.25 var(--k-body); }
+  .p-role b { font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .78em; color: var(--k-accent); display: block; }
+  .p-date { font-family: var(--k-head); font-size: 5cqmin; line-height: 1.05; text-transform: var(--k-head-case); }
+  .p-small { font: 400 2.6cqmin/1.35 var(--k-body); opacity: .85; }
+  .p-cta { font: 700 2.6cqmin/1.2 var(--k-body); letter-spacing: .08em; text-transform: uppercase; }
+
+  /* --- Event flyer --- */
+  .t-event { display: grid; grid-template-rows: auto 1fr auto; padding: 7cqmin; gap: 4cqmin; }
+  .t-event .body { display: grid; align-content: center; gap: 3.2cqmin; }
+  .t-event .foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 4cqmin; padding-top: 3cqmin; border-top: .35cqmin solid currentColor; }
+  .t-event.v-bold { background: var(--k-primary); color: var(--k-on-primary); }
+  .t-event.v-bold .p-date { color: var(--k-accent); }
+  .t-event.v-frame { box-shadow: inset 0 0 0 2.4cqmin var(--k-primary), inset 0 0 0 3.2cqmin var(--k-bg), inset 0 0 0 3.5cqmin var(--k-accent); padding: 10cqmin; }
+  .t-event.v-frame .p-title { color: var(--k-primary); }
+  .t-event.v-frame .p-date { color: var(--k-primary); }
+
+  /* --- Announcement --- */
+  .t-announce { display: grid; grid-template-rows: auto 1fr auto; }
+  .t-announce .band { background: var(--k-primary); color: var(--k-on-primary); padding: 6cqmin 7cqmin; display: flex; justify-content: space-between; align-items: center; gap: 4cqmin; }
+  .t-announce .pill { font: 700 2.6cqmin/1 var(--k-body); letter-spacing: .16em; text-transform: uppercase; background: var(--k-accent); color: var(--k-on-accent); padding: 1.6cqmin 2.6cqmin; border-radius: 99cqmin; white-space: nowrap; }
+  .t-announce .body { padding: 6cqmin 7cqmin; display: grid; align-content: center; gap: 3.4cqmin; }
+  .t-announce .p-title { color: var(--k-primary); font-size: 9cqmin; }
+  .t-announce .p-body { font: 400 3.6cqmin/1.4 var(--k-body); max-width: 60ch; }
+  .t-announce .foot { padding: 4cqmin 7cqmin; border-top: .35cqmin solid var(--k-secondary); display: flex; justify-content: space-between; align-items: center; gap: 4cqmin; }
+  .t-announce .p-date { color: var(--k-secondary); font-size: 4.4cqmin; }
+  .t-announce.v-frame { background: var(--k-secondary); color: var(--k-on-secondary); }
+  .t-announce.v-frame .band { background: transparent; color: inherit; }
+  .t-announce.v-frame .body { background: var(--k-bg); color: var(--k-text); margin-inline: 5cqmin; border-radius: 1.5cqmin; }
+  .t-announce.v-frame .foot { border-top: 0; }
+  .t-announce.v-frame .p-date { color: var(--k-accent); }
+
+  /* --- Quote / scripture card --- */
+  .t-quote { display: grid; grid-template-rows: 1fr auto; padding: 9cqmin; gap: 4cqmin; }
+  .t-quote .body { display: grid; align-content: center; gap: 3.6cqmin; }
+  .t-quote .mark { font-family: var(--k-head); font-size: 22cqmin; line-height: .6; color: var(--k-accent); height: 9cqmin; }
+  .t-quote .p-quote { font-family: var(--k-quote); font-size: 6.4cqmin; line-height: 1.18; }
+  .t-quote .p-ref { font: 700 3cqmin/1.2 var(--k-body); letter-spacing: .14em; text-transform: uppercase; color: var(--k-accent); }
+  .t-quote .foot { display: flex; justify-content: space-between; align-items: center; gap: 4cqmin; }
+  .t-quote.v-bold { background: var(--k-primary); color: var(--k-on-primary); }
+  .t-quote.v-frame { background: var(--k-bg); color: var(--k-text); border-left: 3cqmin solid var(--k-accent); }
+  .t-quote.v-frame .p-quote { color: var(--k-primary); }
+
+  /* --- Format tweaks --- */
+  .fmt-story .p-title { font-size: 13cqmin; }
+  .fmt-story .p-quote { font-size: 8cqmin; }
+  .fmt-story.t-event, .fmt-story.t-quote { padding-block: 16cqmin; }
+  .fmt-story .p-theme, .fmt-story .p-role, .fmt-story .p-body { font-size: 4.4cqmin; }
+  .fmt-story .p-date { font-size: 6.4cqmin; }
+  .fmt-banner.t-event { grid-template-columns: 1.35fr 1fr; grid-template-rows: auto 1fr; column-gap: 8cqmin; padding: 8cqmin 10cqmin; }
+  .fmt-banner.t-event .head { grid-column: 1 / -1; }
+  .fmt-banner.t-event .foot { flex-direction: column; align-items: flex-start; justify-content: center; border-top: 0; border-left: .5cqmin solid currentColor; padding: 0 0 0 6cqmin; }
+  .fmt-banner.t-event .p-title { font-size: 15cqmin; }
+  .fmt-banner.t-event.v-frame { padding: 12cqmin 14cqmin; }
+  .fmt-banner.t-announce { grid-template-columns: auto 1fr; grid-template-rows: 1fr auto; }
+  .fmt-banner.t-announce .band { grid-row: 1 / -1; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: 8cqmin; }
+  .fmt-banner.t-announce .p-title { font-size: 12cqmin; }
+  .fmt-banner.t-announce .p-body { font-size: 4.6cqmin; }
+  .fmt-banner.t-announce.v-frame .body { margin: 6cqmin 6cqmin 0 0; }
+  .fmt-banner.t-quote { grid-template-columns: 1fr auto; grid-template-rows: 1fr; padding: 8cqmin 12cqmin; column-gap: 10cqmin; }
+  .fmt-banner.t-quote .foot { flex-direction: column; align-items: flex-end; justify-content: flex-end; }
+  .fmt-banner .p-quote { font-size: 8.4cqmin; }
+  .fmt-banner .p-org { font-size: 4cqmin; }
+  .fmt-banner .p-logo img { width: 14cqmin; height: 14cqmin; }
+  .fmt-banner .p-small, .fmt-banner .p-cta { font-size: 3.8cqmin; }
+  .fmt-banner .p-theme, .fmt-banner .p-role { font-size: 5cqmin; }
+  .fmt-banner .p-date { font-size: 7.6cqmin; }
+  .fmt-banner .p-eyebrow { font-size: 4cqmin; }
+  .fmt-a5 .p-title { font-size: 12cqmin; }
+  .fmt-a5 .p-quote { font-size: 7.4cqmin; }
+  .fmt-a5 .p-theme, .fmt-a5 .p-role, .fmt-a5 .p-body { font-size: 4cqmin; }
+  .fmt-a5.t-event, .fmt-a5.t-quote { padding-block: 12cqmin; }
+
+  footer.note { padding-inline: clamp(16px, 3vw, 32px); padding-block: 0 32px; max-width: 1440px; margin: 0 auto; font-size: 12px; color: var(--slate); }
+  footer.note code { font: 400 11px var(--font-mono); color: var(--ink); }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .previews { grid-template-columns: 1fr; }
+    .control { font-size: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner { animation-duration: 2.4s; }
+    .btn, .control, .frame.busy .poster { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <p class="wordmark">deloo<span class="dot">.</span></p>
+    <span class="crumb">New brief</span>
+  </div>
+  <div class="badges">
+    <span class="badge test">TEST DATA</span>
+    <span class="badge">Mock AI · no API key</span>
+    <span class="badge">Phase 1 prototype</span>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- ============ LEFT: kit, brief, copy ============ -->
+  <div class="panel">
+
+    <section class="card" aria-labelledby="kit-h">
+      <div class="card-head">
+        <h2 id="kit-h">Brand kit</h2>
+        <span class="lock"><svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="5.5" width="8" height="5.5" rx="1" fill="currentColor"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>Set by HQ</span>
+      </div>
+      <div class="kit" id="kit-summary"></div>
+      <div class="field">
+        <label class="field-label" for="kit-select">Switch test kit <span class="count">prototype only</span></label>
+        <select class="control" id="kit-select"></select>
+        <p class="hint">Volunteers can't edit the kit. Switching here shows every design restyling from brand tokens alone.</p>
+      </div>
+    </section>
+
+    <form class="card" id="brief-form" novalidate aria-labelledby="brief-h">
+      <h2 id="brief-h">Brief</h2>
+      <div class="field">
+        <label class="field-label" for="brief">What's happening? <span class="count" id="brief-count">0 / 280</span></label>
+        <textarea class="control" id="brief" maxlength="280">Youth conference, 3 Oct, guest speaker Pastor Tolu Adeyemi, theme Rise and Shine, 4pm at the Main Auditorium</textarea>
+        <p class="hint">Write it the way you'd text it: event, date, speaker, theme, time, place.</p>
+        <p class="error" id="brief-error" hidden>Describe the event first, e.g. "Youth conference, 3 Oct, guest speaker X".</p>
+      </div>
+      <div class="field">
+        <span class="field-label" id="cat-label">Category</span>
+        <div class="segmented" role="radiogroup" aria-labelledby="cat-label">
+          <input type="radio" name="category" id="cat-event" value="event_flyer" checked><label for="cat-event">Event flyer</label>
+          <input type="radio" name="category" id="cat-announce" value="announcement"><label for="cat-announce">Announcement</label>
+          <input type="radio" name="category" id="cat-quote" value="quote_card"><label for="cat-quote">Quote card</label>
+        </div>
+      </div>
+      <button class="btn btn-generate" type="submit" id="generate">Generate assets</button>
+    </form>
+
+    <section class="card" aria-labelledby="copy-h">
+      <div class="card-head">
+        <h2 id="copy-h">Copy</h2>
+        <span class="card-sub">Edits update every size</span>
+      </div>
+      <p class="ai-note"><span aria-hidden="true">✦</span><span><b>Mocked AI output.</b> A canned response in the Phase 3 slot schema, filled with details picked from your brief. Speakers become "Ministering:" lines automatically.</span></p>
+      <div class="field">
+        <span class="field-label" id="tpl-label">Layout</span>
+        <div class="segmented two" role="radiogroup" aria-labelledby="tpl-label">
+          <input type="radio" name="variant" id="v-bold" value="bold" checked><label for="v-bold">Bold</label>
+          <input type="radio" name="variant" id="v-frame" value="frame"><label for="v-frame">Framed</label>
+        </div>
+      </div>
+      <div id="slot-editor" class="panel"></div>
+    </section>
+  </div>
+
+  <!-- ============ RIGHT: previews ============ -->
+  <section class="stage" aria-labelledby="stage-h">
+    <div class="stage-head">
+      <h2 id="stage-h">Your assets</h2>
+      <p class="stage-status" id="stage-status" role="status" aria-live="polite"></p>
+    </div>
+    <div class="previews" id="previews"></div>
+  </section>
+</main>
+
+<footer class="note">
+  Everything on this page is fictional test data and mocked AI output. No server, no database, no keys. Slot shapes: <code>prototype/slot-schemas.json</code>.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* =========================================================
+     TEST BRAND KITS (fictional). Every template reads only these tokens.
+     ========================================================= */
+  function logoSvg(bg, fg, letters) {
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
+      '<circle cx="50" cy="50" r="48" fill="' + bg + '"/>' +
+      '<circle cx="50" cy="50" r="41" fill="none" stroke="' + fg + '" stroke-width="2"/>' +
+      '<text x="50" y="61" text-anchor="middle" font-family="Georgia, serif" font-size="32" font-weight="700" fill="' + fg + '">' + letters + '</text></svg>';
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  }
+
+  var BRAND_KITS = {
+    grace: {
+      name: "Grace Harbour Chapel",
+      short: "Grace Harbour",
+      logo: logoSvg("#1B2A4A", "#E8B84A", "GH"),
+      colours: { primary: "#1B2A4A", secondary: "#3C5A8A", accent: "#E8B84A", text: "#1B2A4A", bg: "#FBF8F2" },
+      on: { primary: "#FBF8F2", secondary: "#FBF8F2", accent: "#1B2A4A" },
+      fonts: { heading: "Oswald", body: "Lato", quote: "Oswald" },
+      headCase: "uppercase", headTrack: "0.01em",
+      tone: "Warm, hopeful, plain English."
+    },
+    northgate: {
+      name: "Northgate Alumni Association",
+      short: "Northgate Alumni",
+      logo: logoSvg("#7A1F2B", "#F4EDE4", "NA"),
+      colours: { primary: "#7A1F2B", secondary: "#2E4A3F", accent: "#C9913D", text: "#2A1E1A", bg: "#F4EDE4" },
+      on: { primary: "#F4EDE4", secondary: "#F4EDE4", accent: "#2A1E1A" },
+      fonts: { heading: "DM Serif Display", body: "Work Sans", quote: "DM Serif Display" },
+      headCase: "none", headTrack: "-0.01em",
+      tone: "Proud, formal, community-first."
+    }
+  };
+
+  /* Sizes from the MVP, rendered at real pixel dimensions. A5 at 150 dpi for preview. */
+  var SIZES = [
+    { key: "ig_post", name: "Instagram post", w: 1080, h: 1080, cls: "fmt-square" },
+    { key: "ig_story", name: "Instagram story", w: 1080, h: 1920, cls: "fmt-story" },
+    { key: "x_banner", name: "X / LinkedIn banner", w: 1500, h: 500, cls: "fmt-banner", wide: true },
+    { key: "a5_handbill", name: "A5 handbill", w: 874, h: 1240, cls: "fmt-a5", note: "148 × 210 mm · 150 dpi" }
+  ];
+
+  var ROLE_OPTIONS = ["Ministering", "Host", "Anchor", "Guest"];
+
+  /* =========================================================
+     MOCK AI. Returns the Phase 3 slot schema (see slot-schemas.json).
+     Canned text per category, plus details picked out of the brief.
+     ========================================================= */
+  var MONTHS = "jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec";
+  var MONTH_FULL = { jan: "January", feb: "February", mar: "March", apr: "April", may: "May", jun: "June", jul: "July", aug: "August", sep: "September", sept: "September", oct: "October", nov: "November", dec: "December" };
+
+  function titleCase(s) {
+    return s.replace(/\S+/g, function (w) { return /^[A-Z]{2,}$/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1); });
+  }
+  function prettyDate(p) {
+    var m = p.match(new RegExp("(\\d{1,2})(?:st|nd|rd|th)?\\s*(" + MONTHS + ")[a-z]*", "i")) ||
+            p.match(new RegExp("(" + MONTHS + ")[a-z]*\\s*(\\d{1,2})", "i"));
+    if (!m) return p;
+    var day = /\d/.test(m[1]) ? m[1] : m[2];
+    var mon = /\d/.test(m[1]) ? m[2] : m[1];
+    return parseInt(day, 10) + " " + MONTH_FULL[mon.toLowerCase().slice(0, 3)];
+  }
+
+  function parseBrief(text) {
+    var parts = text.split(/[,;\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+    var out = { title: parts[0] || "", roles: [], extras: [] };
+    var dateRe = new RegExp("\\b(\\d{1,2}(st|nd|rd|th)?\\s*(" + MONTHS + ")|(" + MONTHS + ")[a-z]*\\s*\\d{1,2}|monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow)", "i");
+    parts.slice(1).forEach(function (p) {
+      var m;
+      if ((m = p.match(/^(?:guest\s+)?(speaker|minister(?:ing)?|preacher)[:\s]+(.+)$/i))) out.roles.push({ role: "Ministering", name: m[2] });
+      else if ((m = p.match(/^(host|anchor)(?:ed by)?[:\s]+(.+)$/i))) out.roles.push({ role: titleCase(m[1].toLowerCase()), name: m[2] });
+      else if ((m = p.match(/^theme[:\s]+(.+)$/i))) out.theme = m[1].replace(/^["“']|["”']$/g, "");
+      else if (dateRe.test(p) && !out.date) out.date = prettyDate(p);
+      else if (/\b\d{1,2}(:\d{2})?\s*(am|pm)\b/i.test(p) || /\b(at|venue|hall|auditorium|church|centre|center)\b/i.test(p)) out.timeVenue = (out.timeVenue ? out.timeVenue + " · " : "") + p.replace(/\s+at\s+/i, " · ");
+      else out.extras.push(p);
+    });
+    var q = text.match(/["“]([^"”]{8,})["”]/);
+    if (q) out.quote = q[1];
+    return out;
+  }
+
+  function mockGenerateCopy(brief, category, kit) {
+    var b = parseBrief(brief);
+    var title = titleCase(b.title || "Special Service");
+    var date = b.date || "Saturday 3 October";
+    var slots;
+    if (category === "event_flyer") {
+      slots = {
+        eyebrow: kit.short + " presents",
+        title: title,
+        theme: b.theme ? titleCase(b.theme) : "",
+        date_line: date,
+        time_venue: b.timeVenue || "4:00 pm · Main Auditorium",
+        roles: b.roles.length ? b.roles : [{ role: "Ministering", name: "Guest Speaker" }],
+        cta: "Invite a friend · Free entry"
+      };
+    } else if (category === "announcement") {
+      slots = {
+        eyebrow: "Announcement",
+        headline: title,
+        body: "Please note: " + title.toLowerCase() + " holds on " + date + (b.timeVenue ? ", " + b.timeVenue.replace(" · ", " at ") : "") + ". " +
+              (b.extras.length ? b.extras.join(". ") + ". " : "") + "Share this with your department and family.",
+        date_line: date,
+        cta: "Questions? Speak to the " + kit.short + " office."
+      };
+    } else {
+      slots = {
+        quote: b.quote || "Let your light so shine before men, that they may see your good works.",
+        reference: b.quote ? (b.roles[0] ? b.roles[0].name : kit.short) : "Matthew 5:16 (KJV)",
+        footer: b.theme ? titleCase(b.theme) : title
+      };
+    }
+    return new Promise(function (resolve) { setTimeout(function () { resolve(slots); }, 600); });
+  }
+
+  /* =========================================================
+     TEMPLATES. Brand tokens + slots in, markup out.
+     ========================================================= */
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+  function logoBlock(kit) {
+    return '<div class="p-logo"><img src="' + kit.logo + '" alt=""><span class="p-org">' + esc(kit.name) + '</span></div>';
+  }
+
+  var TEMPLATES = {
+    event_flyer: function (s, kit) {
+      var roles = (s.roles || []).filter(function (r) { return r.name; }).map(function (r) {
+        return '<p class="p-role"><b>' + esc(r.role) + ':</b>' + esc(r.name) + '</p>';
+      }).join("");
+      return '<div class="head">' + logoBlock(kit) + '</div>' +
+        '<div class="body">' +
+          '<p class="p-eyebrow">' + esc(s.eyebrow) + '</p>' +
+          '<h1 class="p-title">' + esc(s.title) + '</h1>' +
+          (s.theme ? '<p class="p-theme">Theme: <em>' + esc(s.theme) + '</em></p>' : '') +
+          (roles ? '<div class="p-roles">' + roles + '</div>' : '') +
+        '</div>' +
+        '<div class="foot">' +
+          '<div><p class="p-date">' + esc(s.date_line) + '</p><p class="p-small">' + esc(s.time_venue) + '</p></div>' +
+          '<p class="p-cta">' + esc(s.cta) + '</p>' +
+        '</div>';
+    },
+    announcement: function (s, kit) {
+      return '<div class="band">' + logoBlock(kit) + '<span class="pill">' + esc(s.eyebrow) + '</span></div>' +
+        '<div class="body"><h1 class="p-title">' + esc(s.headline) + '</h1><p class="p-body">' + esc(s.body) + '</p></div>' +
+        '<div class="foot"><p class="p-date">' + esc(s.date_line) + '</p><p class="p-small">' + esc(s.cta) + '</p></div>';
+    },
+    quote_card: function (s, kit) {
+      return '<div class="body"><div class="mark" aria-hidden="true">“</div>' +
+        '<p class="p-quote">' + esc(s.quote) + '</p><p class="p-ref">' + esc(s.reference) + '</p></div>' +
+        '<div class="foot">' + logoBlock(kit) + '<p class="p-small">' + esc(s.footer) + '</p></div>';
+    }
+  };
+  var TEMPLATE_CLASS = { event_flyer: "t-event", announcement: "t-announce", quote_card: "t-quote" };
+
+  function kitStyle(kit) {
+    var c = kit.colours, o = kit.on, f = kit.fonts;
+    return "--k-primary:" + c.primary + ";--k-secondary:" + c.secondary + ";--k-accent:" + c.accent +
+      ";--k-text:" + c.text + ";--k-bg:" + c.bg + ";--k-on-primary:" + o.primary + ";--k-on-secondary:" + o.secondary +
+      ";--k-on-accent:" + o.accent + ";--k-head:'" + f.heading + "', Impact, sans-serif;--k-body:'" + f.body +
+      "', Arial, sans-serif;--k-quote:'" + f.quote + "', Georgia, serif;--k-head-case:" + kit.headCase + ";--k-head-track:" + kit.headTrack + ";";
+  }
+
+  /* =========================================================
+     STATE + UI
+     ========================================================= */
+  var state = { kitId: "grace", category: "event_flyer", variant: "bold", slots: null, busy: false };
+  var $ = function (id) { return document.getElementById(id); };
+  var kitSelect = $("kit-select"), briefEl = $("brief"), countEl = $("brief-count"), statusEl = $("stage-status");
+  var previewsEl = $("previews"), editorEl = $("slot-editor"), genBtn = $("generate");
+
+  Object.keys(BRAND_KITS).forEach(function (id) {
+    var o = document.createElement("option");
+    o.value = id; o.textContent = BRAND_KITS[id].name + " (test)";
+    kitSelect.appendChild(o);
+  });
+
+  function renderKitSummary() {
+    var k = BRAND_KITS[state.kitId];
+    $("kit-summary").innerHTML =
+      '<img src="' + k.logo + '" alt="' + esc(k.name) + ' logo (test)">' +
+      '<div><div class="kit-name">' + esc(k.name) + '</div>' +
+      '<div class="kit-fonts">' + esc(k.fonts.heading) + ' / ' + esc(k.fonts.body) + '</div>' +
+      '<div class="kit-swatches" aria-label="Brand colours">' +
+        ["primary", "secondary", "accent", "text", "bg"].map(function (n) { return '<span title="' + n + ' ' + k.colours[n] + '" style="background:' + k.colours[n] + '"></span>'; }).join("") +
+      '</div></div>';
+  }
+
+  /* Build preview cards once; posters are re-rendered in place. */
+  var frames = {};
+  SIZES.forEach(function (sz) {
+    var card = document.createElement("article");
+    card.className = "preview" + (sz.wide ? " wide" : "");
+    card.innerHTML =
+      '<div class="preview-head"><div><div class="preview-name">' + sz.name + '</div>' +
+      '<div class="preview-dims">' + sz.w + ' × ' + sz.h + ' px' + (sz.note ? ' · ' + sz.note : '') + '</div></div>' +
+      '<button type="button" class="btn btn-secondary btn-sm" data-download="' + sz.key + '">Download PNG</button></div>' +
+      '<div class="frame"><div class="poster" style="width:' + sz.w + 'px;height:' + sz.h + 'px"></div></div>';
+    previewsEl.appendChild(card);
+    frames[sz.key] = { frame: card.querySelector(".frame"), poster: card.querySelector(".poster"), size: sz };
+  });
+
+  function fitFrames() {
+    SIZES.forEach(function (sz) {
+      var f = frames[sz.key], w = f.frame.clientWidth, scale = w / sz.w;
+      f.frame.style.height = Math.round(sz.h * scale) + "px";
+      f.poster.style.transform = "scale(" + scale + ")";
+    });
+  }
+  if (window.ResizeObserver) new ResizeObserver(fitFrames).observe(previewsEl); else window.addEventListener("resize", fitFrames);
+
+  function renderPosters() {
+    if (!state.slots) return;
+    var kit = BRAND_KITS[state.kitId];
+    var tpl = TEMPLATES[state.category];
+    SIZES.forEach(function (sz) {
+      var p = frames[sz.key].poster;
+      p.setAttribute("style", "width:" + sz.w + "px;height:" + sz.h + "px;" + kitStyle(kit) + "transform:" + p.style.transform);
+      p.innerHTML = '<div class="tpl ' + sz.cls + " " + TEMPLATE_CLASS[state.category] + " v-" + state.variant + '">' + tpl(state.slots, kit) + '</div>';
+    });
+    fitFrames();
+  }
+
+  /* Copy editor, built from the current slots */
+  var LABELS = { eyebrow: "Eyebrow", title: "Title", theme: "Theme", date_line: "Date", time_venue: "Time & venue", cta: "Call to action",
+                 headline: "Headline", body: "Message", quote: "Quote / scripture", reference: "Reference", footer: "Footer line" };
+  function renderEditor() {
+    var s = state.slots, html = "";
+    Object.keys(s).forEach(function (key) {
+      if (key === "roles") {
+        html += '<div class="field"><span class="field-label">People</span><div class="roles">';
+        var roles = s.roles.slice(0, 3);
+        while (roles.length < 2) roles.push({ role: "Host", name: "" });
+        s.roles = roles;
+        roles.forEach(function (r, i) {
+          html += '<div class="role-row"><select class="control" id="role-' + i + '" data-role-index="' + i + '" aria-label="Role ' + (i + 1) + '">' +
+            ROLE_OPTIONS.map(function (o) { return '<option' + (o === r.role ? ' selected' : '') + '>' + o + '</option>'; }).join("") +
+            '</select><input class="control" id="role-name-' + i + '" data-role-name="' + i + '" aria-label="Name ' + (i + 1) + '" placeholder="e.g. Pastor, Evang., Chief…" value="' + esc(r.name) + '"></div>';
+        });
+        html += '</div><p class="hint">Keep honorifics as written: Pastor, Evang., Chief, Alhaji, HRM.</p></div>';
+        return;
+      }
+      var long = key === "body" || key === "quote";
+      html += '<div class="field"><label class="field-label" for="slot-' + key + '">' + (LABELS[key] || key) + '</label>' +
+        (long ? '<textarea class="control" id="slot-' + key + '" data-slot="' + key + '">' + esc(s[key]) + '</textarea>'
+              : '<input class="control" id="slot-' + key + '" data-slot="' + key + '" value="' + esc(s[key]) + '">') + '</div>';
+    });
+    editorEl.innerHTML = html;
+  }
+
+  editorEl.addEventListener("input", function (e) {
+    var t = e.target;
+    if (t.dataset.slot) state.slots[t.dataset.slot] = t.value;
+    else if (t.dataset.roleName) state.slots.roles[+t.dataset.roleName].name = t.value;
+    renderPosters();
+  });
+  editorEl.addEventListener("change", function (e) {
+    var t = e.target;
+    if (t.dataset.roleIndex) { state.slots.roles[+t.dataset.roleIndex].role = t.value; renderPosters(); }
+  });
+
+  function setBusy(on) {
+    state.busy = on;
+    genBtn.disabled = on;
+    genBtn.innerHTML = on ? '<span class="spinner" aria-hidden="true"></span>Generating…' : "Generate assets";
+    Object.keys(frames).forEach(function (k) { frames[k].frame.classList.toggle("busy", on); });
+    statusEl.className = "stage-status";
+    if (on) statusEl.textContent = "Writing copy (mocked)…";
+  }
+
+  function generate() {
+    var text = briefEl.value.trim();
+    var err = $("brief-error");
+    if (!text) { briefEl.setAttribute("aria-invalid", "true"); err.hidden = false; briefEl.focus(); return; }
+    briefEl.removeAttribute("aria-invalid"); err.hidden = true;
+    setBusy(true);
+    mockGenerateCopy(text, state.category, BRAND_KITS[state.kitId]).then(function (slots) {
+      state.slots = slots;
+      renderEditor();
+      renderPosters();
+      setBusy(false);
+      statusEl.className = "stage-status ok";
+      statusEl.textContent = "4 sizes ready · " + BRAND_KITS[state.kitId].name;
+    });
+  }
+
+  $("brief-form").addEventListener("submit", function (e) { e.preventDefault(); generate(); });
+  document.querySelectorAll('input[name="category"]').forEach(function (r) {
+    r.addEventListener("change", function () { state.category = r.value; generate(); });
+  });
+  document.querySelectorAll('input[name="variant"]').forEach(function (r) {
+    r.addEventListener("change", function () { state.variant = r.value; renderPosters(); });
+  });
+  kitSelect.addEventListener("change", function () {
+    state.kitId = kitSelect.value;
+    renderKitSummary();
+    if (state.slots && state.slots.eyebrow && /presents$/.test(state.slots.eyebrow)) state.slots.eyebrow = BRAND_KITS[state.kitId].short + " presents";
+    renderEditor();
+    renderPosters();
+    statusEl.textContent = "Restyled from brand tokens · " + BRAND_KITS[state.kitId].name;
+  });
+  function updateCount() { countEl.textContent = briefEl.value.length + " / 280"; }
+  briefEl.addEventListener("input", updateCount);
+
+  /* PNG export at full pixel size */
+  previewsEl.addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-download]");
+    if (!btn || !state.slots) return;
+    var f = frames[btn.dataset.download], sz = f.size;
+    if (!window.htmlToImage) { statusEl.className = "stage-status"; statusEl.textContent = "PNG export needs an internet connection to load its library. Reconnect and reload."; return; }
+    var label = btn.textContent;
+    btn.disabled = true; btn.textContent = "Rendering…";
+    htmlToImage.toPng(f.poster, { width: sz.w, height: sz.h, pixelRatio: 1, style: { transform: "none" } })
+      .then(function (url) {
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "deloo-" + state.kitId + "-" + state.category + "-" + sz.key + ".png";
+        document.body.appendChild(a); a.click(); a.remove();
+        btn.textContent = "Downloaded";
+      })
+      .catch(function () { btn.textContent = "Try again"; statusEl.className = "stage-status"; statusEl.textContent = "Couldn't render that PNG. Wait for fonts to load, then try again."; })
+      .then(function () { setTimeout(function () { btn.disabled = false; btn.textContent = label; }, 1400); });
+  });
+
+  /* Start in a working state: sample brief already generated */
+  renderKitSummary();
+  updateCount();
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(function () {
+    mockGenerateCopy(briefEl.value, state.category, BRAND_KITS[state.kitId]).then(function (slots) {
+      state.slots = slots; renderEditor(); renderPosters();
+      statusEl.className = "stage-status ok";
+      statusEl.textContent = "4 sizes ready · " + BRAND_KITS[state.kitId].name;
+      /* Self-test hook for headless checks: open with #selftest */
+      if (location.hash === "#selftest" && window.htmlToImage) {
+        Promise.all(SIZES.map(function (sz) {
+          return htmlToImage.toPng(frames[sz.key].poster, { width: sz.w, height: sz.h, pixelRatio: 1, style: { transform: "none" } })
+            .then(function (u) { return sz.key + ":" + u.length; }, function (e) { return sz.key + ":ERR " + e; });
+        })).then(function (r) { document.body.setAttribute("data-selftest", r.join(" ")); });
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>
