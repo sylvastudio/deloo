@@ -288,4 +288,4 @@ recorded, Free-plan limits and watermarks are enforced, and a fresh clone runs f
 
 | Date | Instruction I gave | Why | Result (file/section changed) | How I verified |
 |---|---|---|---|---|
-| | | | | |
+| 27 Sep 2026 | "Make the fonts a bit lighter and less bold; the borders around focused buttons are too big, make them lighter; I'm leaning towards smaller font weight and smaller elements." | v0.1 felt too heavy: bold type, thick 3px focus rings, large controls. | `design.html` v0.1 → v0.2 (commit `10bf106`): heading weights 700–800 → 500–600; buttons/labels bold → medium; body font switched to Atkinson Hyperlegible Next (variable weights); focus ring 3px solid → 2px softened gold; type scale reduced (display 56 → 44, H1 40 → 32, H2 28 → 24, H3 20 → 18, body 16 → 15 px); buttons 34/44/52 → 30/38/44 px, inputs 14px text with 1px border; colour chips 104 → 72 px in a 4-column grid. Kept 44px controls on touch screens and 16px input text on phones for tap size and to stop iOS zoom. | |
