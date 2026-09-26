@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Deloo Style Sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  /* ---------- Tokens: light (default) ---------- */
+  :root {
+    --paper: #F3F5F4;
+    --surface: #FFFFFF;
+    --ink: #12161C;
+    --slate: #4A5560;
+    --line: #D3DADB;
+    --lagoon: #0F6B73;
+    --lagoon-strong: #0B5359;
+    --lagoon-tint: #E0EFEF;
+    --on-lagoon: #FFFFFF;
+    --marigold: #F2A900;
+    --marigold-strong: #D99700;
+    --on-marigold: #12161C;
+    --proof-red: #C23A2E;
+    --proof-red-tint: #FBEAE7;
+    --approve: #1F8A5B;
+    --crop: #12161C;
+
+    --font-display: "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
+    --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    --radius: 6px;
+    --gutter: clamp(16px, 4vw, 48px);
+    color-scheme: light;
+  }
+  /* ---------- Tokens: dark ---------- */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0E1215; --surface: #161B20; --ink: #E7ECEE; --slate: #9AA7B0; --line: #2A333A;
+      --lagoon: #3AAAB2; --lagoon-strong: #5CC3CA; --lagoon-tint: #12292C; --on-lagoon: #081214;
+      --marigold: #F5B82E; --marigold-strong: #FFC94D; --on-marigold: #12161C;
+      --proof-red: #EE6A5C; --proof-red-tint: #2E1714; --approve: #4CC08A; --crop: #E7ECEE;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0E1215; --surface: #161B20; --ink: #E7ECEE; --slate: #9AA7B0; --line: #2A333A;
+    --lagoon: #3AAAB2; --lagoon-strong: #5CC3CA; --lagoon-tint: #12292C; --on-lagoon: #081214;
+    --marigold: #F5B82E; --marigold-strong: #FFC94D; --on-marigold: #12161C;
+    --proof-red: #EE6A5C; --proof-red-tint: #2E1714; --approve: #4CC08A; --crop: #E7ECEE;
+    color-scheme: dark;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.55 var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1120px; margin: 0 auto; padding-inline: var(--gutter); padding-block: 40px 72px; }
+
+  /* ---------- Header ---------- */
+  .masthead {
+    display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px;
+    padding-bottom: 28px; border-bottom: 2px solid var(--ink);
+  }
+  .wordmark { font: 800 clamp(48px, 9vw, 88px)/0.9 var(--font-display); letter-spacing: -0.035em; margin: 0; }
+  .wordmark .dot { color: var(--marigold); }
+  .etym { margin: 10px 0 0; color: var(--slate); font-size: 15px; }
+  .etym b { color: var(--ink); font-weight: 700; }
+  .meta { display: grid; gap: 10px; justify-items: end; }
+  .meta-line { font: 500 12px/1.4 var(--font-mono); color: var(--slate); text-align: right; }
+
+  .theme-switch { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+  .theme-switch button {
+    font: 500 12px var(--font-mono); padding: 7px 12px; border: 0; background: transparent; color: var(--slate); cursor: pointer;
+  }
+  .theme-switch button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .theme-switch button:focus-visible { outline: 3px solid var(--marigold); outline-offset: -3px; }
+
+  /* ---------- Sections ---------- */
+  section { padding-top: 48px; }
+  .section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; margin-bottom: 24px; }
+  h2 { font: 700 28px/1.15 var(--font-display); letter-spacing: -0.015em; margin: 0; text-wrap: balance; }
+  .section-note { color: var(--slate); font-size: 14px; margin: 0; max-width: 56ch; }
+  .label {
+    font: 700 12px/1.2 var(--font-body); text-transform: uppercase; letter-spacing: 0.08em; color: var(--slate);
+  }
+
+  /* ---------- Colour ---------- */
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 28px 20px; }
+  .swatch { display: grid; gap: 10px; align-content: start; }
+  /* Printer crop marks around every chip */
+  .crop {
+    padding: 10px;
+    background:
+      linear-gradient(var(--crop), var(--crop)) left 0 top 10px / 7px 1px no-repeat,
+      linear-gradient(var(--crop), var(--crop)) left 10px top 0 / 1px 7px no-repeat,
+      linear-gradient(var(--crop), var(--crop)) right 0 top 10px / 7px 1px no-repeat,
+      linear-gradient(var(--crop), var(--crop)) right 10px top 0 / 1px 7px no-repeat,
+      linear-gradient(var(--crop), var(--crop)) left 0 bottom 10px / 7px 1px no-repeat,
+      linear-gradient(var(--crop), var(--crop)) left 10px bottom 0 / 1px 7px no-repeat,
+      linear-gradient(var(--crop), var(--crop)) right 0 bottom 10px / 7px 1px no-repeat,
+      linear-gradient(var(--crop), var(--crop)) right 10px bottom 0 / 1px 7px no-repeat;
+  }
+  .chip { height: 104px; border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); }
+  .swatch-name { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-inline: 10px; }
+  .swatch-name strong { font: 700 17px var(--font-display); }
+  .ratio { font: 500 11px var(--font-mono); color: var(--slate); white-space: nowrap; }
+  .ratio.pass { color: var(--approve); }
+  .swatch-role { margin: 0; padding-inline: 10px; font-size: 14px; color: var(--slate); line-height: 1.4; }
+  .hexes { display: flex; flex-wrap: wrap; gap: 6px; padding-inline: 10px; }
+  .hex {
+    font: 500 12px var(--font-mono); color: var(--ink); background: transparent;
+    border: 1px solid var(--line); border-radius: 4px; padding: 3px 7px; cursor: pointer;
+  }
+  .hex span { color: var(--slate); margin-right: 4px; }
+  .hex:hover { border-color: var(--ink); }
+  .hex:focus-visible { outline: 3px solid var(--marigold); outline-offset: 1px; }
+
+  /* ---------- Typography ---------- */
+  .type-scale { border-top: 1px solid var(--line); }
+  .type-row {
+    display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 8px 32px; align-items: baseline;
+    padding-block: 18px; border-bottom: 1px solid var(--line);
+  }
+  .type-row .spec { font: 400 12px/1.6 var(--font-mono); color: var(--slate); }
+  .type-row .spec b { display: block; font-weight: 500; color: var(--ink); }
+  .t-display { font: 800 56px/1.0 var(--font-display); letter-spacing: -0.03em; margin: 0; text-wrap: balance; }
+  .t-h1 { font: 700 40px/1.1 var(--font-display); letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+  .t-h2 { font: 700 28px/1.15 var(--font-display); letter-spacing: -0.015em; margin: 0; }
+  .t-h3 { font: 600 20px/1.3 var(--font-display); margin: 0; }
+  .t-body { font: 400 16px/1.55 var(--font-body); margin: 0; max-width: 65ch; }
+  .t-small { font: 400 14px/1.5 var(--font-body); color: var(--slate); margin: 0; }
+  .t-mono { font: 400 13px/1.5 var(--font-mono); margin: 0; }
+  .highlight { background: linear-gradient(transparent 58%, color-mix(in srgb, var(--marigold) 55%, transparent) 58%); }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    --bg: var(--lagoon); --fg: var(--on-lagoon); --bd: var(--lagoon);
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font: 700 15px/1 var(--font-body); letter-spacing: 0.005em;
+    padding: 12px 18px; min-height: 44px; white-space: nowrap;
+    color: var(--fg); background: var(--bg); border: 1.5px solid var(--bd); border-radius: var(--radius);
+    cursor: pointer; transition: background-color .15s, border-color .15s, transform .08s;
+  }
+  .btn:hover, .btn.is-hover { --bg: var(--lagoon-strong); --bd: var(--lagoon-strong); }
+  .btn:active { transform: translateY(1px); }
+  .btn:focus-visible, .btn.is-focus { outline: 3px solid var(--marigold); outline-offset: 2px; }
+  .btn:disabled { cursor: not-allowed; opacity: .45; }
+  .btn-generate { --bg: var(--marigold); --fg: var(--on-marigold); --bd: var(--marigold); }
+  .btn-generate:hover, .btn-generate.is-hover { --bg: var(--marigold-strong); --bd: var(--marigold-strong); }
+  .btn-generate:focus-visible, .btn-generate.is-focus { outline-color: var(--ink); }
+  .btn-secondary { --bg: transparent; --fg: var(--ink); --bd: var(--ink); }
+  .btn-secondary:hover, .btn-secondary.is-hover { --bg: var(--ink); --fg: var(--paper); --bd: var(--ink); }
+  .btn-quiet { --bg: transparent; --fg: var(--lagoon); --bd: transparent; padding-inline: 10px; }
+  .btn-quiet:hover, .btn-quiet.is-hover { --bg: var(--lagoon-tint); --bd: var(--lagoon-tint); }
+  .btn-danger { --bg: transparent; --fg: var(--proof-red); --bd: var(--proof-red); }
+  .btn-danger:hover, .btn-danger.is-hover { --bg: var(--proof-red); --fg: var(--surface); --bd: var(--proof-red); }
+  .btn-sm { min-height: 34px; padding: 8px 12px; font-size: 13px; }
+  .btn-lg { min-height: 52px; padding: 15px 24px; font-size: 17px; }
+  .spinner { width: 15px; height: 15px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .btn-table { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+  .btn-table table { border-collapse: collapse; width: 100%; min-width: 640px; }
+  .btn-table th, .btn-table td { padding: 16px; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--line); }
+  .btn-table tr:last-child td { border-bottom: 0; }
+  .btn-table thead th { font: 500 11px var(--font-mono); color: var(--slate); text-transform: uppercase; letter-spacing: .06em; }
+  .btn-table tbody th { font: 700 14px var(--font-body); white-space: nowrap; }
+  .btn-table tbody th small { display: block; font-weight: 400; color: var(--slate); font-size: 12px; margin-top: 2px; }
+  .sizes { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 20px; }
+
+  /* ---------- Form ---------- */
+  .form-wrap { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+  .brief-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: clamp(18px, 3vw, 28px); display: grid; gap: 20px; }
+  .brief-card h3 { font: 700 22px/1.2 var(--font-display); margin: 0; }
+  .field { display: grid; gap: 7px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .field-label { font: 700 14px var(--font-body); display: flex; justify-content: space-between; gap: 8px; }
+  .field-label .count { font: 400 12px var(--font-mono); color: var(--slate); }
+  .control {
+    font: 400 16px/1.4 var(--font-body); color: var(--ink); background: var(--surface);
+    border: 1.5px solid var(--line); border-radius: var(--radius); padding: 11px 13px; width: 100%;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  textarea.control { resize: vertical; min-height: 104px; }
+  .control::placeholder { color: color-mix(in srgb, var(--slate) 75%, transparent); }
+  .control:hover { border-color: color-mix(in srgb, var(--ink) 45%, var(--line)); }
+  .control:focus, .control.is-focus { outline: none; border-color: var(--lagoon); box-shadow: 0 0 0 3px color-mix(in srgb, var(--lagoon) 25%, transparent); }
+  .control[aria-invalid="true"] { border-color: var(--proof-red); background: var(--proof-red-tint); }
+  .control:disabled { background: color-mix(in srgb, var(--paper) 70%, var(--surface)); color: var(--slate); cursor: not-allowed; }
+  .hint { font-size: 13px; color: var(--slate); margin: 0; }
+  .error { font-size: 13px; color: var(--proof-red); margin: 0; font-weight: 700; }
+  .locked { display: inline-flex; align-items: center; gap: 6px; font: 500 11px var(--font-mono); color: var(--slate); }
+  .locked svg { width: 12px; height: 12px; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; border: 0; padding: 0; margin: 0; }
+  .chips legend { padding: 0; margin-bottom: 7px; font: 700 14px var(--font-body); }
+  .chip-check { position: relative; }
+  .chip-check input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .chip-check span {
+    display: inline-flex; align-items: center; gap: 6px; font: 400 14px var(--font-body);
+    padding: 7px 12px; border: 1.5px solid var(--line); border-radius: 999px; color: var(--slate);
+  }
+  .chip-check span small { font: 400 11px var(--font-mono); }
+  .chip-check input:checked + span { border-color: var(--lagoon); background: var(--lagoon-tint); color: var(--ink); }
+  .chip-check input:focus-visible + span { outline: 3px solid var(--marigold); outline-offset: 2px; }
+
+  .form-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .status { font-size: 14px; color: var(--approve); margin: 0; min-height: 1.5em; font-weight: 700; }
+
+  .states { display: grid; gap: 18px; }
+  .states h3 { font: 600 20px/1.3 var(--font-display); margin: 0; }
+
+  footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--slate); }
+  footer code { font: 400 12px var(--font-mono); color: var(--ink); }
+
+  @media (max-width: 760px) {
+    .form-wrap, .field-row { grid-template-columns: 1fr; }
+    .type-row { grid-template-columns: 1fr; }
+    .t-display { font-size: 42px; }
+    .t-h1 { font-size: 32px; }
+    .meta { justify-items: start; }
+    .meta-line { text-align: left; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner { animation-duration: 2.4s; }
+    .btn, .control { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <div>
+      <h1 class="wordmark">deloo<span class="dot">.</span></h1>
+      <p class="etym"><b>δηλόω · dēloō</b> — to make visible, to make known.</p>
+    </div>
+    <div class="meta">
+      <div class="theme-switch" role="group" aria-label="Preview theme">
+        <button type="button" data-set-theme="system" aria-pressed="true">System</button>
+        <button type="button" data-set-theme="light" aria-pressed="false">Light</button>
+        <button type="button" data-set-theme="dark" aria-pressed="false">Dark</button>
+      </div>
+      <div class="meta-line">App style sheet · v0.1 proposal · 27 Sep 2026<br>Deloo's own interface, not a customer brand kit</div>
+    </div>
+  </header>
+
+  <!-- ================= COLOUR ================= -->
+  <section aria-labelledby="colour-h">
+    <div class="section-head">
+      <h2 id="colour-h">Colour</h2>
+      <p class="section-note">Each chip is marked out like a print proof. The ratio is live text contrast against the page ground in the current theme. Click a hex to copy it.</p>
+    </div>
+    <div class="swatches" id="swatches"></div>
+  </section>
+
+  <!-- ================= TYPE ================= -->
+  <section aria-labelledby="type-h">
+    <div class="section-head">
+      <h2 id="type-h">Typography</h2>
+      <p class="section-note">Bricolage Grotesque for headings, posters' big voice. Atkinson Hyperlegible for everything a volunteer reads on a phone. JetBrains Mono for sizes, hex values and print specs.</p>
+    </div>
+    <div class="type-scale">
+      <div class="type-row">
+        <p class="t-display">Make it <span class="highlight">known</span>.</p>
+        <div class="spec"><b>Display</b>Bricolage Grotesque 800<br>56 / 56 · −0.03em</div>
+      </div>
+      <div class="type-row">
+        <p class="t-h1">Youth Conference, 3 October</p>
+        <div class="spec"><b>Heading 1</b>Bricolage Grotesque 700<br>40 / 44 · −0.02em</div>
+      </div>
+      <div class="type-row">
+        <p class="t-h2">Brand kit</p>
+        <div class="spec"><b>Heading 2</b>Bricolage Grotesque 700<br>28 / 32</div>
+      </div>
+      <div class="type-row">
+        <p class="t-h3">Occasion categories</p>
+        <div class="spec"><b>Heading 3</b>Bricolage Grotesque 600<br>20 / 26</div>
+      </div>
+      <div class="type-row">
+        <p class="t-body">Every church, ministry department, small brand, school and event runs its social media and print on one or two overstretched volunteer designers. Output is late, inconsistent, and depends on whoever has Canva open that week.</p>
+        <div class="spec"><b>Body</b>Atkinson Hyperlegible 400<br>16 / 25 · max 65ch</div>
+      </div>
+      <div class="type-row">
+        <p class="t-small">HQ set this logo. Ask your org admin to change it.</p>
+        <div class="spec"><b>Small / helper</b>Atkinson Hyperlegible 400<br>14 / 21</div>
+      </div>
+      <div class="type-row">
+        <p class="label">Ministering · Host · Anchor</p>
+        <div class="spec"><b>Label</b>Atkinson Hyperlegible 700<br>12 · uppercase · +0.08em</div>
+      </div>
+      <div class="type-row">
+        <p class="t-mono">A5 handbill · 148 × 210 mm + 3 mm bleed · flex 4 × 8 ft</p>
+        <div class="spec"><b>Data / spec</b>JetBrains Mono 400<br>13 / 20</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= BUTTONS ================= -->
+  <section aria-labelledby="btn-h">
+    <div class="section-head">
+      <h2 id="btn-h">Buttons</h2>
+      <p class="section-note">Marigold is kept for the one action that makes something: <em>Generate</em>. Lagoon handles every other primary action. Minimum touch height is 44 px.</p>
+    </div>
+    <div class="btn-table">
+      <table>
+        <thead>
+          <tr><th scope="col">Variant</th><th scope="col">Default</th><th scope="col">Hover</th><th scope="col">Focus</th><th scope="col">Disabled</th><th scope="col">Busy</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Generate<small>one per screen</small></th>
+            <td><button class="btn btn-generate" type="button">Generate assets</button></td>
+            <td><button class="btn btn-generate is-hover" type="button" tabindex="-1">Generate assets</button></td>
+            <td><button class="btn btn-generate is-focus" type="button" tabindex="-1">Generate assets</button></td>
+            <td><button class="btn btn-generate" type="button" disabled>Generate assets</button></td>
+            <td><button class="btn btn-generate" type="button" tabindex="-1" aria-busy="true"><span class="spinner" aria-hidden="true"></span>Generating…</button></td>
+          </tr>
+          <tr>
+            <th scope="row">Primary<small>save, approve, download</small></th>
+            <td><button class="btn" type="button">Download PNGs</button></td>
+            <td><button class="btn is-hover" type="button" tabindex="-1">Download PNGs</button></td>
+            <td><button class="btn is-focus" type="button" tabindex="-1">Download PNGs</button></td>
+            <td><button class="btn" type="button" disabled>Download PNGs</button></td>
+            <td><button class="btn" type="button" tabindex="-1" aria-busy="true"><span class="spinner" aria-hidden="true"></span>Rendering…</button></td>
+          </tr>
+          <tr>
+            <th scope="row">Secondary<small>alternatives</small></th>
+            <td><button class="btn btn-secondary" type="button">Swap template</button></td>
+            <td><button class="btn btn-secondary is-hover" type="button" tabindex="-1">Swap template</button></td>
+            <td><button class="btn btn-secondary is-focus" type="button" tabindex="-1">Swap template</button></td>
+            <td><button class="btn btn-secondary" type="button" disabled>Swap template</button></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <th scope="row">Quiet<small>low-stakes, inline</small></th>
+            <td><button class="btn btn-quiet" type="button">Edit copy</button></td>
+            <td><button class="btn btn-quiet is-hover" type="button" tabindex="-1">Edit copy</button></td>
+            <td><button class="btn btn-quiet is-focus" type="button" tabindex="-1">Edit copy</button></td>
+            <td><button class="btn btn-quiet" type="button" disabled>Edit copy</button></td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <th scope="row">Danger<small>destroys work</small></th>
+            <td><button class="btn btn-danger" type="button">Delete brief</button></td>
+            <td><button class="btn btn-danger is-hover" type="button" tabindex="-1">Delete brief</button></td>
+            <td><button class="btn btn-danger is-focus" type="button" tabindex="-1">Delete brief</button></td>
+            <td><button class="btn btn-danger" type="button" disabled>Delete brief</button></td>
+            <td>—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="sizes">
+      <span class="label">Sizes</span>
+      <button class="btn btn-sm" type="button">Small · 34</button>
+      <button class="btn" type="button">Medium · 44</button>
+      <button class="btn btn-generate btn-lg" type="button">Large · 52</button>
+    </div>
+  </section>
+
+  <!-- ================= INPUTS ================= -->
+  <section aria-labelledby="input-h">
+    <div class="section-head">
+      <h2 id="input-h">Inputs</h2>
+      <p class="section-note">A sample brief form filled with the PRD's example. Everything here is live except generation: submitting only confirms the form is valid.</p>
+    </div>
+    <div class="form-wrap">
+      <form class="brief-card" id="brief-form" novalidate>
+        <h3>New brief</h3>
+
+        <div class="field">
+          <label class="field-label" for="brief">What's happening? <span class="count" id="brief-count">0 / 280</span></label>
+          <textarea class="control" id="brief" name="brief" maxlength="280" placeholder="Event, date, speaker, theme…">Youth conference, 3 Oct, guest speaker X, theme Y</textarea>
+          <p class="hint">Write it the way you'd text it. Deloo writes the copy.</p>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label" for="category">Category</label>
+            <select class="control" id="category" name="category">
+              <option>Event flyer</option>
+              <option>Announcement post</option>
+              <option>Quote / scripture card</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label" for="event-date">Event date</label>
+            <input class="control" id="event-date" name="event-date" type="text" placeholder="e.g. Fri 3 Oct, 4 pm">
+          </div>
+        </div>
+
+        <fieldset class="chips">
+          <legend>Sizes</legend>
+          <label class="chip-check"><input type="checkbox" id="size-igpost" checked><span>IG post <small>1080²</small></span></label>
+          <label class="chip-check"><input type="checkbox" id="size-igstory" checked><span>IG story <small>1080×1920</small></span></label>
+          <label class="chip-check"><input type="checkbox" id="size-whatsapp" checked><span>WhatsApp flyer</span></label>
+          <label class="chip-check"><input type="checkbox" id="size-banner"><span>X / LinkedIn banner</span></label>
+          <label class="chip-check"><input type="checkbox" id="size-a5" checked><span>A5 handbill <small>+bleed</small></span></label>
+        </fieldset>
+
+        <div class="form-actions">
+          <button class="btn btn-generate" type="submit">Generate assets</button>
+          <button class="btn btn-quiet" type="reset">Clear</button>
+        </div>
+        <p class="status" id="status" role="status" aria-live="polite"></p>
+      </form>
+
+      <div class="states">
+        <h3>Field states</h3>
+        <div class="field">
+          <label class="field-label" for="s-default">Default</label>
+          <input class="control" id="s-default" type="text" placeholder="Guest speaker">
+        </div>
+        <div class="field">
+          <label class="field-label" for="s-focus">Focused</label>
+          <input class="control is-focus" id="s-focus" type="text" value="Pastor">
+        </div>
+        <div class="field">
+          <label class="field-label" for="s-error">Error</label>
+          <input class="control" id="s-error" type="text" aria-invalid="true" aria-describedby="s-error-msg" placeholder="e.g. Fri 3 Oct, 4 pm">
+          <p class="error" id="s-error-msg">Add the event date so it prints on every size.</p>
+        </div>
+        <div class="field">
+          <label class="field-label" for="s-locked">Logo <span class="locked"><svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="5.5" width="8" height="5.5" rx="1" fill="currentColor"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>Locked by HQ</span></label>
+          <input class="control" id="s-locked" type="text" value="primary-logo.svg" disabled>
+          <p class="hint">Volunteers can't change brand files. Ask your org admin.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Proposal only. Record changes in <code>PRD.md</code> §10 Design Refinement Notes.</span>
+    <span>Fonts: Google Fonts · Tokens mirror to Tailwind in Phase 2</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+
+  /* ---------- Swatches ---------- */
+  var SWATCHES = [
+    { name: "Lagoon", token: "--lagoon", light: "#0F6B73", dark: "#3AAAB2", role: "Primary actions, links, selected states." },
+    { name: "Marigold", token: "--marigold", light: "#F2A900", dark: "#F5B82E", role: "Generate, highlights, focus rings. Fills only, never text." },
+    { name: "Ink", token: "--ink", light: "#12161C", dark: "#E7ECEE", role: "Text, rules, crop marks." },
+    { name: "Slate", token: "--slate", light: "#4A5560", dark: "#9AA7B0", role: "Secondary text, hints, specs." },
+    { name: "Paper", token: "--paper", light: "#F3F5F4", dark: "#0E1215", role: "Page ground." },
+    { name: "Surface", token: "--surface", light: "#FFFFFF", dark: "#161B20", role: "Cards, inputs, tables." },
+    { name: "Proof Red", token: "--proof-red", light: "#C23A2E", dark: "#EE6A5C", role: "Errors and off-brand flags." },
+    { name: "Approve", token: "--approve", light: "#1F8A5B", dark: "#4CC08A", role: "On-brand, approved, success." }
+  ];
+
+  var grid = document.getElementById("swatches");
+  SWATCHES.forEach(function (s) {
+    var el = document.createElement("div");
+    el.className = "swatch";
+    el.innerHTML =
+      '<div class="crop"><div class="chip" style="background:var(' + s.token + ')"></div></div>' +
+      '<div class="swatch-name"><strong>' + s.name + '</strong><span class="ratio" data-token="' + s.token + '"></span></div>' +
+      '<p class="swatch-role">' + s.role + '</p>' +
+      '<div class="hexes">' +
+        '<button type="button" class="hex" data-hex="' + s.light + '"><span>L</span>' + s.light + '</button>' +
+        '<button type="button" class="hex" data-hex="' + s.dark + '"><span>D</span>' + s.dark + '</button>' +
+      '</div>';
+    grid.appendChild(el);
+  });
+
+  function lum(hex) {
+    var c = hex.replace("#", "");
+    var rgb = [0, 2, 4].map(function (i) {
+      var v = parseInt(c.substr(i, 2), 16) / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+  }
+  function contrast(a, b) {
+    var l1 = lum(a), l2 = lum(b);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  }
+  function tokenValue(t) { return getComputedStyle(root).getPropertyValue(t).trim(); }
+
+  function updateRatios() {
+    var paper = tokenValue("--paper");
+    document.querySelectorAll(".ratio").forEach(function (el) {
+      var t = el.getAttribute("data-token");
+      if (t === "--paper" || t === "--surface") { el.textContent = "ground"; el.className = "ratio"; return; }
+      var r = contrast(tokenValue(t), paper);
+      var grade = r >= 7 ? "AAA" : r >= 4.5 ? "AA" : r >= 3 ? "AA large" : "fill only";
+      el.textContent = r.toFixed(1) + ":1 · " + grade;
+      el.className = "ratio" + (r >= 4.5 ? " pass" : "");
+    });
+  }
+
+  grid.addEventListener("click", function (e) {
+    var btn = e.target.closest(".hex");
+    if (!btn) return;
+    var hex = btn.getAttribute("data-hex");
+    var label = btn.innerHTML;
+    function done(msg) { btn.textContent = msg; setTimeout(function () { btn.innerHTML = label; }, 1200); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(hex).then(function () { done("Copied"); }, function () { done(hex); });
+    } else { done(hex); }
+  });
+
+  /* ---------- Theme switch ---------- */
+  var switches = document.querySelectorAll("[data-set-theme]");
+  switches.forEach(function (b) {
+    b.addEventListener("click", function () {
+      var mode = b.getAttribute("data-set-theme");
+      if (mode === "system") root.removeAttribute("data-theme"); else root.setAttribute("data-theme", mode);
+      switches.forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      updateRatios();
+    });
+  });
+  if (window.matchMedia) {
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    (mq.addEventListener ? mq.addEventListener.bind(mq, "change") : mq.addListener.bind(mq))(updateRatios);
+  }
+
+  /* ---------- Form ---------- */
+  var brief = document.getElementById("brief");
+  var count = document.getElementById("brief-count");
+  var dateInput = document.getElementById("event-date");
+  var status = document.getElementById("status");
+  function updateCount() { count.textContent = brief.value.length + " / 280"; }
+  brief.addEventListener("input", updateCount);
+
+  var form = document.getElementById("brief-form");
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var missing = [];
+    if (!brief.value.trim()) missing.push(brief);
+    if (!dateInput.value.trim()) missing.push(dateInput);
+    [brief, dateInput].forEach(function (f) { f.setAttribute("aria-invalid", String(missing.indexOf(f) > -1)); });
+    if (missing.length) {
+      status.style.color = "var(--proof-red)";
+      status.textContent = "Add the event date so it prints on every size.";
+      missing[0].focus();
+      return;
+    }
+    var sizes = form.querySelectorAll(".chips input:checked").length;
+    status.style.color = "var(--approve)";
+    status.textContent = "Brief is complete: " + sizes + " sizes queued. (Preview only, nothing is generated.)";
+  });
+  form.addEventListener("reset", function () {
+    setTimeout(function () {
+      updateCount(); status.textContent = "";
+      [brief, dateInput].forEach(function (f) { f.removeAttribute("aria-invalid"); });
+    }, 0);
+  });
+
+  updateCount();
+  updateRatios();
+})();
+</script>
+</body>
+</html>
