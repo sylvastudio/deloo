@@ -91,6 +91,27 @@ WhatsApp-native input.
   and that file is never committed.
 - **Not set up yet:** Vercel hosting, a hosted Supabase project, custom domain (deloo.space), payments.
 
+### Decision note: file storage (27 Sep 2026)
+
+**Decision:** Use **Supabase Storage** for all Deloo files (logos, fonts, sample posts, exported PNGs,
+print files, and video later).
+
+**Why:**
+- It runs locally from the same `supabase start` command as the database and auth. There is no extra
+  service or key.
+- Every file is also a row in Postgres (`storage.objects`), so the **same RLS rules** that protect the
+  data protect the files. This lets the database itself enforce "volunteers can't change the logo".
+- Private buckets and signed URLs (links that expire) cover sharing exports without making them public.
+
+**Alternatives considered:** Cloudflare R2, AWS S3, Cloudinary, Vercel Blob, UploadThing, Firebase
+Storage, MinIO/local disk. None of them combines local-first development with shared auth and
+access rules. Vercel Blob and UploadThing are cloud-only. Cloudinary's automatic transformations work
+against "the image model never touches the logo".
+
+**Watch / revisit:** Print-resolution flex banners and video may exceed the default 50 MB upload limit
+(see Open Question 8). If download costs matter after deployment, **Cloudflare R2** is the fallback.
+Both are S3-compatible, so the move stays small.
+
 ---
 
 ## 6. Accounts & Data
