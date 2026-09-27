@@ -282,7 +282,7 @@ recorded, Free-plan limits and watermarks are enforced, and a fresh clone runs f
 
 | Date | Instruction I gave | Why | Result (file/section changed) | How I verified |
 |---|---|---|---|---|
-| | | | | |
+| 27 Sep 2026 | Prototype should be a journey: onboarding questions (organisation, type), pick poster types with "coming soon" and an "other" request form, pick sample designs; then a blank canvas with pointers (upload logo → choose type → describe in chat); a generating animation (blur to sharp); tabs to choose the version to download. Styles from my reference folder, text-only for now. Designs adapt to the church's brand/logo colours (adjustable) but keep their core design language. Chat accepts free-form, steered by fields while mocked. Grain on by default, optional. | The first prototype was one static dashboard; users weren't carried along. | `prototype/index.html` rebuilt: 4-step onboarding, dashboard (brand rail, canvas, chat), 7 poster types + 8 coming soon, 9 text-only styles × 4 sizes, logo colour extraction, option and size tabs, PNG download with embedded fonts. Mock no longer invents missing details. `docs/ux/phase-1-journey.md` added (partly superseded, see its header). | |
 
 ## 10. Design Refinement Notes
 

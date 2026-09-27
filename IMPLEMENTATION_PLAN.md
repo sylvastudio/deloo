@@ -19,6 +19,13 @@ Phases 2–5 change with it.
 
 ## Phase 1 — Single-page local prototype
 
+> **Scope update, 27 Sep 2026 (owner direction, see PRD §9).** Phase 1 now includes onboarding
+> (organisation, structure, poster types, style picks), a chat-plus-canvas dashboard, 7 poster types
+> (event flyer, invitation, announcement, quote/scripture, birthday/celebration, service times,
+> thank-you) and 9 text-only styles instead of 3 categories × 2 layouts. Brand colours come from
+> the uploaded logo or presets; each style keeps its own layout and type. The steps below are the
+> original plan and stay as the baseline; the exit check still applies.
+
 **Goal:** Prove the core loop (brand kit + brief → on-brand graphics in 4 sizes) in one HTML file, with
 no server, no database and no API keys.
 

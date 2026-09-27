@@ -6,669 +6,1885 @@
 <title>Deloo Prototype</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<!-- App UI fonts (from design.html) + fonts used by the two TEST brand kits -->
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@200..800&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400;500&family=Oswald:wght@500;700&family=Lato:wght@400;700&family=DM+Serif+Display&family=Work+Sans:wght@400;600&display=swap">
+<!-- App UI fonts (design.html v0.2) + poster style fonts -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@200..800&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400;500&family=Archivo:wdth,wght@62..125,100..900&family=Anton&family=Space+Mono:wght@400;700&family=Yellowtail&family=Mrs+Saint+Delafield&family=Instrument+Serif&family=Inter+Tight:wght@500..800&family=Caveat:wght@600;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
 <style>
-  /* ===== App tokens (mirrors design.html v0.2) ===== */
-  :root {
-    --paper: #F3F5F4; --surface: #FFFFFF; --ink: #12161C; --slate: #4A5560; --line: #D3DADB;
-    --lagoon: #0F6B73; --lagoon-strong: #0B5359; --lagoon-tint: #E0EFEF; --on-lagoon: #FFFFFF;
-    --marigold: #F2A900; --marigold-strong: #D99700; --on-marigold: #12161C;
-    --proof-red: #C23A2E; --proof-red-tint: #FBEAE7; --approve: #1F8A5B;
-    --font-display: "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
-    --font-body: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
-    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
-    --radius: 5px;
-    --ring: 2px solid color-mix(in srgb, var(--marigold) 70%, transparent);
-    --control-h: 38px;
-    color-scheme: light;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --paper: #0E1215; --surface: #161B20; --ink: #E7ECEE; --slate: #9AA7B0; --line: #2A333A;
-      --lagoon: #3AAAB2; --lagoon-strong: #5CC3CA; --lagoon-tint: #12292C; --on-lagoon: #081214;
-      --marigold: #F5B82E; --marigold-strong: #FFC94D; --on-marigold: #12161C;
-      --proof-red: #EE6A5C; --proof-red-tint: #2E1714; --approve: #4CC08A;
-      color-scheme: dark;
-    }
-  }
-  :root[data-theme="dark"] {
+/* =====================================================================
+   APP TOKENS (mirror design.html v0.2)
+   ===================================================================== */
+:root {
+  --paper: #F3F5F4; --surface: #FFFFFF; --ink: #12161C; --slate: #4A5560; --line: #D3DADB;
+  --lagoon: #0F6B73; --lagoon-strong: #0B5359; --lagoon-tint: #E0EFEF; --on-lagoon: #FFFFFF;
+  --marigold: #F2A900; --marigold-strong: #D99700; --on-marigold: #12161C;
+  --proof-red: #C23A2E; --proof-red-tint: #FBEAE7; --approve: #1F8A5B;
+  --font-display: "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --radius: 5px;
+  --ring: 2px solid color-mix(in srgb, var(--marigold) 70%, transparent);
+  --control-h: 38px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
     --paper: #0E1215; --surface: #161B20; --ink: #E7ECEE; --slate: #9AA7B0; --line: #2A333A;
     --lagoon: #3AAAB2; --lagoon-strong: #5CC3CA; --lagoon-tint: #12292C; --on-lagoon: #081214;
     --marigold: #F5B82E; --marigold-strong: #FFC94D; --on-marigold: #12161C;
     --proof-red: #EE6A5C; --proof-red-tint: #2E1714; --approve: #4CC08A;
     color-scheme: dark;
   }
-  @media (pointer: coarse) { :root { --control-h: 44px; } }
+}
+:root[data-theme="dark"] {
+  --paper: #0E1215; --surface: #161B20; --ink: #E7ECEE; --slate: #9AA7B0; --line: #2A333A;
+  --lagoon: #3AAAB2; --lagoon-strong: #5CC3CA; --lagoon-tint: #12292C; --on-lagoon: #081214;
+  --marigold: #F5B82E; --marigold-strong: #FFC94D; --on-marigold: #12161C;
+  --proof-red: #EE6A5C; --proof-red-tint: #2E1714; --approve: #4CC08A;
+  color-scheme: dark;
+}
+@media (pointer: coarse) { :root { --control-h: 44px; } }
 
-  *, *::before, *::after { box-sizing: border-box; }
-  body { margin: 0; background: var(--paper); color: var(--ink); font: 400 15px/1.55 var(--font-body); -webkit-font-smoothing: antialiased; }
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 15px/1.55 var(--font-body); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-  /* ===== App shell ===== */
-  .topbar {
-    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px;
-    padding-inline: clamp(16px, 3vw, 32px); padding-block: 14px; border-bottom: 1px solid var(--line); background: var(--surface);
-  }
-  .brand { display: flex; align-items: baseline; gap: 12px; }
-  .wordmark { font: 600 26px/1 var(--font-display); letter-spacing: -0.03em; margin: 0; }
-  .wordmark .dot { color: var(--marigold); }
-  .crumb { font-size: 13px; color: var(--slate); }
-  .badges { display: flex; flex-wrap: wrap; gap: 8px; }
-  .badge { font: 400 11px/1 var(--font-mono); padding: 5px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--slate); white-space: nowrap; }
-  .badge.test { border-color: color-mix(in srgb, var(--marigold) 60%, transparent); color: var(--ink); background: color-mix(in srgb, var(--marigold) 14%, transparent); }
+/* ---------- Shared controls ---------- */
+.btn {
+  --bg: var(--lagoon); --fg: var(--on-lagoon); --bd: var(--lagoon);
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap;
+  font: 500 14px/1 var(--font-body); padding: 9px 14px; min-height: var(--control-h);
+  color: var(--fg); background: var(--bg); border: 1px solid var(--bd); border-radius: var(--radius);
+  cursor: pointer; transition: background-color .15s, border-color .15s, opacity .15s;
+}
+.btn:hover { --bg: var(--lagoon-strong); --bd: var(--lagoon-strong); }
+.btn:focus-visible { outline: var(--ring); outline-offset: 2px; }
+.btn:disabled { cursor: not-allowed; opacity: .5; }
+.btn-generate { --bg: var(--marigold); --fg: var(--on-marigold); --bd: var(--marigold); }
+.btn-generate:hover { --bg: var(--marigold-strong); --bd: var(--marigold-strong); }
+.btn-generate:focus-visible { outline: 2px solid color-mix(in srgb, var(--ink) 45%, transparent); }
+.btn-secondary { --bg: transparent; --fg: var(--ink); --bd: var(--line); }
+.btn-secondary:hover { --bg: var(--paper); --bd: var(--ink); }
+.btn-quiet { --bg: transparent; --fg: var(--lagoon); --bd: transparent; padding-inline: 8px; }
+.btn-quiet:hover { --bg: var(--lagoon-tint); --bd: var(--lagoon-tint); }
+.btn-sm { min-height: 30px; padding: 6px 10px; font-size: 12px; }
+.field { display: grid; gap: 5px; }
+.field-label { font: 500 13px var(--font-body); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.field-label .opt { font: 400 11px var(--font-mono); color: var(--slate); }
+.control {
+  font: 400 14px/1.4 var(--font-body); color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; min-height: var(--control-h); width: 100%;
+  transition: border-color .15s, box-shadow .15s;
+}
+textarea.control { resize: vertical; min-height: 64px; }
+.control:hover { border-color: color-mix(in srgb, var(--ink) 45%, var(--line)); }
+.control:focus { outline: none; border-color: var(--lagoon); box-shadow: 0 0 0 2px color-mix(in srgb, var(--lagoon) 18%, transparent); }
+.control[aria-invalid="true"] { border-color: var(--proof-red); background: var(--proof-red-tint); }
+.hint { font-size: 12px; color: var(--slate); margin: 0; }
+.error { font-size: 12px; color: var(--proof-red); margin: 0; font-weight: 500; }
+.badge { font: 400 11px/1 var(--font-mono); padding: 5px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--slate); white-space: nowrap; }
+.badge.warm { border-color: color-mix(in srgb, var(--marigold) 60%, transparent); color: var(--ink); background: color-mix(in srgb, var(--marigold) 14%, transparent); }
+.spinner { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-  .layout {
-    display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: 24px;
-    padding-inline: clamp(16px, 3vw, 32px); padding-block: 24px 48px; max-width: 1440px; margin: 0 auto;
-  }
-  .panel { display: grid; gap: 16px; align-content: start; }
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px; display: grid; gap: 14px; }
-  .card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-  .card h2 { font: 500 17px/1.25 var(--font-display); margin: 0; }
-  .card-sub { font-size: 12px; color: var(--slate); margin: 0; }
+.switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch .track { width: 32px; height: 18px; border-radius: 99px; background: var(--line); position: relative; transition: background .15s; flex-shrink: 0; }
+.switch .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--surface); transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.switch input:checked + .track { background: var(--lagoon); }
+.switch input:checked + .track::after { transform: translateX(14px); }
+.switch input:focus-visible + .track { outline: var(--ring); outline-offset: 2px; }
 
-  /* Brand kit summary */
-  .kit { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; align-items: center; }
-  .kit img { width: 44px; height: 44px; }
-  .kit-name { font-weight: 500; font-size: 14px; line-height: 1.3; }
-  .kit-fonts { font: 400 11px var(--font-mono); color: var(--slate); }
-  .kit-swatches { display: flex; gap: 4px; }
-  .kit-swatches span { width: 22px; height: 22px; border-radius: 3px; border: 1px solid color-mix(in srgb, var(--ink) 15%, transparent); }
-  .lock { display: inline-flex; align-items: center; gap: 5px; font: 400 11px var(--font-mono); color: var(--slate); }
+/* =====================================================================
+   ONBOARDING
+   ===================================================================== */
+.onboarding { min-height: 100%; display: grid; grid-template-rows: auto 1fr; }
+.ob-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-inline: clamp(16px, 4vw, 40px); padding-block: 18px; }
+.wordmark { font: 600 24px/1 var(--font-display); letter-spacing: -0.03em; margin: 0; }
+.wordmark .dot { color: var(--marigold); }
+.ob-progress { display: flex; align-items: center; gap: 10px; font: 400 11px var(--font-mono); color: var(--slate); }
+.ob-bar { width: 120px; height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.ob-bar i { display: block; height: 100%; background: var(--lagoon); transition: width .35s ease; }
+.ob-main { display: grid; justify-items: center; align-content: start; padding-inline: clamp(16px, 4vw, 40px); padding-block: clamp(16px, 5vh, 56px) 56px; }
+.ob-step { width: 100%; max-width: 640px; display: grid; gap: 22px; animation: rise .35s ease both; }
+.ob-step.wide { max-width: 1040px; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.ob-kicker { font: 400 11px var(--font-mono); color: var(--slate); text-transform: uppercase; letter-spacing: .08em; margin: 0; }
+.ob-step h1 { font: 500 clamp(26px, 4vw, 34px)/1.12 var(--font-display); letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+.ob-step h1:focus, .setup-screen h1:focus { outline: none; }
+.ob-lead { margin: 0; color: var(--slate); max-width: 58ch; }
+.ob-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.ob-actions .spacer { flex: 1; }
+.choice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.choice {
+  position: relative; display: grid; gap: 4px; align-content: start; text-align: left;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.choice:hover { border-color: color-mix(in srgb, var(--ink) 40%, var(--line)); }
+.choice[aria-pressed="true"], .choice[aria-checked="true"] { border-color: var(--lagoon); background: var(--lagoon-tint); }
+.choice:focus-visible { outline: var(--ring); outline-offset: 2px; }
+.choice .c-title { font-weight: 500; font-size: 14px; padding-right: 22px; }
+.choice .c-desc { font-size: 12px; color: var(--slate); line-height: 1.4; }
+.choice .tick { position: absolute; top: 10px; right: 10px; width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; font-size: 11px; color: transparent; background: var(--surface); z-index: 2; }
+.choice[aria-pressed="true"] .tick, .choice[aria-checked="true"] .tick { background: var(--lagoon); border-color: var(--lagoon); color: var(--on-lagoon); }
+.choice.soon { cursor: default; opacity: .62; background: transparent; border-style: dashed; }
+.choice.soon:hover { border-color: var(--line); }
+.tag { justify-self: start; font: 400 10px/1 var(--font-mono); padding: 4px 6px; border-radius: 99px; background: var(--paper); border: 1px solid var(--line); color: var(--slate); text-transform: uppercase; letter-spacing: .04em; }
+.tag.req { border-color: color-mix(in srgb, var(--marigold) 60%, transparent); background: color-mix(in srgb, var(--marigold) 14%, transparent); color: var(--ink); }
+.subhead { font: 500 13px var(--font-body); margin: 6px 0 -8px; color: var(--slate); }
+.request-box { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: grid; gap: 12px; }
+.request-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.style-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 760px) { .style-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.style-card { padding: 10px; gap: 8px; }
+.style-card .thumb { border-radius: 4px; overflow: hidden; }
+.style-card .c-title { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-right: 0; }
+.style-card .c-title small { font: 400 10px var(--font-mono); color: var(--slate); }
+.setup-screen { min-height: 50vh; display: grid; place-content: center; justify-items: center; text-align: center; gap: 12px; }
+.setup-screen p { margin: 0; color: var(--slate); }
 
-  /* Controls */
-  .field { display: grid; gap: 5px; }
-  .field-label { font: 500 13px var(--font-body); display: flex; justify-content: space-between; gap: 8px; }
-  .field-label .count { font: 400 11px var(--font-mono); color: var(--slate); }
-  .control {
-    font: 400 14px/1.4 var(--font-body); color: var(--ink); background: var(--surface);
-    border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; min-height: var(--control-h); width: 100%;
-    transition: border-color .15s, box-shadow .15s;
-  }
-  textarea.control { resize: vertical; min-height: 84px; }
-  .control:hover { border-color: color-mix(in srgb, var(--ink) 45%, var(--line)); }
-  .control:focus { outline: none; border-color: var(--lagoon); box-shadow: 0 0 0 2px color-mix(in srgb, var(--lagoon) 18%, transparent); }
-  .control[aria-invalid="true"] { border-color: var(--proof-red); background: var(--proof-red-tint); }
-  .hint { font-size: 12px; color: var(--slate); margin: 0; }
-  .error { font-size: 12px; color: var(--proof-red); margin: 0; font-weight: 500; }
-  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* =====================================================================
+   DASHBOARD
+   ===================================================================== */
+.dash { min-height: 100%; display: grid; grid-template-rows: auto 1fr; }
+.topbar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px;
+  padding-inline: clamp(16px, 2.5vw, 28px); padding-block: 12px; border-bottom: 1px solid var(--line); background: var(--surface);
+}
+.topbar .left { display: flex; align-items: baseline; gap: 14px; min-width: 0; }
+.topbar .org { font-size: 13px; color: var(--slate); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar .right { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.proto-menu { position: relative; }
+.proto-menu summary { list-style: none; cursor: pointer; }
+.proto-menu summary::-webkit-details-marker { display: none; }
+.proto-menu .menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 240px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.12); display: grid; }
+.proto-menu .menu button { text-align: left; background: none; border: 0; padding: 8px 10px; border-radius: 4px; font-size: 13px; cursor: pointer; }
+.proto-menu .menu button:hover, .proto-menu .menu button:focus-visible { background: var(--paper); outline: none; }
+.proto-menu .menu small { display: block; padding: 6px 10px 2px; font: 400 10px var(--font-mono); color: var(--slate); text-transform: uppercase; letter-spacing: .06em; }
+.workspace { display: grid; grid-template-columns: 250px minmax(0, 1fr) 360px; gap: 16px; padding: 16px clamp(16px, 2.5vw, 28px) 24px; align-items: start; }
+.rail, .chat { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.rail { padding: 16px; display: grid; gap: 18px; align-content: start; }
+.rail h2, .chat h2 { font: 500 16px/1.2 var(--font-display); margin: 0; }
+.rail section { display: grid; gap: 10px; }
+.rail .sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.rail .sec-head span { font: 400 11px var(--font-mono); color: var(--slate); }
+.dropzone {
+  display: grid; place-items: center; gap: 6px; text-align: center; min-height: 104px; padding: 12px;
+  border: 1px dashed color-mix(in srgb, var(--ink) 30%, var(--line)); border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--slate);
+  transition: border-color .15s, background .15s;
+}
+.dropzone:hover, .dropzone.drag { border-color: var(--lagoon); background: var(--lagoon-tint); color: var(--ink); }
+.dropzone:focus-visible { outline: var(--ring); outline-offset: 2px; }
+.dropzone img { max-height: 64px; max-width: 100%; }
+.dropzone span { display: grid; gap: 4px; justify-items: center; }
+.dropzone b { color: var(--ink); font-weight: 500; }
+.pulse { animation: pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--marigold) 45%, transparent); } 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--marigold) 0%, transparent); } }
+.swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.swatch { display: grid; gap: 4px; justify-items: center; font: 400 10px var(--font-mono); color: var(--slate); }
+.swatch input[type="color"] { width: 100%; height: 34px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: none; cursor: pointer; }
+.swatch input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+.swatch input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 2px; }
+.swatch input[type="color"]:focus-visible { outline: var(--ring); outline-offset: 2px; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.preset { display: inline-flex; align-items: center; padding: 3px; border: 1px solid var(--line); border-radius: 99px; background: var(--surface); cursor: pointer; }
+.preset i { width: 14px; height: 14px; border-radius: 50%; display: block; }
+.preset i + i { margin-left: -4px; }
+.preset:hover { border-color: var(--ink); }
+.preset:focus-visible { outline: var(--ring); outline-offset: 2px; }
+.locked-note { display: flex; gap: 8px; font-size: 12px; color: var(--slate); background: var(--paper); border-radius: var(--radius); padding: 8px 10px; margin: 0; }
 
-  .segmented { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-  .segmented.two { grid-template-columns: repeat(2, 1fr); }
-  .segmented input { position: absolute; opacity: 0; pointer-events: none; }
-  .segmented label { font: 400 13px/1.2 var(--font-body); text-align: center; padding: 9px 6px; cursor: pointer; color: var(--slate); border-right: 1px solid var(--line); }
-  .segmented label:last-of-type { border-right: 0; }
-  .segmented input:checked + label { background: var(--lagoon-tint); color: var(--ink); font-weight: 500; }
-  .segmented input:focus-visible + label { outline: var(--ring); outline-offset: -2px; }
+.canvas { display: grid; grid-template-rows: auto auto auto; gap: 12px; min-width: 0; }
+.canvas-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; min-height: 38px; }
+.canvas-head h2 { font: 500 18px/1.2 var(--font-display); margin: 0; }
+.tabs { display: inline-flex; flex-wrap: wrap; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 3px; }
+.tab { border: 0; background: transparent; padding: 6px 10px; border-radius: 5px; font-size: 13px; color: var(--slate); cursor: pointer; white-space: nowrap; }
+.tab small { font: 400 10px var(--font-mono); margin-left: 5px; opacity: .85; }
+.tab[aria-selected="true"] { background: var(--lagoon-tint); color: var(--ink); font-weight: 500; }
+.tab:focus-visible { outline: var(--ring); outline-offset: 1px; }
+.tab-rows { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.artboard {
+  position: relative; min-height: 440px; border-radius: 10px; display: grid; place-items: center; padding: 20px;
+  background: radial-gradient(color-mix(in srgb, var(--ink) 12%, transparent) 1px, transparent 1.4px) 0 0 / 18px 18px, color-mix(in srgb, var(--paper) 60%, var(--surface));
+  border: 1px solid var(--line); overflow: hidden;
+}
+.empty-canvas { width: min(100%, 560px); display: grid; gap: 14px; }
+.empty-canvas .blank {
+  aspect-ratio: 1; width: min(100%, 36vh, 340px); margin-inline: auto;
+  background: var(--surface); border: 1.5px dashed color-mix(in srgb, var(--ink) 25%, var(--line)); border-radius: 6px;
+  display: grid; place-items: center; color: var(--slate); font-size: 13px; text-align: center; padding: 20px;
+}
+.pointers { display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.pointer { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; transition: border-color .2s, opacity .2s, box-shadow .2s; }
+.pointer .num { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 500 12px var(--font-mono); border: 1px solid var(--line); color: var(--slate); }
+.pointer.current { border-color: var(--marigold); box-shadow: 0 0 0 3px color-mix(in srgb, var(--marigold) 18%, transparent); }
+.pointer.current .num { background: var(--marigold); border-color: var(--marigold); color: var(--on-marigold); }
+.pointer.done .num { background: var(--approve); border-color: var(--approve); color: #fff; }
+.pointer.done { opacity: .72; }
+.pointer b { font-weight: 500; font-size: 14px; display: block; }
+.pointer .sub { font-size: 12px; color: var(--slate); }
+.pointer .dir { font-size: 18px; color: var(--slate); display: flex; gap: 6px; align-items: center; }
+.type-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 400 13px/1.2 var(--font-body); padding: 6px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); cursor: pointer; color: var(--ink); }
+.chip:hover { border-color: var(--lagoon); background: var(--lagoon-tint); }
+.chip:focus-visible { outline: var(--ring); outline-offset: 2px; }
+.chip[aria-pressed="true"] { border-color: var(--lagoon); background: var(--lagoon-tint); font-weight: 500; }
+.chip:disabled { opacity: .5; cursor: default; }
+.chip:disabled[aria-pressed="true"] { opacity: .9; }
+.frame { position: relative; overflow: hidden; border-radius: 3px; box-shadow: 0 10px 30px rgba(0,0,0,.18); max-width: 100%; }
+.frame > .poster { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+.gen-pill {
+  position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 5;
+  display: inline-flex; align-items: center; gap: 8px; font: 400 12px var(--font-mono);
+  background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid var(--line); border-radius: 99px; padding: 7px 12px; color: var(--ink);
+  box-shadow: 0 4px 16px rgba(0,0,0,.12);
+}
+.canvas-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; min-height: 30px; }
+.canvas-foot .meta { font: 400 11px var(--font-mono); color: var(--slate); }
+.canvas-foot .acts { display: flex; gap: 8px; flex-wrap: wrap; }
 
-  .btn {
-    --bg: var(--lagoon); --fg: var(--on-lagoon); --bd: var(--lagoon);
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap;
-    font: 500 14px/1 var(--font-body); padding: 9px 14px; min-height: var(--control-h);
-    color: var(--fg); background: var(--bg); border: 1px solid var(--bd); border-radius: var(--radius);
-    cursor: pointer; transition: background-color .15s, border-color .15s;
-  }
-  .btn:hover { --bg: var(--lagoon-strong); --bd: var(--lagoon-strong); }
-  .btn:focus-visible { outline: var(--ring); outline-offset: 2px; }
-  .btn:disabled { cursor: not-allowed; opacity: .5; }
-  .btn-generate { --bg: var(--marigold); --fg: var(--on-marigold); --bd: var(--marigold); width: 100%; }
-  .btn-generate:hover { --bg: var(--marigold-strong); --bd: var(--marigold-strong); }
-  .btn-generate:focus-visible { outline: 2px solid color-mix(in srgb, var(--ink) 45%, transparent); }
-  .btn-secondary { --bg: transparent; --fg: var(--ink); --bd: var(--line); }
-  .btn-secondary:hover { --bg: var(--paper); --bd: var(--ink); }
-  .btn-sm { min-height: 30px; padding: 6px 10px; font-size: 12px; }
-  .spinner { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* Blur to sharp */
+.developing .tpl { animation: develop 1.9s cubic-bezier(.2,.7,.2,1) both; }
+.developing.quick .tpl { animation-duration: .7s; }
+@keyframes develop {
+  0% { filter: blur(34px) saturate(.15) brightness(1.15); transform: scale(1.06); }
+  45% { filter: blur(14px) saturate(.6) brightness(1.06); }
+  100% { filter: none; transform: none; }
+}
 
-  /* Copy editor */
-  .roles { display: grid; gap: 8px; }
-  .role-row { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 8px; }
-  .ai-note { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--slate); background: var(--paper); border-radius: var(--radius); padding: 8px 10px; margin: 0; }
-  .ai-note b { color: var(--ink); font-weight: 500; }
+.chat { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: calc(100vh - 98px); min-height: 520px; position: sticky; top: 12px; }
+.chat-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.chat-log { overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.msg { max-width: 94%; display: grid; gap: 8px; animation: rise .25s ease both; }
+.msg .bubble { padding: 9px 12px; border-radius: 12px; font-size: 14px; line-height: 1.45; }
+.msg.bot { align-self: flex-start; }
+.msg.bot .bubble { background: var(--paper); border-top-left-radius: 4px; }
+.msg.user { align-self: flex-end; }
+.msg.user .bubble { background: var(--lagoon); color: var(--on-lagoon); border-top-right-radius: 4px; }
+.msg .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.typing { display: inline-flex; gap: 4px; padding: 12px; background: var(--paper); border-radius: 12px; border-top-left-radius: 4px; align-self: flex-start; }
+.typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--slate); animation: blink 1s infinite; }
+.typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes blink { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+.card-form { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 10px; }
+.found { font: 400 10px var(--font-mono); padding: 2px 6px; border-radius: 99px; text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.found.yes { color: var(--approve); background: color-mix(in srgb, var(--approve) 12%, transparent); }
+.found.no { color: var(--slate); background: var(--paper); }
+.mini-swatches { display: inline-flex; gap: 4px; vertical-align: middle; margin-inline: 2px; }
+.mini-swatches i { width: 14px; height: 14px; border-radius: 3px; border: 1px solid color-mix(in srgb, var(--ink) 15%, transparent); display: inline-block; }
+.composer { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 12px 16px 14px; border-top: 1px solid var(--line); align-items: end; }
+.composer textarea { min-height: 42px; max-height: 140px; resize: none; }
+.composer .hint { grid-column: 1 / -1; }
 
-  /* Previews */
-  .stage { display: grid; gap: 16px; align-content: start; }
-  .stage-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
-  .stage-head h2 { font: 500 20px/1.2 var(--font-display); margin: 0; }
-  .stage-status { font-size: 13px; color: var(--slate); margin: 0; }
-  .stage-status.ok { color: var(--approve); }
-  .previews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
-  .preview { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 10px; }
-  .preview.wide { grid-column: 1 / -1; }
-  .preview-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  .preview-name { font-weight: 500; font-size: 13px; }
-  .preview-dims { font: 400 11px var(--font-mono); color: var(--slate); }
-  .frame { position: relative; overflow: hidden; background: repeating-conic-gradient(color-mix(in srgb, var(--ink) 6%, transparent) 0 25%, transparent 0 50%) 0 0 / 16px 16px; border-radius: 3px; max-width: 100%; }
-  .frame.busy .poster { filter: blur(3px) saturate(.6); opacity: .6; transition: filter .2s, opacity .2s; }
-  .frame > .poster { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+.gallery { padding: 24px; display: grid; gap: 28px; }
+.gallery h2 { font: 500 18px var(--font-display); margin: 0 0 10px; }
+.gallery .row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.gallery .row .frame { box-shadow: none; outline: 1px solid var(--line); }
 
-  /* ===== POSTER TEMPLATES =====
-     Rendered at real pixel size, scaled down for preview.
-     Only brand tokens (--k-*) and slot data are used: no hard-coded colours or fonts. */
-  .poster { container-type: size; overflow: hidden; position: relative; }
-  /* The template lives one level down so its own padding can use the poster's cq units */
-  .tpl { width: 100%; height: 100%; overflow: hidden; background: var(--k-bg); color: var(--k-text); font-family: var(--k-body); }
-  .poster * { margin: 0; }
-  .p-logo { display: flex; align-items: center; gap: 2.2cqmin; }
-  .p-logo img { width: 9cqmin; height: 9cqmin; display: block; }
-  .p-org { font: 700 2.6cqmin/1.15 var(--k-body); letter-spacing: .12em; text-transform: uppercase; }
-  .p-eyebrow { font: 700 2.8cqmin/1.2 var(--k-body); letter-spacing: .18em; text-transform: uppercase; color: var(--k-accent); }
-  .p-title { font-family: var(--k-head); font-size: 10.5cqmin; line-height: .98; text-transform: var(--k-head-case); letter-spacing: var(--k-head-track); overflow-wrap: anywhere; }
-  .p-theme { font: 400 3.6cqmin/1.3 var(--k-body); }
-  .p-theme em { font-style: normal; font-weight: 700; color: var(--k-accent); }
-  .p-roles { display: grid; gap: 1.2cqmin; }
-  .p-role { font: 400 3.2cqmin/1.25 var(--k-body); }
-  .p-role b { font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .78em; color: var(--k-accent); display: block; }
-  .p-date { font-family: var(--k-head); font-size: 5cqmin; line-height: 1.05; text-transform: var(--k-head-case); }
-  .p-small { font: 400 2.6cqmin/1.35 var(--k-body); opacity: .85; }
-  .p-cta { font: 700 2.6cqmin/1.2 var(--k-body); letter-spacing: .08em; text-transform: uppercase; }
+@media (max-width: 1180px) {
+  .workspace { grid-template-columns: minmax(0, 1fr) 340px; }
+  .rail { grid-column: 1 / -1; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); order: 3; }
+}
+@media (max-width: 860px) {
+  .workspace { grid-template-columns: 1fr; }
+  .chat { position: static; height: 70vh; }
+  .control { font-size: 16px; }
+  .pointer .dir { font-size: 14px; }
+  .gallery .row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+}
 
-  /* --- Event flyer --- */
-  .t-event { display: grid; grid-template-rows: auto 1fr auto; padding: 7cqmin; gap: 4cqmin; }
-  .t-event .body { display: grid; align-content: center; gap: 3.2cqmin; }
-  .t-event .foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 4cqmin; padding-top: 3cqmin; border-top: .35cqmin solid currentColor; }
-  .t-event.v-bold { background: var(--k-primary); color: var(--k-on-primary); }
-  .t-event.v-bold .p-date { color: var(--k-accent); }
-  .t-event.v-frame { box-shadow: inset 0 0 0 2.4cqmin var(--k-primary), inset 0 0 0 3.2cqmin var(--k-bg), inset 0 0 0 3.5cqmin var(--k-accent); padding: 10cqmin; }
-  .t-event.v-frame .p-title { color: var(--k-primary); }
-  .t-event.v-frame .p-date { color: var(--k-primary); }
+/* =====================================================================
+   POSTERS
+   Rendered at real pixel size, scaled for preview.
+   Style = layout + type (fixed). Brand = colours + logo (from the kit).
+   Colours come only from palette variables set per poster.
+   ===================================================================== */
+.poster {
+  container-type: size; position: relative; overflow: hidden;
+  --f-cond: "Anton", Impact, "Arial Narrow", sans-serif;
+  --f-wide: "Archivo", "Arial Black", Arial, sans-serif;
+  --f-mono: "Space Mono", "Courier New", monospace;
+  --f-script: "Yellowtail", "Brush Script MT", cursive;
+  --f-sign: "Mrs Saint Delafield", "Brush Script MT", cursive;
+  --f-serif: "Instrument Serif", Georgia, serif;
+  --f-grot: "Inter Tight", Arial, sans-serif;
+  --f-hand: "Caveat", "Comic Sans MS", cursive;
+}
+.tpl { position: relative; width: 100%; height: 100%; overflow: hidden; --hs: 1; --ts: 1; }
+.tpl * { margin: 0; }
+.tpl .box { position: relative; }
+.tpl .box > * { flex-shrink: 0; }
+.tpl .grain { position: absolute; inset: 0; pointer-events: none; z-index: 10; opacity: .55; }
+.tpl .logo-img { display: block; object-fit: contain; }
+.tpl .logo-text { font-family: var(--f-mono); font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
 
-  /* --- Announcement --- */
-  .t-announce { display: grid; grid-template-rows: auto 1fr auto; }
-  .t-announce .band { background: var(--k-primary); color: var(--k-on-primary); padding: 6cqmin 7cqmin; display: flex; justify-content: space-between; align-items: center; gap: 4cqmin; }
-  .t-announce .pill { font: 700 2.6cqmin/1 var(--k-body); letter-spacing: .16em; text-transform: uppercase; background: var(--k-accent); color: var(--k-on-accent); padding: 1.6cqmin 2.6cqmin; border-radius: 99cqmin; white-space: nowrap; }
-  .t-announce .body { padding: 6cqmin 7cqmin; display: grid; align-content: center; gap: 3.4cqmin; }
-  .t-announce .p-title { color: var(--k-primary); font-size: 9cqmin; }
-  .t-announce .p-body { font: 400 3.6cqmin/1.4 var(--k-body); max-width: 60ch; }
-  .t-announce .foot { padding: 4cqmin 7cqmin; border-top: .35cqmin solid var(--k-secondary); display: flex; justify-content: space-between; align-items: center; gap: 4cqmin; }
-  .t-announce .p-date { color: var(--k-secondary); font-size: 4.4cqmin; }
-  .t-announce.v-frame { background: var(--k-secondary); color: var(--k-on-secondary); }
-  .t-announce.v-frame .band { background: transparent; color: inherit; }
-  .t-announce.v-frame .body { background: var(--k-bg); color: var(--k-text); margin-inline: 5cqmin; border-radius: 1.5cqmin; }
-  .t-announce.v-frame .foot { border-top: 0; }
-  .t-announce.v-frame .p-date { color: var(--k-accent); }
+/* ---------- 1. BADGE ---------- */
+.st-badge { background: var(--p); color: var(--on-p); font-family: var(--f-wide); text-transform: uppercase; }
+.st-badge > .box { height: 100%; padding: 6cqmin 6.5cqmin; display: flex; flex-direction: column; align-items: center; gap: 2.6cqmin; text-align: center; }
+.st-badge .b-row { width: 100%; display: flex; justify-content: space-between; gap: 4cqmin; font-weight: 800; font-size: calc(3.5cqmin * var(--ts)); line-height: 1.1; }
+.st-badge .b-row span:last-child { text-align: right; }
+.st-badge .b-date { font-weight: 900; font-stretch: 112%; font-size: calc(8.5cqmin * var(--ts)); line-height: 1; letter-spacing: -.01em; }
+.st-badge .b-oval { width: 100%; flex: 1 1 auto; min-height: 22cqmin; max-height: 50cqmin; display: grid; place-items: center; border: 1.1cqmin solid currentColor; border-radius: 50%; padding: 4cqmin 8cqmin; flex-shrink: 1; }
+.st-badge .hl { font-weight: 900; font-stretch: 125%; font-size: calc(14cqmin * var(--hs)); line-height: .9; letter-spacing: -.035em; }
+.st-badge.is-quote .hl { font-stretch: 100%; text-transform: none; line-height: 1; }
+.st-badge .b-sub { font-weight: 800; font-stretch: 125%; font-size: calc(4.2cqmin * var(--ts)); line-height: 1.1; max-width: 92%; }
+.st-badge .b-with { font-weight: 700; font-size: calc(2.6cqmin * var(--ts)); letter-spacing: .8em; margin-right: -.8em; }
+.st-badge .b-names { font-family: var(--f-cond); font-size: calc(7cqmin * var(--ts)); line-height: 1; }
+.st-badge .b-body { font-family: var(--f-grot); text-transform: none; font-weight: 500; font-size: calc(3.3cqmin * var(--ts)); line-height: 1.35; max-width: 84%; }
+.st-badge .b-row.foot { margin-top: auto; font-size: calc(3cqmin * var(--ts)); }
+.st-badge.sz-story > .box { padding-block: 12cqmin 10cqmin; gap: 4cqmin; }
+.st-badge.sz-story .b-oval { max-height: 44cqmin; }
+.st-badge.sz-banner > .box { display: grid; grid-template-columns: 1.25fr 1fr; grid-auto-rows: auto; align-content: center; column-gap: 8cqmin; row-gap: 2.4cqmin; padding: 8cqmin 10cqmin; text-align: left; justify-items: start; }
+.st-badge.sz-banner > .box > * { grid-column: 2; }
+.st-badge.sz-banner .b-oval { grid-column: 1; grid-row: 1 / span 9; height: 100%; max-height: none; align-self: stretch; }
+.st-badge.sz-banner .hl { font-size: calc(24cqmin * var(--hs)); }
+.st-badge.sz-banner .b-row { font-size: calc(5.4cqmin * var(--ts)); }
+.st-badge.sz-banner .b-row.foot { font-size: calc(4.6cqmin * var(--ts)); margin-top: 2cqmin; }
+.st-badge.sz-banner .b-date { font-size: calc(13cqmin * var(--ts)); }
+.st-badge.sz-banner .b-sub { font-size: calc(6.4cqmin * var(--ts)); }
+.st-badge.sz-banner .b-names { font-size: calc(11cqmin * var(--ts)); }
+.st-badge.sz-banner .b-with { font-size: calc(4cqmin * var(--ts)); }
+.st-badge.sz-banner .b-body { font-size: calc(5cqmin * var(--ts)); }
 
-  /* --- Quote / scripture card --- */
-  .t-quote { display: grid; grid-template-rows: 1fr auto; padding: 9cqmin; gap: 4cqmin; }
-  .t-quote .body { display: grid; align-content: center; gap: 3.6cqmin; }
-  .t-quote .mark { font-family: var(--k-head); font-size: 22cqmin; line-height: .6; color: var(--k-accent); height: 9cqmin; }
-  .t-quote .p-quote { font-family: var(--k-quote); font-size: 6.4cqmin; line-height: 1.18; }
-  .t-quote .p-ref { font: 700 3cqmin/1.2 var(--k-body); letter-spacing: .14em; text-transform: uppercase; color: var(--k-accent); }
-  .t-quote .foot { display: flex; justify-content: space-between; align-items: center; gap: 4cqmin; }
-  .t-quote.v-bold { background: var(--k-primary); color: var(--k-on-primary); }
-  .t-quote.v-frame { background: var(--k-bg); color: var(--k-text); border-left: 3cqmin solid var(--k-accent); }
-  .t-quote.v-frame .p-quote { color: var(--k-primary); }
+/* ---------- 2. RECEIPT ---------- */
+.st-receipt { background: var(--p); }
+.st-receipt .stage { height: 100%; display: flex; justify-content: center; align-items: stretch; padding: 6cqmin; }
+.st-receipt .r-paper {
+  width: 64%; height: 100%; background-color: var(--pp-light); color: var(--k); font-family: var(--f-mono);
+  background-image: radial-gradient(var(--dot) 22%, transparent 25%); background-size: 1.1cqmin 1.1cqmin;
+  padding: 5.5cqmin 5cqmin 4cqmin; display: flex; flex-direction: column; gap: 2.4cqmin; box-shadow: 0 1.5cqmin 4cqmin rgba(0,0,0,.28);
+}
+.st-receipt .r-a, .st-receipt .r-b { display: flex; flex-direction: column; gap: 2cqmin; }
+.st-receipt .r-b { flex: 1 1 auto; }
+.st-receipt .r-top { display: flex; justify-content: space-between; gap: 2cqmin; font-size: calc(2.6cqmin * var(--ts)); font-weight: 700; text-transform: uppercase; }
+.st-receipt .r-top .k { color: var(--on-pp); font-family: var(--f-wide); font-stretch: 112%; letter-spacing: .06em; }
+.st-receipt .r-logo { display: flex; justify-content: center; }
+.st-receipt .r-logo .logo-img { height: 7cqmin; }
+.st-receipt .r-logo .logo-text { font-size: 2.4cqmin; }
+.st-receipt .hl { font-family: var(--f-script); color: var(--on-pp); font-size: calc(10cqmin * var(--hs)); line-height: 1.05; text-align: center; }
+.st-receipt .r-sub { text-align: center; font-size: calc(2.6cqmin * var(--ts)); }
+.st-receipt .r-rule { border-top: .45cqmin dashed var(--k); }
+.st-receipt .r-row { display: flex; align-items: baseline; gap: 1cqmin; font-size: calc(2.8cqmin * var(--ts)); line-height: 1.35; }
+.st-receipt .r-row i { flex: 1 1 auto; border-bottom: .35cqmin dotted var(--k); min-width: 3cqmin; transform: translateY(-.6cqmin); }
+.st-receipt .r-row .v { text-align: right; max-width: 62%; }
+.st-receipt .r-body { font-size: calc(2.6cqmin * var(--ts)); line-height: 1.45; }
+.st-receipt .r-bar { height: 7cqmin; margin-inline: 3cqmin; margin-top: auto; background: repeating-linear-gradient(90deg, var(--k) 0 .45cqmin, transparent .45cqmin .9cqmin, var(--k) .9cqmin 1.6cqmin, transparent 1.6cqmin 2.1cqmin, var(--k) 2.1cqmin 2.35cqmin, transparent 2.35cqmin 3cqmin); }
+.st-receipt .r-sign { font-family: var(--f-script); color: var(--on-pp); font-size: calc(7.5cqmin * var(--ts)); text-align: center; line-height: 1.05; }
+.st-receipt .r-foot { display: flex; justify-content: space-between; gap: 2cqmin; font-size: calc(2.2cqmin * var(--ts)); text-transform: uppercase; }
+.st-receipt.sz-story .r-paper { width: 78%; height: 86%; }
+.st-receipt.sz-a5 .r-paper { width: 76%; }
+.st-receipt.sz-banner .r-paper { width: 90%; flex-direction: row; gap: 8cqmin; padding: 6cqmin 8cqmin; }
+.st-receipt.sz-banner .r-a { flex: 1; justify-content: center; }
+.st-receipt.sz-banner .r-b { flex: 1.15; }
+.st-receipt.sz-banner .hl { font-size: calc(17cqmin * var(--hs)); }
+.st-receipt.sz-banner .r-top { font-size: calc(4cqmin * var(--ts)); }
+.st-receipt.sz-banner .r-sub, .st-receipt.sz-banner .r-body { font-size: calc(4cqmin * var(--ts)); }
+.st-receipt.sz-banner .r-row { font-size: calc(4.4cqmin * var(--ts)); }
+.st-receipt.sz-banner .r-sign { font-size: calc(10cqmin * var(--ts)); }
+.st-receipt.sz-banner .r-foot { font-size: calc(3.4cqmin * var(--ts)); }
+.st-receipt.sz-banner .r-logo .logo-img { height: 11cqmin; }
+.st-receipt.sz-banner .r-bar { height: 9cqmin; }
 
-  /* --- Format tweaks --- */
-  .fmt-story .p-title { font-size: 13cqmin; }
-  .fmt-story .p-quote { font-size: 8cqmin; }
-  .fmt-story.t-event, .fmt-story.t-quote { padding-block: 16cqmin; }
-  .fmt-story .p-theme, .fmt-story .p-role, .fmt-story .p-body { font-size: 4.4cqmin; }
-  .fmt-story .p-date { font-size: 6.4cqmin; }
-  .fmt-banner.t-event { grid-template-columns: 1.35fr 1fr; grid-template-rows: auto 1fr; column-gap: 8cqmin; padding: 8cqmin 10cqmin; }
-  .fmt-banner.t-event .head { grid-column: 1 / -1; }
-  .fmt-banner.t-event .foot { flex-direction: column; align-items: flex-start; justify-content: center; border-top: 0; border-left: .5cqmin solid currentColor; padding: 0 0 0 6cqmin; }
-  .fmt-banner.t-event .p-title { font-size: 15cqmin; }
-  .fmt-banner.t-event.v-frame { padding: 12cqmin 14cqmin; }
-  .fmt-banner.t-announce { grid-template-columns: auto 1fr; grid-template-rows: 1fr auto; }
-  .fmt-banner.t-announce .band { grid-row: 1 / -1; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: 8cqmin; }
-  .fmt-banner.t-announce .p-title { font-size: 12cqmin; }
-  .fmt-banner.t-announce .p-body { font-size: 4.6cqmin; }
-  .fmt-banner.t-announce.v-frame .body { margin: 6cqmin 6cqmin 0 0; }
-  .fmt-banner.t-quote { grid-template-columns: 1fr auto; grid-template-rows: 1fr; padding: 8cqmin 12cqmin; column-gap: 10cqmin; }
-  .fmt-banner.t-quote .foot { flex-direction: column; align-items: flex-end; justify-content: flex-end; }
-  .fmt-banner .p-quote { font-size: 8.4cqmin; }
-  .fmt-banner .p-org { font-size: 4cqmin; }
-  .fmt-banner .p-logo img { width: 14cqmin; height: 14cqmin; }
-  .fmt-banner .p-small, .fmt-banner .p-cta { font-size: 3.8cqmin; }
-  .fmt-banner .p-theme, .fmt-banner .p-role { font-size: 5cqmin; }
-  .fmt-banner .p-date { font-size: 7.6cqmin; }
-  .fmt-banner .p-eyebrow { font-size: 4cqmin; }
-  .fmt-a5 .p-title { font-size: 12cqmin; }
-  .fmt-a5 .p-quote { font-size: 7.4cqmin; }
-  .fmt-a5 .p-theme, .fmt-a5 .p-role, .fmt-a5 .p-body { font-size: 4cqmin; }
-  .fmt-a5.t-event, .fmt-a5.t-quote { padding-block: 12cqmin; }
+/* ---------- 3. TICKET ROLL ---------- */
+.st-ticket { background: var(--p); color: var(--on-p-body); }
+.st-ticket > .box { height: 100%; display: grid; grid-template-columns: 100%; grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: "big" "slot" "paper" "org"; justify-items: center; padding: 6cqmin 7cqmin 4.5cqmin; }
+.st-ticket .t-big { grid-area: big; font-family: var(--f-cond); text-transform: uppercase; font-size: calc(15cqmin * var(--hs)); line-height: .9; text-align: center; margin-bottom: 4cqmin; max-width: 100%; }
+.st-ticket .t-slot { grid-area: slot; width: 100%; height: 6.5cqmin; border-radius: 1.6cqmin; background: linear-gradient(#ececec, #a1a1a1 55%, #d2d2d2); box-shadow: 0 1cqmin 2cqmin rgba(0,0,0,.3), inset 0 -1.2cqmin 0 #6f6f6f; position: relative; z-index: 2; }
+.st-ticket .t-slot i { position: absolute; left: 6%; right: 6%; top: 42%; height: .9cqmin; background: #333; border-radius: 1cqmin; }
+.st-ticket .t-paper {
+  grid-area: paper; width: 84%; height: 100%; margin-top: -2.4cqmin; background: var(--pp-light); color: var(--k);
+  padding: 6cqmin 5cqmin 7cqmin; display: flex; flex-direction: column; align-items: center; gap: 2.2cqmin; text-align: center;
+  clip-path: var(--zig); font-family: var(--f-mono); box-shadow: inset 0 3cqmin 3cqmin -2cqmin rgba(0,0,0,.25);
+}
+.st-ticket .t-kick { font-family: var(--f-wide); font-weight: 800; font-stretch: 112%; letter-spacing: .28em; text-transform: uppercase; font-size: calc(3.4cqmin * var(--ts)); line-height: 1.2; }
+.st-ticket .t-block { width: 100%; background: var(--p); color: var(--on-p-body); padding: 3cqmin 2cqmin; font-family: var(--f-cond); text-transform: uppercase; font-size: calc(8.5cqmin * var(--hs)); line-height: .92; }
+.st-ticket.is-quote .t-block { text-transform: none; }
+.st-ticket .t-rule { width: 80%; border-top: .4cqmin solid var(--k); }
+.st-ticket .t-line { font-weight: 700; text-transform: uppercase; font-size: calc(3.4cqmin * var(--ts)); line-height: 1.25; }
+.st-ticket .t-date { font-size: calc(4cqmin * var(--ts)); text-transform: uppercase; }
+.st-ticket .t-bar { width: 90%; height: 8cqmin; margin-top: auto; background: repeating-linear-gradient(90deg, var(--k) 0 .45cqmin, transparent .45cqmin .9cqmin, var(--k) .9cqmin 1.6cqmin, transparent 1.6cqmin 2.1cqmin, var(--k) 2.1cqmin 2.35cqmin, transparent 2.35cqmin 3cqmin); }
+.st-ticket .t-sign { font-family: var(--f-wide); font-weight: 800; font-style: italic; text-transform: uppercase; font-size: calc(3.2cqmin * var(--ts)); line-height: 1.15; }
+.st-ticket .t-org { grid-area: org; margin-top: 3cqmin; display: flex; align-items: center; gap: 2cqmin; font-family: var(--f-mono); font-weight: 700; text-decoration: underline; text-underline-offset: .8cqmin; text-transform: uppercase; font-size: calc(3.4cqmin * var(--ts)); letter-spacing: .05em; }
+.st-ticket .t-org .logo-img { height: 6cqmin; }
+.st-ticket.sz-story > .box { padding-block: 12cqmin 8cqmin; }
+.st-ticket.sz-banner > .box { grid-template-columns: 1fr 1.15fr; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "big slot" "big paper" "org paper"; column-gap: 8cqmin; padding: 6cqmin 9cqmin; justify-items: stretch; }
+.st-ticket.sz-banner .t-big { align-self: center; text-align: left; font-size: calc(22cqmin * var(--hs)); margin: 0; }
+.st-ticket.sz-banner .t-org { justify-self: start; font-size: calc(4.6cqmin * var(--ts)); }
+.st-ticket.sz-banner .t-paper { justify-self: center; width: 88%; padding: 6cqmin 6cqmin 7cqmin; }
+.st-ticket.sz-banner .t-slot { height: 8cqmin; }
+.st-ticket.sz-banner .t-kick { font-size: calc(4.6cqmin * var(--ts)); }
+.st-ticket.sz-banner .t-block { font-size: calc(12cqmin * var(--hs)); }
+.st-ticket.sz-banner .t-line, .st-ticket.sz-banner .t-sign { font-size: calc(4.6cqmin * var(--ts)); }
+.st-ticket.sz-banner .t-date { font-size: calc(5.4cqmin * var(--ts)); }
 
-  footer.note { padding-inline: clamp(16px, 3vw, 32px); padding-block: 0 32px; max-width: 1440px; margin: 0 auto; font-size: 12px; color: var(--slate); }
-  footer.note code { font: 400 11px var(--font-mono); color: var(--ink); }
+/* ---------- 4. FORM CARD ---------- */
+.st-form { background: var(--pp); color: var(--k); }
+.st-form .f-giant { position: absolute; left: 50%; transform: translateX(-50%); font-family: var(--f-cond); color: var(--on-pp); text-transform: uppercase; line-height: .8; white-space: nowrap; z-index: 0; }
+.st-form .f-top { top: -2.5cqmin; }
+.st-form .f-bot { bottom: -4.5cqmin; }
+.st-form .f-script { position: absolute; font-family: var(--f-sign); color: var(--on-pp-script); font-size: 17cqmin; transform: rotate(-8deg); white-space: nowrap; line-height: 1.2; z-index: 3; pointer-events: none; }
+.st-form .f-s1 { top: 3cqmin; left: 18%; }
+.st-form .f-s2 { bottom: 3cqmin; left: 34%; }
+.st-form .f-card {
+  position: absolute; left: 12%; right: 12%; top: 23%; bottom: 20%; transform: rotate(-2.2deg); z-index: 2;
+  background: var(--pp-light); border: .25cqmin solid var(--k); padding: 5.5cqmin 6cqmin 4.5cqmin;
+  display: flex; flex-direction: column; gap: 2.2cqmin; font-family: var(--f-mono); box-shadow: 0 1cqmin 3cqmin rgba(0,0,0,.12);
+}
+.st-form .f-intro { text-align: center; text-transform: uppercase; font-size: calc(4cqmin * var(--hs)); line-height: 1.25; margin-bottom: 1.5cqmin; }
+.st-form.is-quote .f-intro { text-transform: none; font-size: calc(5cqmin * var(--hs)); }
+.st-form .f-subline { text-align: center; text-transform: uppercase; font-size: calc(3cqmin * var(--ts)); }
+.st-form .f-field { display: grid; gap: 1cqmin; }
+.st-form .f-tab { justify-self: start; background: var(--p); color: var(--on-p-body); font-family: var(--f-wide); font-weight: 800; font-stretch: 105%; text-transform: uppercase; font-size: calc(3cqmin * var(--ts)); padding: .9cqmin 2.2cqmin; }
+.st-form .f-val { border-top: .25cqmin solid var(--k); padding-top: 1.2cqmin; font-size: calc(4.2cqmin * var(--ts)); text-transform: uppercase; line-height: 1.15; }
+.st-form .f-field.first .f-val { font-size: calc(6.6cqmin * var(--ts)); }
+.st-form .f-foot { margin-top: auto; text-align: center; text-transform: uppercase; font-size: calc(2.8cqmin * var(--ts)); }
+.st-form .f-body { text-align: center; font-size: calc(2.8cqmin * var(--ts)); line-height: 1.4; }
+.st-form .f-logo { position: absolute; right: 4cqmin; bottom: 3cqmin; z-index: 4; }
+.st-form .f-logo .logo-img { height: 6cqmin; }
+.st-form .f-logo .logo-text { font-size: 2cqmin; color: var(--k); background: var(--pp-light); padding: .6cqmin 1cqmin; }
+.st-form.sz-square .f-card { top: 17%; bottom: 13%; left: 10%; right: 10%; }
+.st-form.sz-story .f-card { top: 20%; bottom: 17%; }
+.st-form.sz-story .f-script { font-size: 20cqmin; }
+.st-form.sz-banner .f-card { left: 48%; right: 5%; top: 9%; bottom: 9%; transform: rotate(-1.4deg); padding: 5cqmin 7cqmin; }
+.st-form.sz-banner .f-giant { left: 4%; transform: none; }
+.st-form.sz-banner .f-top { top: -4cqmin; }
+.st-form.sz-banner .f-bot { bottom: -8cqmin; }
+.st-form.sz-banner .f-s1 { top: 10cqmin; left: 8%; font-size: 24cqmin; }
+.st-form.sz-banner .f-s2 { bottom: 6cqmin; left: 20%; font-size: 22cqmin; }
+.st-form.sz-banner .f-intro { font-size: calc(6cqmin * var(--hs)); }
+.st-form.sz-banner .f-subline, .st-form.sz-banner .f-body { font-size: calc(4.2cqmin * var(--ts)); }
+.st-form.sz-banner .f-tab { font-size: calc(4.4cqmin * var(--ts)); }
+.st-form.sz-banner .f-val { font-size: calc(5.6cqmin * var(--ts)); }
+.st-form.sz-banner .f-field.first .f-val { font-size: calc(8.5cqmin * var(--ts)); }
+.st-form.sz-banner .f-foot { font-size: calc(4.2cqmin * var(--ts)); }
+.st-form.sz-banner .f-logo { right: auto; left: 4%; bottom: 40%; }
+.st-form.sz-banner .f-logo .logo-img { height: 12cqmin; }
 
-  @media (max-width: 900px) {
-    .layout { grid-template-columns: 1fr; }
-    .previews { grid-template-columns: 1fr; }
-    .control { font-size: 16px; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .spinner { animation-duration: 2.4s; }
-    .btn, .control, .frame.busy .poster { transition: none; }
-  }
+/* ---------- 5. EDITORIAL SERIF ---------- */
+.st-editorial { background: var(--pp); }
+.st-editorial .e-frame { height: 100%; padding: 6cqmin; }
+.st-editorial .e-panel { height: 100%; background: var(--p); color: var(--on-p-body); padding: 5cqmin 6cqmin; display: flex; flex-direction: column; gap: 3cqmin; font-family: var(--f-serif); text-transform: uppercase; }
+.st-editorial .e-a, .st-editorial .e-b { display: flex; flex-direction: column; gap: 3cqmin; }
+.st-editorial .e-b { margin-top: auto; }
+.st-editorial .e-kick { font-family: var(--f-mono); font-size: calc(2.4cqmin * var(--ts)); letter-spacing: .2em; text-align: center; }
+.st-editorial .hl { font-size: calc(12cqmin * var(--hs)); line-height: .92; text-align: center; letter-spacing: -.01em; font-weight: 400; }
+.st-editorial.is-quote .hl { text-transform: none; line-height: 1; }
+.st-editorial .e-sub { font-size: calc(4.8cqmin * var(--ts)); line-height: .98; max-width: 72%; }
+.st-editorial .e-body { font-size: calc(4.2cqmin * var(--ts)); line-height: .98; text-align: right; margin-left: 30%; }
+.st-editorial .e-date { font-size: calc(14cqmin * var(--ts)); line-height: .9; text-align: center; }
+.st-editorial .e-meta { text-align: center; font-size: calc(3.4cqmin * var(--ts)); letter-spacing: .06em; }
+.st-editorial .e-org { position: absolute; left: 0; right: 0; bottom: 1.4cqmin; display: flex; justify-content: center; align-items: center; gap: 1.4cqmin; font-family: var(--f-mono); font-size: 1.9cqmin; color: var(--k); text-transform: uppercase; letter-spacing: .2em; }
+.st-editorial .e-org .logo-img { height: 3.4cqmin; }
+.st-editorial .e-org .logo-text { font-size: 1.9cqmin; }
+.st-editorial.sz-story .e-panel { padding-block: 10cqmin 8cqmin; }
+.st-editorial.sz-banner .e-frame { padding: 4.5cqmin; }
+.st-editorial.sz-banner .e-panel { flex-direction: row; gap: 9cqmin; padding: 7cqmin 9cqmin; }
+.st-editorial.sz-banner .e-a { flex: 1.3; justify-content: center; }
+.st-editorial.sz-banner .e-b { flex: 1; margin-top: 0; justify-content: center; }
+.st-editorial.sz-banner .hl { font-size: calc(19cqmin * var(--hs)); text-align: left; }
+.st-editorial.sz-banner .e-kick { text-align: left; font-size: calc(3.6cqmin * var(--ts)); }
+.st-editorial.sz-banner .e-sub { font-size: calc(6.4cqmin * var(--ts)); max-width: none; }
+.st-editorial.sz-banner .e-body { font-size: calc(5.6cqmin * var(--ts)); margin-left: 0; text-align: left; }
+.st-editorial.sz-banner .e-date { font-size: calc(20cqmin * var(--ts)); text-align: left; }
+.st-editorial.sz-banner .e-meta { text-align: left; font-size: calc(4.8cqmin * var(--ts)); }
+.st-editorial.sz-banner .e-org { font-size: 2.6cqmin; bottom: .8cqmin; }
+
+/* ---------- 6. PINNED NOTE ---------- */
+.st-note { background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bot) 64%, var(--ground) 64%, var(--ground-2) 100%); }
+.st-note .n-stage { height: 100%; display: flex; justify-content: center; align-items: center; padding: 7cqmin; }
+.st-note .n-wrap { position: relative; width: 82%; height: 86%; transform: rotate(-1.4deg); }
+.st-note .n-pin { position: absolute; top: -3.5cqmin; left: calc(50% - 3.5cqmin); width: 7cqmin; height: 11cqmin; z-index: 3; }
+.st-note .n-pin .h { position: absolute; top: 0; left: 0; width: 7cqmin; height: 7cqmin; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #6a6a6a, #111 62%); box-shadow: .6cqmin 1cqmin 1.2cqmin rgba(0,0,0,.45); }
+.st-note .n-pin .n { position: absolute; top: 5.5cqmin; left: 3.2cqmin; width: .7cqmin; height: 5cqmin; background: linear-gradient(90deg, #aaa, #555); }
+.st-note .n-note { height: 100%; background: var(--p); color: var(--on-p-ink); box-shadow: 1.2cqmin 2.4cqmin 3.6cqmin rgba(0,0,0,.35); padding: 11cqmin 6.5cqmin 6cqmin; display: flex; flex-direction: column; gap: 2.8cqmin; }
+.st-note .n-a, .st-note .n-b { display: flex; flex-direction: column; gap: 2.6cqmin; }
+.st-note .n-b { margin-top: auto; }
+.st-note .hl { font-size: calc(10cqmin * var(--hs)); line-height: 1.02; }
+.st-note .hl b { font-family: var(--f-wide); font-weight: 900; text-transform: uppercase; letter-spacing: -.02em; }
+.st-note.is-quote .hl b { text-transform: none; font-weight: 800; }
+.st-note .hl em { font-family: var(--f-script); font-style: normal; font-size: 1.1em; font-weight: 400; }
+.st-note .n-kick { font-family: var(--f-wide); font-weight: 800; text-transform: uppercase; font-size: calc(5cqmin * var(--ts)); line-height: .98; max-width: 78%; }
+.st-note .n-body { font-family: var(--f-grot); font-weight: 600; font-size: calc(3.2cqmin * var(--ts)); line-height: 1.35; max-width: 86%; }
+.st-note .n-details { display: grid; gap: 1.3cqmin; font-family: var(--f-wide); font-weight: 800; text-transform: uppercase; font-size: calc(4.3cqmin * var(--ts)); line-height: 1.02; }
+.st-note .n-details p:first-child { text-align: right; }
+.st-note .n-sign { font-family: var(--f-script); font-size: calc(7cqmin * var(--ts)); text-align: right; line-height: 1.05; }
+.st-note .n-logo { position: absolute; right: 4cqmin; bottom: 3.5cqmin; z-index: 2; }
+.st-note .n-logo .logo-img { height: 6cqmin; }
+.st-note .n-logo .logo-text { font-size: 2cqmin; color: var(--on-ground); }
+.st-note.sz-story .n-wrap { width: 86%; height: 70%; }
+.st-note.sz-banner .n-stage { padding: 5cqmin 8cqmin; }
+.st-note.sz-banner .n-wrap { width: 82%; height: 88%; }
+.st-note.sz-banner .n-note { flex-direction: row; gap: 8cqmin; padding: 9cqmin 9cqmin 6cqmin; }
+.st-note.sz-banner .n-a { flex: 1.25; justify-content: center; }
+.st-note.sz-banner .n-b { flex: 1; margin-top: 0; justify-content: flex-end; }
+.st-note.sz-banner .hl { font-size: calc(16cqmin * var(--hs)); }
+.st-note.sz-banner .n-kick { font-size: calc(7cqmin * var(--ts)); }
+.st-note.sz-banner .n-body { font-size: calc(4.6cqmin * var(--ts)); }
+.st-note.sz-banner .n-details { font-size: calc(6cqmin * var(--ts)); }
+.st-note.sz-banner .n-sign { font-size: calc(10cqmin * var(--ts)); }
+.st-note.sz-banner .n-pin { left: 12%; }
+.st-note.sz-banner .n-logo .logo-img { height: 10cqmin; }
+
+/* ---------- 7. STICKER TITLE ---------- */
+.st-sticker { background: var(--p); color: var(--on-p-body); }
+.st-sticker > .box { height: 100%; padding: 6cqmin; display: flex; flex-direction: column; align-items: center; gap: 3cqmin; text-align: center; }
+.st-sticker .s-top { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 3cqmin; font-family: var(--f-mono); font-size: calc(2.4cqmin * var(--ts)); }
+.st-sticker .s-top .logo-img { height: 6cqmin; }
+.st-sticker .s-top .logo-text { border: .3cqmin solid currentColor; padding: .6cqmin 1.4cqmin; letter-spacing: .28em; font-size: 2.2cqmin; }
+.st-sticker .s-kick { font-family: var(--f-wide); font-weight: 800; text-transform: uppercase; font-size: calc(4.8cqmin * var(--ts)); line-height: 1.1; margin-top: 5cqmin; }
+.st-sticker .hl { font-family: var(--f-wide); font-weight: 800; font-stretch: 75%; text-transform: uppercase; font-size: calc(16cqmin * var(--hs)); line-height: 1.08; transform: rotate(-2deg); max-width: 100%; }
+.st-sticker.is-quote .hl { text-transform: none; }
+.st-sticker .hl span { background: var(--a); color: var(--on-a); padding: 0 .12em; border-radius: .08em; -webkit-box-decoration-break: clone; box-decoration-break: clone; box-shadow: .9cqmin .9cqmin 0 var(--shadow); }
+.st-sticker .s-with span { display: inline-block; background: var(--a); color: var(--on-a); font-family: var(--f-wide); font-weight: 900; text-transform: uppercase; font-size: calc(4.4cqmin * var(--ts)); padding: .8cqmin 2cqmin; border-radius: 1cqmin; transform: rotate(-1deg); box-shadow: .6cqmin .6cqmin 0 var(--shadow); }
+.st-sticker .s-details { margin-top: auto; width: 100%; display: flex; justify-content: space-between; align-items: flex-end; gap: 4cqmin; font-family: var(--f-script); font-size: calc(6cqmin * var(--ts)); line-height: 1.1; text-align: left; }
+.st-sticker .s-details .r { text-align: right; }
+.st-sticker .s-body { font-family: var(--f-grot); font-weight: 500; font-size: calc(2.5cqmin * var(--ts)); line-height: 1.4; opacity: .9; max-width: 90%; }
+.st-sticker.sz-story > .box { padding-block: 10cqmin 8cqmin; gap: 4.5cqmin; }
+.st-sticker.sz-story .hl { font-size: calc(19cqmin * var(--hs)); }
+.st-sticker.sz-banner > .box { display: grid; grid-template-columns: 1.3fr 1fr; grid-template-areas: "top top" "title kick" "title with" "title details" "title body"; grid-template-rows: auto 1fr auto auto 1fr; column-gap: 8cqmin; row-gap: 2cqmin; text-align: left; align-items: center; justify-items: start; padding: 6cqmin 9cqmin; }
+.st-sticker.sz-banner .s-top { grid-area: top; font-size: calc(3.4cqmin * var(--ts)); }
+.st-sticker.sz-banner .s-kick { grid-area: kick; margin: 0; align-self: end; font-size: calc(6cqmin * var(--ts)); }
+.st-sticker.sz-banner .hl { grid-area: title; font-size: calc(24cqmin * var(--hs)); }
+.st-sticker.sz-banner .s-with { grid-area: with; }
+.st-sticker.sz-banner .s-with span { font-size: calc(6cqmin * var(--ts)); }
+.st-sticker.sz-banner .s-details { grid-area: details; margin: 0; font-size: calc(8cqmin * var(--ts)); gap: 6cqmin; justify-content: flex-start; }
+.st-sticker.sz-banner .s-details .r { text-align: left; }
+.st-sticker.sz-banner .s-body { grid-area: body; align-self: start; font-size: calc(3.6cqmin * var(--ts)); }
+
+/* ---------- 8. BILLBOARD ---------- */
+.st-billboard {
+  background:
+    radial-gradient(ellipse 30% 11% at 22% 13%, rgba(255,255,255,.85), transparent 70%),
+    radial-gradient(ellipse 26% 9% at 74% 7%, rgba(255,255,255,.7), transparent 70%),
+    radial-gradient(ellipse 34% 11% at 26% 90%, rgba(255,255,255,.8), transparent 70%),
+    radial-gradient(ellipse 24% 8% at 84% 82%, rgba(255,255,255,.7), transparent 70%),
+    linear-gradient(180deg, var(--sky-top), var(--sky-bot));
+}
+.st-billboard .bb-board {
+  position: absolute; left: 9%; right: -1%; top: 22%; height: 50%; z-index: 2;
+  background: var(--board); color: var(--k); padding: 6cqmin 7cqmin; display: flex; flex-direction: column; gap: 2cqmin;
+  box-shadow: 0 .7cqmin 0 rgba(0,0,0,.55), 0 2.4cqmin 4cqmin rgba(0,0,0,.2);
+}
+.st-billboard .bb-star { width: 8cqmin; height: 8cqmin; color: var(--on-board-a); }
+.st-billboard .hl { margin-top: auto; font-family: var(--f-grot); font-weight: 800; letter-spacing: -.035em; font-size: calc(10.5cqmin * var(--hs)); line-height: 1; max-width: 74%; }
+.st-billboard .bb-details { font-family: var(--f-grot); font-weight: 600; font-size: calc(3cqmin * var(--ts)); line-height: 1.3; opacity: .85; max-width: 74%; }
+.st-billboard .bb-hand { position: absolute; right: 7%; top: 11%; font-family: var(--f-hand); font-weight: 700; font-size: calc(5cqmin * var(--ts)); line-height: .95; transform: rotate(8deg); text-align: center; max-width: 24%; text-transform: uppercase; }
+.st-billboard .bb-post { position: absolute; left: 62%; width: 6cqmin; top: 72%; bottom: 0; background: linear-gradient(90deg, #1d1d1d, #3d3d3d 50%, #1d1d1d); z-index: 1; }
+.st-billboard .bb-feet { position: absolute; left: 13%; right: 3%; top: 72%; height: 2.6cqmin; background: repeating-linear-gradient(90deg, #262626 0 5cqmin, transparent 5cqmin 16cqmin); z-index: 1; }
+.st-billboard .bb-rail { position: absolute; left: 0; width: 10%; top: calc(72% - 8cqmin); height: 8cqmin; border-top: .5cqmin solid #333; background: repeating-linear-gradient(90deg, #333 0 .45cqmin, transparent .45cqmin 2.2cqmin); z-index: 1; }
+.st-billboard .bb-logo { position: absolute; left: 0; right: 0; bottom: 4cqmin; display: flex; justify-content: center; z-index: 2; }
+.st-billboard .bb-logo .logo-img { height: 8cqmin; }
+.st-billboard .bb-logo .logo-text { font-size: 2.4cqmin; color: var(--on-sky); }
+.st-billboard.sz-story .bb-board { top: 30%; height: 38%; }
+.st-billboard.sz-story .bb-post, .st-billboard.sz-story .bb-feet { top: 68%; }
+.st-billboard.sz-story .bb-rail { top: calc(68% - 8cqmin); }
+.st-billboard.sz-a5 .bb-board { top: 24%; height: 46%; }
+.st-billboard.sz-a5 .bb-post, .st-billboard.sz-a5 .bb-feet { top: 70%; }
+.st-billboard.sz-a5 .bb-rail { top: calc(70% - 8cqmin); }
+.st-billboard.sz-banner .bb-board { left: 4%; right: 24%; top: 8%; height: 72%; padding: 7cqmin 9cqmin; }
+.st-billboard.sz-banner .bb-post { left: 46%; top: 80%; width: 8cqmin; }
+.st-billboard.sz-banner .bb-feet { left: 8%; right: 28%; top: 80%; }
+.st-billboard.sz-banner .bb-rail { top: calc(80% - 9cqmin); width: 4%; }
+.st-billboard.sz-banner .bb-logo { left: auto; right: 4%; top: 0; bottom: 0; width: 17%; align-items: center; }
+.st-billboard.sz-banner .bb-logo .logo-img { height: 16cqmin; }
+.st-billboard.sz-banner .hl { font-size: calc(17cqmin * var(--hs)); }
+.st-billboard.sz-banner .bb-details { font-size: calc(4.6cqmin * var(--ts)); }
+.st-billboard.sz-banner .bb-hand { font-size: calc(7cqmin * var(--ts)); right: 5%; top: 12%; }
+.st-billboard.sz-banner .bb-star { width: 11cqmin; height: 11cqmin; }
+
+/* ---------- 9. POSTER BLOCK ---------- */
+.st-block { background: var(--p); }
+.st-block .pb-frame { height: 100%; padding: 4.5cqmin; }
+.st-block .pb-card { height: 100%; background: var(--pp-light); color: var(--k); padding: 4.5cqmin 5cqmin; display: flex; flex-direction: column; gap: 2.8cqmin; }
+.st-block .pb-top { display: flex; justify-content: space-between; align-items: center; gap: 3cqmin; font-family: var(--f-wide); font-weight: 900; text-transform: uppercase; font-size: calc(3.2cqmin * var(--ts)); }
+.st-block .pb-top .arrow { display: inline-grid; place-items: center; width: 5cqmin; height: 5cqmin; border: .5cqmin solid currentColor; border-radius: 50%; font-size: 3cqmin; margin-left: 1cqmin; vertical-align: middle; line-height: 1; }
+.st-block .pb-top .logo-img { height: 6.5cqmin; }
+.st-block .pb-top .logo-text { font-size: 2.2cqmin; }
+.st-block .pb-head { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 2cqmin 3cqmin; }
+.st-block .hl { font-family: var(--f-cond); color: var(--on-pp); text-transform: uppercase; font-size: calc(16cqmin * var(--hs)); line-height: .9; flex: 1 1 58%; min-width: 0; }
+.st-block.is-quote .hl { text-transform: none; }
+.st-block .pb-oval { border: .35cqmin solid var(--k); border-radius: 50%; padding: 2.2cqmin 3.6cqmin; font-family: var(--f-mono); font-weight: 700; text-transform: uppercase; font-size: calc(2.4cqmin * var(--ts)); line-height: 1.2; text-align: center; max-width: 40%; }
+.st-block .pb-block {
+  flex: 1 1 auto; min-height: 12cqmin; flex-shrink: 1; display: grid; place-items: center; padding: 4cqmin; text-align: center;
+  background-color: var(--p); background-image: radial-gradient(var(--dot-on-p) 25%, transparent 28%); background-size: 1.3cqmin 1.3cqmin;
+  color: var(--on-p-body); font-family: var(--f-mono); font-weight: 700; text-transform: uppercase; font-size: calc(3.2cqmin * var(--ts)); line-height: 1.35;
+}
+.st-block .pb-foot { display: flex; justify-content: space-between; gap: 4cqmin; font-family: var(--f-mono); font-weight: 700; text-transform: uppercase; font-size: calc(3.9cqmin * var(--ts)); line-height: 1.15; }
+.st-block .pb-foot .r { text-align: right; }
+.st-block.sz-banner .pb-frame { padding: 4cqmin; }
+.st-block.sz-banner .pb-card { display: grid; grid-template-columns: 1.25fr 1fr; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "top top" "head block" "head foot"; column-gap: 7cqmin; row-gap: 3cqmin; padding: 5cqmin 7cqmin; }
+.st-block.sz-banner .pb-top { grid-area: top; font-size: calc(4.4cqmin * var(--ts)); }
+.st-block.sz-banner .pb-head { grid-area: head; align-self: center; }
+.st-block.sz-banner .pb-block { grid-area: block; font-size: calc(4.4cqmin * var(--ts)); }
+.st-block.sz-banner .pb-foot { grid-area: foot; font-size: calc(5.2cqmin * var(--ts)); }
+.st-block.sz-banner .hl { font-size: calc(24cqmin * var(--hs)); }
+.st-block.sz-banner .pb-oval { font-size: calc(3.4cqmin * var(--ts)); }
 </style>
 </head>
 <body>
 
-<header class="topbar">
-  <div class="brand">
-    <p class="wordmark">deloo<span class="dot">.</span></p>
-    <span class="crumb">New brief</span>
-  </div>
-  <div class="badges">
-    <span class="badge test">TEST DATA</span>
-    <span class="badge">Mock AI · no API key</span>
-    <span class="badge">Phase 1 prototype</span>
-  </div>
-</header>
-
-<main class="layout">
-  <!-- ============ LEFT: kit, brief, copy ============ -->
-  <div class="panel">
-
-    <section class="card" aria-labelledby="kit-h">
-      <div class="card-head">
-        <h2 id="kit-h">Brand kit</h2>
-        <span class="lock"><svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="5.5" width="8" height="5.5" rx="1" fill="currentColor"/><path d="M4 5.5V4a2 2 0 0 1 4 0v1.5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>Set by HQ</span>
-      </div>
-      <div class="kit" id="kit-summary"></div>
-      <div class="field">
-        <label class="field-label" for="kit-select">Switch test kit <span class="count">prototype only</span></label>
-        <select class="control" id="kit-select"></select>
-        <p class="hint">Volunteers can't edit the kit. Switching here shows every design restyling from brand tokens alone.</p>
-      </div>
-    </section>
-
-    <form class="card" id="brief-form" novalidate aria-labelledby="brief-h">
-      <h2 id="brief-h">Brief</h2>
-      <div class="field">
-        <label class="field-label" for="brief">What's happening? <span class="count" id="brief-count">0 / 280</span></label>
-        <textarea class="control" id="brief" maxlength="280">Youth conference, 3 Oct, guest speaker Pastor Tolu Adeyemi, theme Rise and Shine, 4pm at the Main Auditorium</textarea>
-        <p class="hint">Write it the way you'd text it: event, date, speaker, theme, time, place.</p>
-        <p class="error" id="brief-error" hidden>Describe the event first, e.g. "Youth conference, 3 Oct, guest speaker X".</p>
-      </div>
-      <div class="field">
-        <span class="field-label" id="cat-label">Category</span>
-        <div class="segmented" role="radiogroup" aria-labelledby="cat-label">
-          <input type="radio" name="category" id="cat-event" value="event_flyer" checked><label for="cat-event">Event flyer</label>
-          <input type="radio" name="category" id="cat-announce" value="announcement"><label for="cat-announce">Announcement</label>
-          <input type="radio" name="category" id="cat-quote" value="quote_card"><label for="cat-quote">Quote card</label>
-        </div>
-      </div>
-      <button class="btn btn-generate" type="submit" id="generate">Generate assets</button>
-    </form>
-
-    <section class="card" aria-labelledby="copy-h">
-      <div class="card-head">
-        <h2 id="copy-h">Copy</h2>
-        <span class="card-sub">Edits update every size</span>
-      </div>
-      <p class="ai-note"><span aria-hidden="true">✦</span><span><b>Mocked AI output.</b> A canned response in the Phase 3 slot schema, filled with details picked from your brief. Speakers become "Ministering:" lines automatically.</span></p>
-      <div class="field">
-        <span class="field-label" id="tpl-label">Layout</span>
-        <div class="segmented two" role="radiogroup" aria-labelledby="tpl-label">
-          <input type="radio" name="variant" id="v-bold" value="bold" checked><label for="v-bold">Bold</label>
-          <input type="radio" name="variant" id="v-frame" value="frame"><label for="v-frame">Framed</label>
-        </div>
-      </div>
-      <div id="slot-editor" class="panel"></div>
-    </section>
-  </div>
-
-  <!-- ============ RIGHT: previews ============ -->
-  <section class="stage" aria-labelledby="stage-h">
-    <div class="stage-head">
-      <h2 id="stage-h">Your assets</h2>
-      <p class="stage-status" id="stage-status" role="status" aria-live="polite"></p>
-    </div>
-    <div class="previews" id="previews"></div>
-  </section>
-</main>
-
-<footer class="note">
-  Everything on this page is fictional test data and mocked AI output. No server, no database, no keys. Slot shapes: <code>prototype/slot-schemas.json</code>.
-</footer>
+<div id="app"></div>
+<input type="file" id="logo-file" accept="image/*" class="sr-only" tabindex="-1" aria-hidden="true">
 
 <script>
 (function () {
-  "use strict";
+"use strict";
 
-  /* =========================================================
-     TEST BRAND KITS (fictional). Every template reads only these tokens.
-     ========================================================= */
-  function logoSvg(bg, fg, letters) {
-    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
-      '<circle cx="50" cy="50" r="48" fill="' + bg + '"/>' +
-      '<circle cx="50" cy="50" r="41" fill="none" stroke="' + fg + '" stroke-width="2"/>' +
-      '<text x="50" y="61" text-anchor="middle" font-family="Georgia, serif" font-size="32" font-weight="700" fill="' + fg + '">' + letters + '</text></svg>';
-    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
-  }
+/* =====================================================================
+   DATA
+   ===================================================================== */
+var ORG_TYPES = [
+  { key: "church", label: "Church or ministry" }, { key: "school", label: "School or campus" },
+  { key: "ngo", label: "NGO or charity" }, { key: "business", label: "Business or brand" },
+  { key: "association", label: "Association or alumni" }, { key: "events", label: "Event organiser" },
+  { key: "other", label: "Something else" }
+];
+var STRUCTURES = [
+  { key: "single", label: "Just one", desc: "One location or team." },
+  { key: "branches", label: "Branches or campuses", desc: "Several locations that each publish." },
+  { key: "units", label: "Departments or units", desc: "Youth, choir, media, cells…" }
+];
 
-  var BRAND_KITS = {
-    grace: {
-      name: "Grace Harbour Chapel",
-      short: "Grace Harbour",
-      logo: logoSvg("#1B2A4A", "#E8B84A", "GH"),
-      colours: { primary: "#1B2A4A", secondary: "#3C5A8A", accent: "#E8B84A", text: "#1B2A4A", bg: "#FBF8F2" },
-      on: { primary: "#FBF8F2", secondary: "#FBF8F2", accent: "#1B2A4A" },
-      fonts: { heading: "Oswald", body: "Lato", quote: "Oswald" },
-      headCase: "uppercase", headTrack: "0.01em",
-      tone: "Warm, hopeful, plain English."
-    },
-    northgate: {
-      name: "Northgate Alumni Association",
-      short: "Northgate Alumni",
-      logo: logoSvg("#7A1F2B", "#F4EDE4", "NA"),
-      colours: { primary: "#7A1F2B", secondary: "#2E4A3F", accent: "#C9913D", text: "#2A1E1A", bg: "#F4EDE4" },
-      on: { primary: "#F4EDE4", secondary: "#F4EDE4", accent: "#2A1E1A" },
-      fonts: { heading: "DM Serif Display", body: "Work Sans", quote: "DM Serif Display" },
-      headCase: "none", headTrack: "-0.01em",
-      tone: "Proud, formal, community-first."
-    }
+/* Each type's fields. Required ones must be filled; nothing is ever invented. */
+var TYPES = {
+  event: { label: "Event flyer", desc: "Services, conferences, programmes.",
+    fields: [
+      { k: "title", label: "Event name", req: true, ph: "Youth Conference" },
+      { k: "date", label: "Date", req: true, ph: "3 October" },
+      { k: "time", label: "Time", ph: "4pm" },
+      { k: "venue", label: "Venue", ph: "Main Auditorium" },
+      { k: "theme", label: "Theme", ph: "Rise and Shine" },
+      { k: "speaker", label: "Ministering", ph: "Pastor Tolu Adeyemi", hint: "Keep honorifics as written: Pastor, Evang., Chief, Alhaji, HRM." },
+      { k: "host", label: "Host", ph: "" },
+      { k: "cta", label: "Closing line", ph: "Invite a friend" }
+    ],
+    example: "Youth conference, 3 Oct, guest speaker Pastor Tolu Adeyemi, theme Rise and Shine, 4pm at the Main Auditorium" },
+  invite: { label: "Invitation", desc: "“You're invited” for dinners, launches, special days.",
+    fields: [
+      { k: "occasion", label: "What's the occasion?", req: true, ph: "Choir Anniversary Dinner" },
+      { k: "date", label: "Date", req: true, ph: "14 November" },
+      { k: "time", label: "Time", ph: "6pm" },
+      { k: "venue", label: "Venue", ph: "Fellowship Hall" },
+      { k: "host", label: "Hosted by", ph: "The Choir" },
+      { k: "dress", label: "Dress code", ph: "All white" },
+      { k: "rsvp", label: "RSVP to", ph: "Sister Bola" }
+    ],
+    example: "Choir anniversary dinner, 14 Nov, 6pm at the Fellowship Hall, dress code all white, RSVP Sister Bola" },
+  announce: { label: "Announcement", desc: "Notices, “we've moved”, updates.",
+    fields: [
+      { k: "headline", label: "Headline", req: true, ph: "We've moved" },
+      { k: "message", label: "Message", req: true, long: true, ph: "From Sunday 5 October, all services hold at our new hall." },
+      { k: "date", label: "Date", ph: "5 October" },
+      { k: "contact", label: "Contact", ph: "Church office" }
+    ],
+    example: "We've moved, from Sunday 5 Oct all services hold at our new hall on Unity Road, contact the church office" },
+  quote: { label: "Quote or scripture card", desc: "Verses, sermon quotes, thoughts.",
+    fields: [
+      { k: "quote", label: "Quote or verse", req: true, long: true, ph: "Let your light so shine before men." },
+      { k: "reference", label: "Reference or speaker", ph: "Matthew 5:16" },
+      { k: "occasion", label: "Small heading", ph: "Sunday thought" }
+    ],
+    example: "\"Let your light so shine before men\" Matthew 5:16, Sunday thought" },
+  birthday: { label: "Birthday or celebration", desc: "Birthdays, anniversaries, milestones.",
+    fields: [
+      { k: "name", label: "Who's celebrating?", req: true, ph: "Mama Grace" },
+      { k: "milestone", label: "Milestone", ph: "turns 70" },
+      { k: "date", label: "Date", ph: "12 December" },
+      { k: "message", label: "Message", long: true, ph: "Join us to celebrate seventy years of grace." },
+      { k: "from", label: "From", ph: "The family" }
+    ],
+    example: "Mama Grace turns 70, 12 Dec, join us to celebrate seventy years of grace, from the family" },
+  service: { label: "Service times", desc: "“See you Sunday”, weekly services.",
+    fields: [
+      { k: "day", label: "Day", req: true, ph: "Sunday" },
+      { k: "time", label: "Time", req: true, ph: "10:30am" },
+      { k: "headline", label: "Headline", ph: "Empty = “See you Sunday at 10:30am”" },
+      { k: "venue", label: "Venue", ph: "Main Auditorium" },
+      { k: "tagline", label: "Tagline", ph: "Come as you are" }
+    ],
+    example: "See you Sunday, 10:30am at the Main Auditorium, tagline come as you are" },
+  thanks: { label: "Thank-you", desc: "Appreciation after events and giving.",
+    fields: [
+      { k: "for_what", label: "Thank you for…", req: true, ph: "Harvest Thanksgiving 2026" },
+      { k: "headline", label: "Headline", ph: "Empty = “Thank you”" },
+      { k: "items", label: "Who or what to thank (one per line)", long: true, ph: "Ushers\nChoir\nMedia team" },
+      { k: "from", label: "From", ph: "The Pastorate" }
+    ],
+    example: "Thank you for Harvest Thanksgiving 2026, ushers, choir, media team, from the Pastorate" }
+};
+var TYPE_ORDER = ["event", "invite", "announce", "quote", "birthday", "service", "thanks"];
+var COMING_SOON = [
+  { label: "Speaker line-up", desc: "Needs speaker photos." }, { label: "Celebration of Life", desc: "Obituaries, service of songs." },
+  { label: "Thanksgiving service", desc: "" }, { label: "Naming ceremony", desc: "" }, { label: "Wedding & aso-ebi", desc: "" },
+  { label: "Back-to-school", desc: "" }, { label: "Product launch", desc: "" }, { label: "Countdown reel", desc: "Short video." }
+];
+/* Fictional sample content for style previews */
+var SAMPLES = {
+  event: { title: "Youth Conference", date: "3 October", time: "4pm", venue: "Main Auditorium", theme: "Rise and Shine", speaker: "Pastor Tolu Adeyemi", cta: "Invite a friend" },
+  invite: { occasion: "Choir Anniversary Dinner", date: "14 November", time: "6pm", venue: "Fellowship Hall", host: "The Choir", dress: "All white", rsvp: "Sister Bola" },
+  announce: { headline: "We've moved", message: "From Sunday 5 October, all services hold at our new hall on Unity Road.", date: "5 October", contact: "Church office" },
+  quote: { quote: "Let your light so shine before men.", reference: "Matthew 5:16", occasion: "Sunday thought" },
+  birthday: { name: "Mama Grace", milestone: "turns 70", date: "12 December", message: "Join us to celebrate seventy years of grace.", from: "The family" },
+  service: { day: "Sunday", time: "10:30am", venue: "Main Auditorium", tagline: "Come as you are" },
+  thanks: { for_what: "Harvest Thanksgiving 2026", items: "Ushers\nChoir\nMedia team\nEveryone who gave", from: "The Pastorate" }
+};
+var STYLES = {
+  badge: { name: "Badge", desc: "Title in a bold oval, date up top." },
+  receipt: { name: "Receipt", desc: "Till receipt, dotted lines, script sign-off." },
+  ticket: { name: "Ticket roll", desc: "A ticket printing out of a slot." },
+  form: { name: "Form card", desc: "Tilted card with labelled tabs over giant type." },
+  editorial: { name: "Editorial serif", desc: "Elegant serif on a colour panel." },
+  note: { name: "Pinned note", desc: "Pinned note, bold caps with script." },
+  sticker: { name: "Sticker title", desc: "Cut-out sticker title, script details." },
+  billboard: { name: "Billboard", desc: "A short friendly line on a billboard." },
+  block: { name: "Poster block", desc: "Huge headline, framed card, mono details." }
+};
+var STYLE_ORDER = ["badge", "receipt", "ticket", "form", "editorial", "note", "sticker", "billboard", "block"];
+var RECOMMEND = {
+  event: ["block", "badge", "ticket"], invite: ["ticket", "form", "sticker"], announce: ["block", "note", "billboard"],
+  quote: ["editorial", "note", "badge"], birthday: ["form", "editorial", "sticker"], service: ["billboard", "note", "badge"], thanks: ["receipt", "editorial", "form"]
+};
+var SIZES = [
+  { key: "post", name: "Post", long: "Instagram post", w: 1080, h: 1080, cls: "sz-square" },
+  { key: "story", name: "Story", long: "Instagram story", w: 1080, h: 1920, cls: "sz-story" },
+  { key: "banner", name: "Banner", long: "X / LinkedIn banner", w: 1500, h: 500, cls: "sz-banner" },
+  { key: "a5", name: "A5 print", long: "A5 handbill, 148 × 210 mm at 150 dpi", w: 874, h: 1240, cls: "sz-a5" }
+];
+var PRESETS = [
+  { name: "Cobalt and yellow", p: "#2B3FB8", a: "#F2C230" }, { name: "Red and cream", p: "#D7262F", a: "#F3E9D8" },
+  { name: "Navy and gold", p: "#1B2A4A", a: "#E8B84A" }, { name: "Green and cream", p: "#1E5B3F", a: "#F1E3C8" },
+  { name: "Purple and gold", p: "#4B2A7B", a: "#F2C230" }, { name: "Maroon and sand", p: "#7A1F2B", a: "#E9D2A8" }
+];
+var COLOR_WORDS = {
+  red: "#D7262F", blue: "#2B3FB8", cobalt: "#2B3FB8", navy: "#1B2A4A", green: "#1E7A4C", teal: "#0F6B73", purple: "#4B2A7B",
+  yellow: "#F2C230", gold: "#E8B84A", orange: "#F07F1F", pink: "#E4508F", maroon: "#7A1F2B", black: "#16181D", cream: "#F3E9D8",
+  white: "#F7F5F0", brown: "#6B4226"
+};
+var DEFAULT_PALETTE = { primary: "#2B3FB8", accent: "#F2C230" };
+
+/* =====================================================================
+   COLOUR
+   ===================================================================== */
+function hexToRgb(h) { h = h.replace("#", ""); if (h.length === 3) h = h.split("").map(function (c) { return c + c; }).join(""); return [0, 2, 4].map(function (i) { return parseInt(h.substr(i, 2), 16); }); }
+function rgbToHex(r, g, b) { return "#" + [r, g, b].map(function (v) { v = Math.round(Math.max(0, Math.min(255, v))); return (v < 16 ? "0" : "") + v.toString(16); }).join("").toUpperCase(); }
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  var max = Math.max(r, g, b), min = Math.min(r, g, b), h = 0, s = 0, l = (max + min) / 2;
+  if (max !== min) { var d = max - min; s = l > .5 ? d / (2 - max - min) : d / (max + min); h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
+  return [h, s, l];
+}
+function hslToHex(h, s, l) {
+  h = ((h % 360) + 360) % 360;
+  var c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2, r, g, b;
+  if (h < 60) { r = c; g = x; b = 0; } else if (h < 120) { r = x; g = c; b = 0; } else if (h < 180) { r = 0; g = c; b = x; }
+  else if (h < 240) { r = 0; g = x; b = c; } else if (h < 300) { r = x; g = 0; b = c; } else { r = c; g = 0; b = x; }
+  return rgbToHex((r + m) * 255, (g + m) * 255, (b + m) * 255);
+}
+function mix(a, b, t) { var A = hexToRgb(a), B = hexToRgb(b); return rgbToHex(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t); }
+function lum(hex) { var c = hexToRgb(hex).map(function (v) { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; }
+function contrast(a, b) { var x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); }
+function onColor(bg, prefs, min) { for (var i = 0; i < prefs.length; i++) if (contrast(prefs[i], bg) >= min) return prefs[i]; return prefs.slice().sort(function (a, b) { return contrast(b, bg) - contrast(a, bg); })[0]; }
+function withAlpha(hex, a) { var c = hexToRgb(hex); return "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")"; }
+function autoAccent(primary) {
+  var h = rgbToHsl.apply(null, hexToRgb(primary))[0];
+  var acc = (h >= 190 && h <= 290) ? "#F2C230" : hslToHex(h + 165, .7, .62);
+  if (contrast(acc, primary) < 2) acc = hslToHex(h + 165, .6, lum(primary) > .4 ? .2 : .85);
+  return acc;
+}
+function buildPalette(primary, accent) {
+  var hsl = rgbToHsl.apply(null, hexToRgb(primary));
+  return { primary: primary.toUpperCase(), accent: (accent || autoAccent(primary)).toUpperCase(),
+    paper: hslToHex(hsl[0], Math.min(.35, hsl[1] * .5 + .08), .925), ink: hslToHex(hsl[0], Math.min(.4, hsl[1] * .6), .09) };
+}
+function zigzag() {
+  var pts = ["0 0", "100% 0"], teeth = 22;
+  for (var i = 0; i <= teeth * 2; i++) { var x = 100 - i * (100 / (teeth * 2)); pts.push(x.toFixed(2) + "% " + (i % 2 ? "100%" : "calc(100% - 2.4cqmin)")); }
+  return "polygon(" + pts.join(",") + ")";
+}
+var ZIG = zigzag();
+/* Every colour a poster uses, with readable pairings worked out per palette */
+function posterVars(pal) {
+  var p = pal.primary, a = pal.accent, pp = pal.paper, k = pal.ink;
+  var ppLight = mix(pp, "#FFFFFF", .45), skyBot = mix(p, "#FFFFFF", .72), ground = mix(p, k, .35), board = mix(ppLight, "#FFFFFF", .35);
+  return {
+    "--p": p, "--a": a, "--pp": pp, "--k": k, "--pp-light": ppLight,
+    "--on-p": onColor(p, [a, pp, k], 3), "--on-p-body": onColor(p, [pp, k, "#FFFFFF"], 4.5), "--on-p-ink": onColor(p, [k, pp, "#FFFFFF"], 4.5),
+    "--on-a": onColor(a, [p, k, pp], 3), "--on-pp": onColor(pp, [p, k], 3), "--on-pp-script": onColor(p, [ppLight, "#FFFFFF"], 2.5),
+    "--sky-top": mix(p, "#FFFFFF", .42), "--sky-bot": skyBot, "--ground": ground, "--ground-2": mix(ground, k, .35), "--on-ground": onColor(ground, [pp, "#FFFFFF"], 3),
+    "--on-sky": onColor(skyBot, [k, p], 3), "--board": board, "--on-board-a": onColor(board, [a, p, k], 1.8),
+    "--dot": withAlpha(k, .08), "--dot-on-p": withAlpha(onColor(p, [pp, k], 3), .14), "--shadow": withAlpha(k, .55), "--zig": ZIG
   };
-
-  /* Sizes from the MVP, rendered at real pixel dimensions. A5 at 150 dpi for preview. */
-  var SIZES = [
-    { key: "ig_post", name: "Instagram post", w: 1080, h: 1080, cls: "fmt-square" },
-    { key: "ig_story", name: "Instagram story", w: 1080, h: 1920, cls: "fmt-story" },
-    { key: "x_banner", name: "X / LinkedIn banner", w: 1500, h: 500, cls: "fmt-banner", wide: true },
-    { key: "a5_handbill", name: "A5 handbill", w: 874, h: 1240, cls: "fmt-a5", note: "148 × 210 mm · 150 dpi" }
-  ];
-
-  var ROLE_OPTIONS = ["Ministering", "Host", "Anchor", "Guest"];
-
-  /* =========================================================
-     MOCK AI. Returns the Phase 3 slot schema (see slot-schemas.json).
-     Canned text per category, plus details picked out of the brief.
-     ========================================================= */
-  var MONTHS = "jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec";
-  var MONTH_FULL = { jan: "January", feb: "February", mar: "March", apr: "April", may: "May", jun: "June", jul: "July", aug: "August", sep: "September", sept: "September", oct: "October", nov: "November", dec: "December" };
-
-  function titleCase(s) {
-    return s.replace(/\S+/g, function (w) { return /^[A-Z]{2,}$/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1); });
+}
+/* Main colours of an uploaded logo */
+function extractColors(img) {
+  var c = document.createElement("canvas"), n = 72; c.width = n; c.height = n;
+  var ctx2 = c.getContext("2d"); ctx2.drawImage(img, 0, 0, n, n);
+  var data = ctx2.getImageData(0, 0, n, n).data, buckets = {}, total = 0, darks = [];
+  for (var i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 200) continue;
+    var r = data[i], g = data[i + 1], b = data[i + 2], hsl = rgbToHsl(r, g, b);
+    if (hsl[2] > .93) continue;
+    if (hsl[2] < .08 || hsl[1] < .12) { darks.push([r, g, b]); continue; }
+    var key = (r >> 4) + "," + (g >> 4) + "," + (b >> 4), bk = buckets[key] || (buckets[key] = { n: 0, r: 0, g: 0, b: 0 });
+    bk.n++; bk.r += r; bk.g += g; bk.b += b; total++;
   }
-  function prettyDate(p) {
-    var m = p.match(new RegExp("(\\d{1,2})(?:st|nd|rd|th)?\\s*(" + MONTHS + ")[a-z]*", "i")) ||
-            p.match(new RegExp("(" + MONTHS + ")[a-z]*\\s*(\\d{1,2})", "i"));
-    if (!m) return p;
-    var day = /\d/.test(m[1]) ? m[1] : m[2];
-    var mon = /\d/.test(m[1]) ? m[2] : m[1];
-    return parseInt(day, 10) + " " + MONTH_FULL[mon.toLowerCase().slice(0, 3)];
+  var list = Object.keys(buckets).map(function (k) { var b = buckets[k], hex = rgbToHex(b.r / b.n, b.g / b.n, b.b / b.n); return { hex: hex, n: b.n, hsl: rgbToHsl.apply(null, hexToRgb(hex)) }; })
+    .sort(function (a, b) { return b.n - a.n; });
+  if (!list.length) { if (darks.length > 20) { var d = darks[0]; return { primary: rgbToHex(d[0], d[1], d[2]), accent: null }; } return null; }
+  var accent = null;
+  for (var j = 1; j < list.length; j++) {
+    var dh = Math.abs(list[j].hsl[0] - list[0].hsl[0]); dh = Math.min(dh, 360 - dh);
+    if (list[j].n > total * .04 && (dh > 35 || Math.abs(list[j].hsl[2] - list[0].hsl[2]) > .3)) { accent = list[j].hex; break; }
   }
+  return { primary: list[0].hex, accent: accent };
+}
+/* Paper grain, generated once */
+(function () {
+  try {
+    var c = document.createElement("canvas"), n = 160; c.width = n; c.height = n;
+    var g = c.getContext("2d"), img = g.createImageData(n, n);
+    for (var i = 0; i < img.data.length; i += 4) { var v = Math.random() * 255; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 34; }
+    g.putImageData(img, 0, 0);
+    var s = document.createElement("style"); s.textContent = ".tpl .grain{background-image:url(" + c.toDataURL("image/png") + ");background-size:320px 320px;}"; document.head.appendChild(s);
+  } catch (e) {}
+})();
 
-  function parseBrief(text) {
-    var parts = text.split(/[,;\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
-    var out = { title: parts[0] || "", roles: [], extras: [] };
-    var dateRe = new RegExp("\\b(\\d{1,2}(st|nd|rd|th)?\\s*(" + MONTHS + ")|(" + MONTHS + ")[a-z]*\\s*\\d{1,2}|monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow)", "i");
-    parts.slice(1).forEach(function (p) {
-      var m;
-      if ((m = p.match(/^(?:guest\s+)?(speaker|minister(?:ing)?|preacher)[:\s]+(.+)$/i))) out.roles.push({ role: "Ministering", name: m[2] });
-      else if ((m = p.match(/^(host|anchor)(?:ed by)?[:\s]+(.+)$/i))) out.roles.push({ role: titleCase(m[1].toLowerCase()), name: m[2] });
-      else if ((m = p.match(/^theme[:\s]+(.+)$/i))) out.theme = m[1].replace(/^["“']|["”']$/g, "");
-      else if (dateRe.test(p) && !out.date) out.date = prettyDate(p);
-      else if (/\b\d{1,2}(:\d{2})?\s*(am|pm)\b/i.test(p) || /\b(at|venue|hall|auditorium|church|centre|center)\b/i.test(p)) out.timeVenue = (out.timeVenue ? out.timeVenue + " · " : "") + p.replace(/\s+at\s+/i, " · ");
-      else out.extras.push(p);
-    });
-    var q = text.match(/["“]([^"”]{8,})["”]/);
-    if (q) out.quote = q[1];
-    return out;
-  }
+/* =====================================================================
+   MOCK UNDERSTANDING. Picks details out of a free-text brief.
+   It never invents a value: anything it can't find stays empty.
+   ===================================================================== */
+var MONTHS = "jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec";
+var MONTH_FULL = { jan: "January", feb: "February", mar: "March", apr: "April", may: "May", jun: "June", jul: "July", aug: "August", sep: "September", oct: "October", nov: "November", dec: "December" };
+var MONTH_KEYS = Object.keys(MONTH_FULL);
+var DAYS = "monday|tuesday|wednesday|thursday|friday|saturday|sunday";
+function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+function titleCase(s) { return s.replace(/\S+/g, function (w, i) { if (/^[A-Z0-9]{2,}$/.test(w)) return w; if (i > 0 && /^(and|of|the|for|to|in|at|on|a)$/i.test(w)) return w.toLowerCase(); return w.charAt(0).toUpperCase() + w.slice(1); }); }
+function findDate(p) {
+  var m = p.match(new RegExp("\\b(\\d{1,2})(?:st|nd|rd|th)?\\s*(?:of\\s+)?(" + MONTHS + ")[a-z]*\\b", "i")) || p.match(new RegExp("\\b(" + MONTHS + ")[a-z]*\\.?\\s*(\\d{1,2})(?:st|nd|rd|th)?\\b", "i"));
+  if (m) { var day = /\d/.test(m[1]) ? m[1] : m[2], mon = /\d/.test(m[1]) ? m[2] : m[1]; return parseInt(day, 10) + " " + MONTH_FULL[mon.toLowerCase().slice(0, 3)]; }
+  m = p.match(/\b(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?\b/);
+  if (m && +m[2] >= 1 && +m[2] <= 12) return parseInt(m[1], 10) + " " + MONTH_FULL[MONTH_KEYS[+m[2] - 1]];
+  return "";
+}
+function findTime(p) { var m = p.match(/\b(\d{1,2}(?::\d{2})?\s*(?:am|pm))\b/i); return m ? m[1].replace(/\s+/g, "").toLowerCase() : ""; }
+function findDay(p) { var m = p.match(new RegExp("\\b(" + DAYS + ")s?\\b", "i")); return m ? cap(m[1].toLowerCase()) : ""; }
+var DATE_BITS = new RegExp("\\b\\d{1,2}(st|nd|rd|th)?\\s*(of\\s+)?(" + MONTHS + ")[a-z]*\\b|\\b(" + MONTHS + ")[a-z]*\\.?\\s*\\d{1,2}(st|nd|rd|th)?\\b|\\b(" + DAYS + ")\\b|\\bfrom\\b|\\bon\\b", "gi");
 
-  function mockGenerateCopy(brief, category, kit) {
-    var b = parseBrief(brief);
-    var title = titleCase(b.title || "Special Service");
-    var date = b.date || "Saturday 3 October";
-    var slots;
-    if (category === "event_flyer") {
-      slots = {
-        eyebrow: kit.short + " presents",
-        title: title,
-        theme: b.theme ? titleCase(b.theme) : "",
-        date_line: date,
-        time_venue: b.timeVenue || "4:00 pm · Main Auditorium",
-        roles: b.roles.length ? b.roles : [{ role: "Ministering", name: "Guest Speaker" }],
-        cta: "Invite a friend · Free entry"
-      };
-    } else if (category === "announcement") {
-      slots = {
-        eyebrow: "Announcement",
-        headline: title,
-        body: "Please note: " + title.toLowerCase() + " holds on " + date + (b.timeVenue ? ", " + b.timeVenue.replace(" · ", " at ") : "") + ". " +
-              (b.extras.length ? b.extras.join(". ") + ". " : "") + "Share this with your department and family.",
-        date_line: date,
-        cta: "Questions? Speak to the " + kit.short + " office."
-      };
-    } else {
-      slots = {
-        quote: b.quote || "Let your light so shine before men, that they may see your good works.",
-        reference: b.quote ? (b.roles[0] ? b.roles[0].name : kit.short) : "Matthew 5:16 (KJV)",
-        footer: b.theme ? titleCase(b.theme) : title
-      };
+function parseBrief(type, text) {
+  var out = {}, rest = [];
+  var q = text.match(/["“]([^"”]{4,})["”]/);
+  if (q) { out.quote = q[1].trim(); text = text.replace(q[0], ","); }
+  var parts = text.split(/[,;\n]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+  parts.forEach(function (p, i) {
+    var m, used = false, date = findDate(p), time = findTime(p);
+    if ((m = p.match(/^(?:guest\s+)?(?:speaker|minister(?:ing)?|preacher)[:\s]+(.+)$/i))) { out.speaker = m[1]; used = true; }
+    else if ((m = p.match(/^(?:hosted by|host|anchor)[:\s]+(.+)$/i))) { out.host = m[1]; used = true; }
+    else if ((m = p.match(/^theme[:\s]+(.+)$/i))) { out.theme = m[1].replace(/^["“']|["”']$/g, ""); used = true; }
+    else if ((m = p.match(/^dress\s*code[:\s]+(.+)$/i))) { out.dress = cap(m[1]); used = true; }
+    else if ((m = p.match(/^rsvp(?:\s+to)?[:\s]+(.+)$/i))) { out.rsvp = m[1]; used = true; }
+    else if ((m = p.match(/^(?:contact|call|enquiries)[:\s]+(.+)$/i))) { out.contact = m[1]; used = true; }
+    else if ((m = p.match(/^from[:\s]+(the\s+.+|[A-Z].*)$/i)) && !date) { out.from = cap(m[1]); used = true; }
+    else if ((m = p.match(/^(?:tagline|slogan)[:\s]+(.+)$/i))) { out.tagline = cap(m[1]); used = true; }
+    if (!used && (m = p.match(/\b((?:[1-3]\s?)?[A-Z][a-z]+\.?\s+\d{1,3}:\d{1,3}(?:-\d{1,3})?)\b/))) { out.reference = m[1].trim(); used = p.replace(m[1], "").trim().length < 3; }
+    if (!used && date && !out.date) {
+      out.date = date; var dd = findDay(p); if (dd && !out.day) out.day = dd;
+      var leftover = p.replace(DATE_BITS, "").replace(/\s+/g, " ").trim();
+      if (leftover.length > 2 && type === "announce") rest.push(p);
+      used = true;
     }
-    return new Promise(function (resolve) { setTimeout(function () { resolve(slots); }, 600); });
+    if (!used && time) {
+      out.time = time;
+      var at = p.split(/\s+at\s+/i);
+      if (at.length > 1) out.venue = titleCase(at.slice(1).join(" at ").replace(/^the\s+/i, ""));
+      var d2 = findDay(at[0]); if (d2) out.day = d2;
+      used = true;
+    }
+    if (!used && !out.venue && (m = p.match(/^(?:at|venue[:\s]+)\s*(?:the\s+)?(.+)$/i))) { out.venue = titleCase(m[1]); used = true; }
+    if (!used && (m = p.match(/^(.+?)\s+turns\s+(\d{1,3})/i))) { out.name = titleCase(m[1]); out.milestone = "turns " + m[2]; used = true; }
+    if (!used && (m = p.match(/^(?:thank you|thanks)(?:\s+(?:for|to))?\s*(.*)$/i))) { if (m[1]) out.for_what = cap(m[1]); used = true; }
+    if (!used && /^see you\b/i.test(p)) { var sd = findDay(p); if (sd) out.day = sd; used = true; }
+    if (!used && findDay(p) && p.split(/\s+/).length <= 2) { out.day = findDay(p); used = true; }
+    if (!used) rest.push(p);
+  });
+  var primary = { event: "title", invite: "occasion", announce: "headline", birthday: "name", service: "headline", thanks: "for_what", quote: "quote" }[type];
+  if (rest.length && !out[primary] && !(type === "announce" && rest.length === 1 && out.headline)) {
+    var main = rest.shift();
+    out[primary] = type === "quote" ? main : type === "announce" ? cap(main) : titleCase(main);
   }
-
-  /* =========================================================
-     TEMPLATES. Brand tokens + slots in, markup out.
-     ========================================================= */
-  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
-
-  function logoBlock(kit) {
-    return '<div class="p-logo"><img src="' + kit.logo + '" alt=""><span class="p-org">' + esc(kit.name) + '</span></div>';
+  if (rest.length) {
+    if (type === "announce" || type === "birthday") out.message = rest.map(cap).join(". ").replace(/\.?$/, ".");
+    else if (type === "thanks") out.items = rest.map(cap).join("\n");
+    else if (type === "quote" && !out.occasion) out.occasion = cap(rest.join(" "));
+    else out._unplaced = rest;
   }
+  if (type === "service" && out.headline && /^see you/i.test(out.headline)) delete out.headline;
+  return out;
+}
+function guessType(text) {
+  var t = text.toLowerCase();
+  if (/birthday|turns \d|\bbday\b/.test(t)) return "birthday";
+  if (/thank(s| you)|appreciat/.test(t)) return "thanks";
+  if (/["“]|scripture|verse|quote|\b[a-z]+ \d+:\d+/.test(t)) return "quote";
+  if (/see you|service times|every sunday|sunday service/.test(t)) return "service";
+  if (/invit|rsvp|dress code|dinner|gala|brunch/.test(t)) return "invite";
+  if (/announce|moved|notice|update|change of|postpone/.test(t)) return "announce";
+  return "event";
+}
 
-  var TEMPLATES = {
-    event_flyer: function (s, kit) {
-      var roles = (s.roles || []).filter(function (r) { return r.name; }).map(function (r) {
-        return '<p class="p-role"><b>' + esc(r.role) + ':</b>' + esc(r.name) + '</p>';
-      }).join("");
-      return '<div class="head">' + logoBlock(kit) + '</div>' +
-        '<div class="body">' +
-          '<p class="p-eyebrow">' + esc(s.eyebrow) + '</p>' +
-          '<h1 class="p-title">' + esc(s.title) + '</h1>' +
-          (s.theme ? '<p class="p-theme">Theme: <em>' + esc(s.theme) + '</em></p>' : '') +
-          (roles ? '<div class="p-roles">' + roles + '</div>' : '') +
+/* =====================================================================
+   CONTENT. Turns a type's fields into one shape every style can draw.
+   ===================================================================== */
+function toContent(type, f, org) {
+  var c = { kicker: "", headline: "", subhead: "", details: [], people: [], body: "", signoff: "", isQuote: false };
+  function det(label, v) { if (v) c.details.push({ label: label, value: v }); }
+  if (type === "event") {
+    c.headline = f.title || ""; c.subhead = f.theme ? "Theme: " + f.theme : "";
+    det("Date", f.date); det("Time", f.time); det("Venue", f.venue);
+    if (f.speaker) c.people.push({ role: "Ministering", name: f.speaker });
+    if (f.host) c.people.push({ role: "Host", name: f.host });
+    c.signoff = f.cta || "";
+  } else if (type === "invite") {
+    c.kicker = "You're invited"; c.headline = f.occasion || ""; c.subhead = f.host ? "Hosted by " + f.host : "";
+    det("Date", f.date); det("Time", f.time); det("Venue", f.venue); det("Dress code", f.dress);
+    c.signoff = f.rsvp ? "RSVP " + f.rsvp : "";
+  } else if (type === "announce") {
+    c.kicker = "Announcement"; c.headline = f.headline || ""; c.body = f.message || "";
+    det("Date", f.date); det("Contact", f.contact);
+  } else if (type === "quote") {
+    c.kicker = f.occasion || ""; c.headline = f.quote ? "“" + f.quote.replace(/^["“]|["”]$/g, "") + "”" : ""; c.signoff = f.reference || ""; c.isQuote = true;
+  } else if (type === "birthday") {
+    c.kicker = f.milestone ? cap(f.milestone) : "Happy birthday"; c.headline = f.name || "";
+    det("Date", f.date); c.body = f.message || ""; c.signoff = f.from ? "— " + f.from : "";
+  } else if (type === "service") {
+    c.headline = f.headline || ("See you " + (f.day || "") + (f.time ? " at " + f.time : "")).replace(/\s+/g, " ").trim();
+    det("Venue", f.venue); c.signoff = f.tagline || "";
+  } else if (type === "thanks") {
+    c.headline = f.headline || "Thank you"; c.subhead = f.for_what || "";
+    (f.items || "").split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean).forEach(function (s) {
+      var m = s.split(/\s+[—–-]\s+|:\s+/); c.details.push(m.length > 1 ? { label: m[0], value: m.slice(1).join(" ") } : { label: "", value: s });
+    });
+    c.signoff = f.from ? "— " + f.from : "";
+  }
+  return c;
+}
+function D(c, label) { var d = c.details.filter(function (x) { return x.label === label; })[0]; return d ? d.value : ""; }
+function others(c, skip) { return c.details.filter(function (d) { return skip.indexOf(d.label) < 0; }); }
+function dText(d) { return (d.label ? d.label + ": " : "") + d.value; }
+
+/* =====================================================================
+   STYLE RENDERERS. Content + context in, markup out. Empty pieces are skipped.
+   ===================================================================== */
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (ch) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]; }); }
+function logo(ctx) { return ctx.logo ? '<img class="logo-img" src="' + ctx.logo + '" alt="">' : '<span class="logo-text">' + esc(ctx.org) + "</span>"; }
+function when(c) { return [D(c, "Date"), D(c, "Time")].filter(Boolean).join(" · "); }
+function namesLine(c) { return c.people.map(function (p) { return p.name; }).join(" · "); }
+function rolesLine(c) { return c.people.map(function (p) { return p.role + ": " + p.name; }).join("  ·  "); }
+function lines(arr) { return arr.filter(Boolean).map(esc).join("<br>"); }
+
+var RENDER = {
+  badge: function (c, ctx) {
+    return '<div class="box">' +
+      '<div class="b-row"><span>' + esc(c.kicker || ctx.org) + '</span><span>' + esc(D(c, "Time")) + '</span></div>' +
+      (D(c, "Date") ? '<div class="b-date">' + esc(D(c, "Date")) + '</div>' : '') +
+      '<div class="b-oval box"><h1 class="hl">' + esc(c.headline) + '</h1></div>' +
+      (c.subhead ? '<div class="b-sub">' + esc(c.subhead) + '</div>' : '') +
+      (c.people.length ? '<div class="b-with">' + esc(c.people.length === 1 ? c.people[0].role : "With") + '</div><div class="b-names">' + esc(namesLine(c)) + '</div>' : '') +
+      (c.body ? '<p class="b-body">' + esc(c.body) + '</p>' : '') +
+      others(c, ["Date", "Time", "Venue"]).map(function (d) { return '<div class="b-sub">' + esc(dText(d)) + '</div>'; }).join("") +
+      '<div class="b-row foot"><span>' + esc(D(c, "Venue")) + '</span><span>' + esc(c.signoff || (c.kicker ? ctx.org : "")) + '</span></div>' +
+    '</div>';
+  },
+  receipt: function (c, ctx) {
+    var rows = c.details.map(function (d) { return '<div class="r-row"><span>' + esc(d.label || "•") + '</span><i></i><span class="v">' + esc(d.value) + '</span></div>'; })
+      .concat(c.people.map(function (p) { return '<div class="r-row"><span>' + esc(p.role) + '</span><i></i><span class="v">' + esc(p.name) + '</span></div>'; })).join("");
+    return '<div class="stage"><div class="r-paper box">' +
+      '<div class="r-a">' +
+        '<div class="r-top"><span class="k">' + esc(c.kicker || "Receipt") + '</span><span>' + esc(D(c, "Date")) + '</span></div>' +
+        '<div class="r-logo">' + logo(ctx) + '</div>' +
+        '<h1 class="hl">' + esc(c.headline) + '</h1>' +
+        (c.subhead ? '<p class="r-sub">/' + esc(c.subhead) + '/</p>' : '') +
+      '</div>' +
+      '<div class="r-b">' +
+        '<div class="r-rule"></div>' + rows + (c.body ? '<p class="r-body">' + esc(c.body) + '</p>' : '') + (rows || c.body ? '<div class="r-rule"></div>' : '') +
+        '<div class="r-bar"></div>' +
+        (c.signoff ? '<p class="r-sign">' + esc(c.signoff) + '</p>' : '') +
+        '<div class="r-foot"><span>' + esc(ctx.org) + '</span><span>' + esc(D(c, "Contact")) + '</span></div>' +
+      '</div>' +
+    '</div></div>';
+  },
+  ticket: function (c, ctx) {
+    var big = c.kicker || c.headline, block = c.kicker ? c.headline : "", line = rolesLine(c) || c.body;
+    return '<div class="box">' +
+      '<h1 class="t-big hl">' + esc(big) + '</h1>' +
+      '<div class="t-slot"><i></i></div>' +
+      '<div class="t-paper box">' +
+        (c.subhead ? '<p class="t-kick">' + esc(c.subhead) + '</p>' : '') +
+        (block ? '<div class="t-block hl">' + esc(block) + '</div>' : '') +
+        '<div class="t-rule"></div>' +
+        (line ? '<p class="t-line">' + esc(line) + '</p>' : '') +
+        (when(c) ? '<p class="t-date">' + esc(when(c)) + '</p>' : '') +
+        others(c, ["Date", "Time"]).map(function (d) { return '<p class="t-date">' + esc(dText(d)) + '</p>'; }).join("") +
+        '<div class="t-bar"></div>' +
+        (c.signoff ? '<p class="t-sign">' + esc(c.signoff) + '</p>' : '') +
+      '</div>' +
+      '<div class="t-org">' + (ctx.logo ? logo(ctx) : '') + '<span>' + esc(ctx.org) + '</span></div>' +
+    '</div>';
+  },
+  form: function (c, ctx) {
+    var src = c.isQuote ? (c.kicker || "") : c.headline;
+    var words = src.replace(/[“”"]/g, "").split(/\s+/).filter(Boolean);
+    var w1 = words[0] || "", w2 = words.length > 1 ? words.slice(1).join(" ") : "";
+    var intro = c.isQuote ? c.headline : [c.kicker, c.headline].filter(Boolean).join(" — ");
+    var fields = c.details.map(function (d, i) { return '<div class="f-field' + (i === 0 ? ' first' : '') + '">' + (d.label ? '<span class="f-tab">' + esc(d.label) + '</span>' : '') + '<div class="f-val">' + esc(d.value) + '</div></div>'; })
+      .concat(c.people.map(function (p) { return '<div class="f-field"><span class="f-tab">' + esc(p.role) + '</span><div class="f-val">' + esc(p.name) + '</div></div>'; })).join("");
+    var script1 = c.isQuote ? "" : (c.kicker || "");
+    var script2 = (c.isQuote ? c.signoff : c.signoff.replace(/^—\s*/, ""));
+    return (w1 ? '<div class="f-giant f-top" data-giant="' + esc(w1) + '">' + esc(w1) + '</div>' : '') +
+      (w2 ? '<div class="f-giant f-bot" data-giant="' + esc(w2) + '">' + esc(w2) + '</div>' : '') +
+      (script1 ? '<div class="f-script f-s1">' + esc(script1) + '</div>' : '') +
+      '<div class="f-card box">' +
+        '<p class="f-intro hl">' + esc(intro) + '</p>' +
+        (c.subhead ? '<p class="f-subline">' + esc(c.subhead) + '</p>' : '') +
+        fields +
+        (c.body ? '<p class="f-body">' + esc(c.body) + '</p>' : '') +
+        (c.signoff && script2.length >= 22 ? '<p class="f-foot">' + esc(c.signoff) + '</p>' : '<p class="f-foot"></p>') +
+      '</div>' +
+      (script2 && script2.length < 22 ? '<div class="f-script f-s2">' + esc(script2) + '</div>' : '') +
+      '<div class="f-logo">' + logo(ctx) + '</div>';
+  },
+  editorial: function (c, ctx) {
+    var meta = others(c, ["Date"]).map(function (d) { return d.value; });
+    return '<div class="e-frame"><div class="e-panel box">' +
+      '<div class="e-a">' +
+        (c.kicker ? '<p class="e-kick">' + esc(c.kicker) + '</p>' : '') +
+        '<h1 class="hl">' + esc(c.headline) + '</h1>' +
+        (c.subhead ? '<p class="e-sub">' + esc(c.subhead) + '</p>' : '') +
+      '</div>' +
+      '<div class="e-b">' +
+        (c.body ? '<p class="e-body">' + esc(c.body) + '</p>' : '') +
+        (c.people.length ? '<p class="e-body">' + esc(rolesLine(c)) + '</p>' : '') +
+        (D(c, "Date") ? '<p class="e-date">' + esc(D(c, "Date")) + '</p>' : '') +
+        (meta.length ? '<p class="e-meta">' + esc(meta.join(" · ")) + '</p>' : '') +
+        (c.signoff ? '<p class="e-meta">' + esc(c.signoff) + '</p>' : '') +
+      '</div>' +
+    '</div></div>' +
+    '<div class="e-org">' + (ctx.logo ? logo(ctx) : '') + '<span>' + esc(ctx.org) + '</span></div>';
+  },
+  note: function (c, ctx) {
+    var words = c.headline.split(/\s+/).filter(Boolean), head;
+    if (c.isQuote || words.length < 2) head = '<b>' + esc(c.headline) + '</b>';
+    else head = '<b>' + esc(words.slice(0, -1).join(" ")) + '</b> <em>' + esc(words[words.length - 1].toLowerCase()) + '</em>';
+    return '<div class="n-stage"><div class="n-wrap">' +
+      '<div class="n-pin"><i class="h"></i><i class="n"></i></div>' +
+      '<div class="n-note box">' +
+        '<div class="n-a">' +
+          '<h1 class="hl">' + head + '</h1>' +
+          (c.kicker && !c.isQuote ? '<p class="n-kick">' + esc(c.kicker) + '</p>' : '') +
+          (c.subhead ? '<p class="n-kick">' + esc(c.subhead) + '</p>' : '') +
+          (c.body ? '<p class="n-body">' + esc(c.body) + '</p>' : '') +
         '</div>' +
-        '<div class="foot">' +
-          '<div><p class="p-date">' + esc(s.date_line) + '</p><p class="p-small">' + esc(s.time_venue) + '</p></div>' +
-          '<p class="p-cta">' + esc(s.cta) + '</p>' +
-        '</div>';
-    },
-    announcement: function (s, kit) {
-      return '<div class="band">' + logoBlock(kit) + '<span class="pill">' + esc(s.eyebrow) + '</span></div>' +
-        '<div class="body"><h1 class="p-title">' + esc(s.headline) + '</h1><p class="p-body">' + esc(s.body) + '</p></div>' +
-        '<div class="foot"><p class="p-date">' + esc(s.date_line) + '</p><p class="p-small">' + esc(s.cta) + '</p></div>';
-    },
-    quote_card: function (s, kit) {
-      return '<div class="body"><div class="mark" aria-hidden="true">“</div>' +
-        '<p class="p-quote">' + esc(s.quote) + '</p><p class="p-ref">' + esc(s.reference) + '</p></div>' +
-        '<div class="foot">' + logoBlock(kit) + '<p class="p-small">' + esc(s.footer) + '</p></div>';
-    }
+        '<div class="n-b">' +
+          '<div class="n-details">' +
+            c.details.map(function (d) { return '<p>' + esc(dText(d)) + '</p>'; }).join("") +
+            c.people.map(function (p) { return '<p>' + esc(p.role + ": " + p.name) + '</p>'; }).join("") +
+          '</div>' +
+          (c.signoff || (c.isQuote && c.kicker) ? '<p class="n-sign">' + esc(c.signoff || c.kicker) + '</p>' : '') +
+        '</div>' +
+      '</div>' +
+    '</div></div>' +
+    '<div class="n-logo">' + logo(ctx) + '</div>';
+  },
+  sticker: function (c, ctx) {
+    var withLine = c.people.length ? "with " + namesLine(c) : c.subhead;
+    var left = [D(c, "Date"), D(c, "Venue") ? "at " + D(c, "Venue") : ""];
+    var right = [D(c, "Time")].concat(others(c, ["Date", "Venue", "Time"]).map(function (d) { return d.value; }));
+    return '<div class="box">' +
+      '<div class="s-top">' + logo(ctx) + '<span>' + esc(c.signoff) + '</span></div>' +
+      '<p class="s-kick">' + esc(c.kicker) + '</p>' +
+      '<h1 class="hl"><span>' + esc(c.headline) + '</span></h1>' +
+      (withLine ? '<p class="s-with"><span>' + esc(withLine) + '</span></p>' : '') +
+      '<div class="s-details"><p>' + lines(left) + '</p><p class="r">' + lines(right) + '</p></div>' +
+      (c.body ? '<p class="s-body">' + esc(c.body) + '</p>' : '') +
+    '</div>';
+  },
+  billboard: function (c, ctx) {
+    var details = [c.subhead, D(c, "Date"), D(c, "Time"), D(c, "Venue")].concat(others(c, ["Date", "Time", "Venue"]).map(dText))
+      .concat(c.people.map(function (p) { return p.role + ": " + p.name; })).filter(Boolean);
+    return '<div class="bb-rail"></div><div class="bb-post"></div><div class="bb-feet"></div>' +
+      '<div class="bb-board box">' +
+        '<svg class="bb-star" viewBox="0 0 40 40" aria-hidden="true"><g stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M20 3v34M3 20h34M8 8l24 24M32 8L8 32"/></g></svg>' +
+        (c.signoff || c.kicker ? '<p class="bb-hand">' + esc(c.signoff || c.kicker) + '</p>' : '') +
+        '<h1 class="hl">' + esc(c.headline) + '</h1>' +
+        (c.body ? '<p class="bb-details">' + esc(c.body) + '</p>' : '') +
+        (details.length ? '<p class="bb-details">' + esc(details.join("  ·  ")) + '</p>' : '') +
+      '</div>' +
+      '<div class="bb-logo">' + logo(ctx) + '</div>';
+  },
+  block: function (c, ctx) {
+    var left = [D(c, "Venue"), D(c, "Contact")].concat(others(c, ["Date", "Time", "Venue", "Contact"]).map(dText));
+    var right = [D(c, "Date"), D(c, "Time")];
+    var block = [c.subhead, c.body].filter(Boolean).join(" — ") || c.kicker;
+    var topLabel = c.kicker && block !== c.kicker ? c.kicker : ctx.org;
+    return '<div class="pb-frame"><div class="pb-card box">' +
+      '<div class="pb-top"><span>' + esc(topLabel) + '<span class="arrow">→</span></span>' + logo(ctx) + '</div>' +
+      '<div class="pb-head"><h1 class="hl">' + esc(c.headline) + '</h1>' + (c.people.length ? '<div class="pb-oval">' + esc(rolesLine(c)) + '</div>' : '') + '</div>' +
+      '<div class="pb-block">' + (block ? '[ ' + esc(block) + ' ]' : '') + '</div>' +
+      '<div class="pb-foot"><div>' + lines(left) + '</div><div class="r">' + lines(right.concat([c.signoff])) + '</div></div>' +
+    '</div></div>';
+  }
+};
+
+/* =====================================================================
+   POSTER RENDER + FIT
+   ===================================================================== */
+function renderPoster(el, style, size, content, ctx, palette, grain) {
+  var vars = posterVars(palette), css = "width:" + size.w + "px;height:" + size.h + "px;";
+  Object.keys(vars).forEach(function (k) { css += k + ":" + vars[k] + ";"; });
+  var keep = el.style.transform;
+  el.className = "poster";
+  el.setAttribute("style", css + (keep ? "transform:" + keep + ";" : ""));
+  el.innerHTML = '<div class="tpl st-' + style + ' ' + size.cls + (content.isQuote ? ' is-quote' : '') + '">' + RENDER[style](content, ctx) + (grain ? '<div class="grain"></div>' : '') + '</div>';
+  fitPoster(el.firstChild, size);
+}
+function fitPoster(tpl, size) {
+  $$("[data-giant]", tpl).forEach(function (g) {
+    var len = Math.max(3, g.getAttribute("data-giant").length), avail = size.key === "banner" ? 128 : 104;
+    g.style.fontSize = Math.min(size.key === "banner" ? 44 : 36, avail / (len * .5)) + "cqmin";
+  });
+  var boxes = $$(".box", tpl), hls = $$(".hl", tpl), hs = 1, ts = 1, n = 0;
+  /* Layout offsets ignore transforms, so rotated cards measure true. Text must stay clear of the bottom padding. */
+  function spills(b) {
+    if (b.scrollWidth > b.clientWidth + 2 || b.scrollHeight > b.clientHeight + 2) return true;
+    var limit = b.clientHeight - parseFloat(getComputedStyle(b).paddingBottom) + 1, kids = b.children;
+    for (var k = 0; k < kids.length; k++) { var el = kids[k]; if (el.offsetParent === b && el.offsetTop + el.offsetHeight > limit) return true; }
+    return false;
+  }
+  function over() {
+    for (var i = 0; i < boxes.length; i++) if (spills(boxes[i])) return true;
+    for (var j = 0; j < hls.length; j++) { if (hls[j].scrollWidth > hls[j].clientWidth + 2) return true; }
+    return false;
+  }
+  tpl.style.setProperty("--hs", 1); tpl.style.setProperty("--ts", 1);
+  while (over() && n < 45) {
+    if (hs > .42) hs *= .93; else ts *= .93;
+    tpl.style.setProperty("--hs", hs.toFixed(3)); tpl.style.setProperty("--ts", ts.toFixed(3)); n++;
+  }
+}
+function scaleInto(frame, poster, size, maxW, maxH) {
+  var s = Math.min(maxW / size.w, maxH / size.h);
+  frame.style.width = Math.round(size.w * s) + "px"; frame.style.height = Math.round(size.h * s) + "px";
+  poster.style.transform = "scale(" + s + ")";
+}
+
+/* Downloads: the image library can't read the Google Fonts stylesheet from
+   a local file, so fetch the poster fonts once and embed them (Latin subset). */
+var POSTER_FONTS_URL = "https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Anton&family=Space+Mono:wght@400;700&family=Yellowtail&family=Mrs+Saint+Delafield&family=Instrument+Serif&family=Inter+Tight:wght@500..800&family=Caveat:wght@600;700&display=swap";
+var fontEmbed = null;
+function getFontEmbedCSS() {
+  if (fontEmbed) return fontEmbed;
+  fontEmbed = fetch(POSTER_FONTS_URL).then(function (r) { return r.text(); }).then(function (css) {
+    var blocks = css.split(/(?=\/\*)/).filter(function (b) { return /^\/\* latin \*\//.test(b); });
+    return Promise.all(blocks.map(function (b) {
+      var m = b.match(/url\((https:[^)]+)\)/); if (!m) return b;
+      return fetch(m[1]).then(function (r) { return r.blob(); }).then(function (blob) {
+        return new Promise(function (res) { var fr = new FileReader(); fr.onload = function () { res(b.replace(m[1], fr.result)); }; fr.readAsDataURL(blob); });
+      });
+    })).then(function (a) { return a.join("\n"); });
+  }).catch(function () { fontEmbed = null; return ""; });
+  return fontEmbed;
+}
+function toPng(node, size) {
+  return getFontEmbedCSS().then(function (css) {
+    var opts = { width: size.w, height: size.h, pixelRatio: 1, style: { transform: "none" } };
+    if (css) opts.fontEmbedCSS = css;
+    return htmlToImage.toPng(node, opts);
+  });
+}
+
+/* =====================================================================
+   STATE + HELPERS
+   ===================================================================== */
+function freshState() {
+  return {
+    view: "onboarding", step: 0,
+    org: { name: "", type: "", typeOther: "", structure: "" }, types: [], requests: [], styles: [],
+    logo: null, palette: buildPalette(DEFAULT_PALETTE.primary, DEFAULT_PALETTE.accent), paletteSource: "default", grain: true,
+    type: null, fields: {}, generated: false, options: [], opt: 0, size: 0, logoStepDone: false, chatStarted: false
   };
-  var TEMPLATE_CLASS = { event_flyer: "t-event", announcement: "t-announce", quote_card: "t-quote" };
+}
+var state = freshState();
+var app = document.getElementById("app"), fileInput = document.getElementById("logo-file");
+function $(sel, root) { return (root || document).querySelector(sel); }
+function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function h(html) { var t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; }
+function ctx() { return { org: state.org.name || "Your organisation", logo: state.logo }; }
+function reduced() { return !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches); }
+function debounce(fn, ms) { var t; return function () { var a = arguments, s = this; clearTimeout(t); t = setTimeout(function () { fn.apply(s, a); }, ms); }; }
+function fieldLabel(k) { var f = TYPES[state.type].fields.filter(function (x) { return x.k === k; })[0]; return f ? f.label : k; }
 
-  function kitStyle(kit) {
-    var c = kit.colours, o = kit.on, f = kit.fonts;
-    return "--k-primary:" + c.primary + ";--k-secondary:" + c.secondary + ";--k-accent:" + c.accent +
-      ";--k-text:" + c.text + ";--k-bg:" + c.bg + ";--k-on-primary:" + o.primary + ";--k-on-secondary:" + o.secondary +
-      ";--k-on-accent:" + o.accent + ";--k-head:'" + f.heading + "', Impact, sans-serif;--k-body:'" + f.body +
-      "', Arial, sans-serif;--k-quote:'" + f.quote + "', Georgia, serif;--k-head-case:" + kit.headCase + ";--k-head-track:" + kit.headTrack + ";";
-  }
+/* =====================================================================
+   ONBOARDING
+   ===================================================================== */
+var OB_STEPS = 4;
+function renderOnboarding() {
+  state.view = "onboarding";
+  app.innerHTML =
+    '<div class="onboarding">' +
+      '<div class="ob-top"><p class="wordmark">deloo<span class="dot">.</span></p>' +
+        (state.step ? '<div class="ob-progress"><span>Step ' + state.step + ' of ' + OB_STEPS + '</span><div class="ob-bar"><i style="width:' + (state.step / OB_STEPS * 100) + '%"></i></div></div>' : '') + '</div>' +
+      '<main class="ob-main" id="ob-main"></main>' +
+    '</div>';
+  var main = $("#ob-main");
+  [obWelcome, obOrg, obStructure, obTypes, obStyles][state.step](main);
+  var h1 = $("h1", main); if (h1) { h1.setAttribute("tabindex", "-1"); h1.focus({ preventScroll: true }); }
+}
+function obGo(step) { state.step = step; renderOnboarding(); window.scrollTo(0, 0); }
+function obActions(back, next, id) {
+  return '<div class="ob-actions">' + (back != null ? '<button type="button" class="btn btn-quiet" data-back="' + back + '">Back</button>' : '') +
+    '<span class="spacer"></span><button type="submit" class="btn" id="' + (id || "ob-next") + '">' + next + '</button></div>';
+}
+function bindBack(root) { $$("[data-back]", root).forEach(function (b) { b.addEventListener("click", function () { obGo(+b.dataset.back); }); }); }
 
-  /* =========================================================
-     STATE + UI
-     ========================================================= */
-  var state = { kitId: "grace", category: "event_flyer", variant: "bold", slots: null, busy: false };
-  var $ = function (id) { return document.getElementById(id); };
-  var kitSelect = $("kit-select"), briefEl = $("brief"), countEl = $("brief-count"), statusEl = $("stage-status");
-  var previewsEl = $("previews"), editorEl = $("slot-editor"), genBtn = $("generate");
-
-  Object.keys(BRAND_KITS).forEach(function (id) {
-    var o = document.createElement("option");
-    o.value = id; o.textContent = BRAND_KITS[id].name + " (test)";
-    kitSelect.appendChild(o);
+function obWelcome(main) {
+  main.innerHTML =
+    '<section class="ob-step">' +
+      '<p class="ob-kicker">Welcome to Deloo</p>' +
+      '<h1>A designer and a brand guardian for your organisation.</h1>' +
+      '<p class="ob-lead">Answer four quick questions so Deloo learns how you work. It takes about a minute. Then you\'ll describe your first design and watch it come together.</p>' +
+      '<div class="ob-actions"><button type="button" class="btn btn-generate" id="ob-start">Get started</button>' +
+      '<button type="button" class="btn btn-quiet" id="ob-demo">Skip to a ready-made demo</button></div>' +
+      '<p class="hint">Prototype: everything stays in this browser tab. The AI is mocked, so no API key is used.</p>' +
+    '</section>';
+  $("#ob-start").addEventListener("click", function () { obGo(1); });
+  $("#ob-demo").addEventListener("click", function () { loadDemo(); });
+}
+function obOrg(main) {
+  var o = state.org;
+  main.innerHTML =
+    '<form class="ob-step" novalidate>' +
+      '<p class="ob-kicker">About you</p>' +
+      '<h1>What\'s your organisation called?</h1>' +
+      '<div class="field"><label class="field-label" for="org-name">Organisation name</label>' +
+        '<input class="control" id="org-name" autocomplete="organization" placeholder="e.g. Grace Harbour Chapel" value="' + esc(o.name) + '" aria-describedby="org-name-err">' +
+        '<p class="error" id="org-name-err" hidden>Add your organisation\'s name. It goes on your designs.</p></div>' +
+      '<p class="subhead" id="org-type-label">What kind of organisation is it?</p>' +
+      '<div class="choice-grid" role="radiogroup" aria-labelledby="org-type-label">' +
+        ORG_TYPES.map(function (t) { return '<button type="button" role="radio" class="choice" data-type="' + t.key + '" aria-checked="' + (o.type === t.key) + '"><span class="tick">✓</span><span class="c-title">' + t.label + '</span></button>'; }).join("") +
+      '</div>' +
+      '<div class="field" id="org-other-wrap"' + (o.type === "other" ? "" : " hidden") + '><label class="field-label" for="org-other">Tell us what kind</label><input class="control" id="org-other" value="' + esc(o.typeOther) + '" placeholder="e.g. Sports club"></div>' +
+      '<p class="error" id="org-type-err" hidden>Choose the closest match, or pick "Something else".</p>' +
+      obActions(0, "Continue") +
+    '</form>';
+  $$(".choice", main).forEach(function (b) {
+    b.addEventListener("click", function () {
+      o.type = b.dataset.type; $$(".choice", main).forEach(function (x) { x.setAttribute("aria-checked", String(x === b)); });
+      $("#org-other-wrap").hidden = o.type !== "other"; $("#org-type-err").hidden = true;
+      if (o.type === "other") $("#org-other").focus();
+    });
   });
-
-  function renderKitSummary() {
-    var k = BRAND_KITS[state.kitId];
-    $("kit-summary").innerHTML =
-      '<img src="' + k.logo + '" alt="' + esc(k.name) + ' logo (test)">' +
-      '<div><div class="kit-name">' + esc(k.name) + '</div>' +
-      '<div class="kit-fonts">' + esc(k.fonts.heading) + ' / ' + esc(k.fonts.body) + '</div>' +
-      '<div class="kit-swatches" aria-label="Brand colours">' +
-        ["primary", "secondary", "accent", "text", "bg"].map(function (n) { return '<span title="' + n + ' ' + k.colours[n] + '" style="background:' + k.colours[n] + '"></span>'; }).join("") +
-      '</div></div>';
-  }
-
-  /* Build preview cards once; posters are re-rendered in place. */
-  var frames = {};
-  SIZES.forEach(function (sz) {
-    var card = document.createElement("article");
-    card.className = "preview" + (sz.wide ? " wide" : "");
-    card.innerHTML =
-      '<div class="preview-head"><div><div class="preview-name">' + sz.name + '</div>' +
-      '<div class="preview-dims">' + sz.w + ' × ' + sz.h + ' px' + (sz.note ? ' · ' + sz.note : '') + '</div></div>' +
-      '<button type="button" class="btn btn-secondary btn-sm" data-download="' + sz.key + '">Download PNG</button></div>' +
-      '<div class="frame"><div class="poster" style="width:' + sz.w + 'px;height:' + sz.h + 'px"></div></div>';
-    previewsEl.appendChild(card);
-    frames[sz.key] = { frame: card.querySelector(".frame"), poster: card.querySelector(".poster"), size: sz };
+  bindBack(main);
+  $("form", main).addEventListener("submit", function (e) {
+    e.preventDefault();
+    o.name = $("#org-name").value.trim(); o.typeOther = $("#org-other").value.trim();
+    var ok = true;
+    $("#org-name").setAttribute("aria-invalid", String(!o.name)); $("#org-name-err").hidden = !!o.name;
+    if (!o.type) { $("#org-type-err").hidden = false; ok = false; }
+    if (!o.name) { ok = false; $("#org-name").focus(); }
+    if (ok) obGo(2);
   });
+}
+function obStructure(main) {
+  var o = state.org;
+  main.innerHTML =
+    '<form class="ob-step" novalidate>' +
+      '<p class="ob-kicker">How you\'re set up</p>' +
+      '<h1>Does ' + esc(o.name) + ' have branches or departments?</h1>' +
+      '<p class="ob-lead">If it does, HQ sets the brand once, and each branch or department makes its own designs without breaking it.</p>' +
+      '<div class="choice-grid" role="radiogroup" aria-label="How you\'re set up">' +
+        STRUCTURES.map(function (s) { return '<button type="button" role="radio" class="choice" data-s="' + s.key + '" aria-checked="' + (o.structure === s.key) + '"><span class="tick">✓</span><span class="c-title">' + s.label + '</span><span class="c-desc">' + s.desc + '</span></button>'; }).join("") +
+      '</div>' +
+      '<p class="error" id="st-err" hidden>Choose one. You can change it later.</p>' +
+      obActions(1, "Continue") +
+    '</form>';
+  $$(".choice", main).forEach(function (b) { b.addEventListener("click", function () { o.structure = b.dataset.s; $$(".choice", main).forEach(function (x) { x.setAttribute("aria-checked", String(x === b)); }); $("#st-err").hidden = true; }); });
+  bindBack(main);
+  $("form", main).addEventListener("submit", function (e) { e.preventDefault(); if (!o.structure) { $("#st-err").hidden = false; return; } obGo(3); });
+}
+function obTypes(main) {
+  main.innerHTML =
+    '<form class="ob-step wide" novalidate>' +
+      '<p class="ob-kicker">What you make</p>' +
+      '<h1>What would you like to make?</h1>' +
+      '<p class="ob-lead">Pick everything that fits. More types are on the way. If yours isn\'t listed, tell us under "Something else".</p>' +
+      '<p class="subhead">Available now</p>' +
+      '<div class="choice-grid">' + TYPE_ORDER.map(function (k) { return '<button type="button" class="choice" data-t="' + k + '" aria-pressed="' + (state.types.indexOf(k) > -1) + '"><span class="tick">✓</span><span class="c-title">' + TYPES[k].label + '</span><span class="c-desc">' + TYPES[k].desc + '</span></button>'; }).join("") + '</div>' +
+      '<p class="subhead">Coming soon</p>' +
+      '<div class="choice-grid">' +
+        COMING_SOON.map(function (t) { return '<div class="choice soon" aria-disabled="true"><span class="c-title">' + t.label + '</span>' + (t.desc ? '<span class="c-desc">' + t.desc + '</span>' : '') + '<span class="tag">Coming soon</span></div>'; }).join("") +
+        '<button type="button" class="choice" id="req-open" aria-expanded="false" aria-controls="req-box"><span class="c-title">Something else</span><span class="c-desc">Tell us what you need.</span></button>' +
+      '</div>' +
+      '<div class="request-box" id="req-box" hidden>' +
+        '<div class="field"><label class="field-label" for="req-name">What do you want to make?</label><input class="control" id="req-name" placeholder="e.g. Church bulletin, sports fixtures, menu" aria-describedby="req-err"></div>' +
+        '<div class="field"><label class="field-label" for="req-desc">Anything we should know? <span class="opt">optional</span></label><textarea class="control" id="req-desc" placeholder="Where it gets shared, how often, what it must include…"></textarea></div>' +
+        '<p class="error" id="req-err" hidden>Name the design you need.</p>' +
+        '<div class="ob-actions"><button type="button" class="btn btn-secondary" id="req-add">Send request</button></div>' +
+      '</div>' +
+      '<div class="request-list" id="req-list" aria-live="polite"></div>' +
+      '<p class="error" id="types-err" hidden>Pick at least one type you can make today. Your requests are saved for later.</p>' +
+      obActions(2, "Continue") +
+    '</form>';
+  function drawRequests() { $("#req-list").innerHTML = state.requests.map(function (r) { return '<span class="tag req">Requested · ' + esc(r.name) + '</span>'; }).join(""); }
+  drawRequests();
+  $$("[data-t]", main).forEach(function (b) {
+    b.addEventListener("click", function () {
+      var k = b.dataset.t, i = state.types.indexOf(k);
+      if (i > -1) state.types.splice(i, 1); else state.types.push(k);
+      b.setAttribute("aria-pressed", String(i < 0)); $("#types-err").hidden = true;
+    });
+  });
+  $("#req-open").addEventListener("click", function () { var box = $("#req-box"); box.hidden = !box.hidden; this.setAttribute("aria-expanded", String(!box.hidden)); if (!box.hidden) $("#req-name").focus(); });
+  $("#req-add").addEventListener("click", function () {
+    var name = $("#req-name").value.trim();
+    if (!name) { $("#req-err").hidden = false; $("#req-name").setAttribute("aria-invalid", "true"); $("#req-name").focus(); return; }
+    state.requests.push({ name: name, desc: $("#req-desc").value.trim() });
+    $("#req-name").value = ""; $("#req-desc").value = ""; $("#req-err").hidden = true; $("#req-name").removeAttribute("aria-invalid");
+    drawRequests();
+  });
+  bindBack(main);
+  $("form", main).addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!state.types.length) { $("#types-err").hidden = false; return; }
+    state.types.sort(function (a, b) { return TYPE_ORDER.indexOf(a) - TYPE_ORDER.indexOf(b); });
+    obGo(4);
+  });
+}
+function obStyles(main) {
+  main.innerHTML =
+    '<form class="ob-step wide" novalidate>' +
+      '<p class="ob-kicker">Your look · last step</p>' +
+      '<h1>Which designs feel like ' + esc(state.org.name) + '?</h1>' +
+      '<p class="ob-lead">These samples use the types you picked. Choose your favourites and Deloo leads with them. Once you add your logo, every style switches to your brand colours.</p>' +
+      '<div class="style-grid" id="style-grid"></div>' +
+      '<p class="error" id="styles-err" hidden>Pick at least one style. You can try the others any time.</p>' +
+      obActions(3, "Finish setup", "ob-finish") +
+    '</form>';
+  var grid = $("#style-grid"), size = SIZES[0];
+  STYLE_ORDER.forEach(function (sk, i) {
+    var type = state.types[i % state.types.length];
+    var card = h('<button type="button" class="choice style-card" data-s="' + sk + '" aria-pressed="' + (state.styles.indexOf(sk) > -1) + '">' +
+      '<span class="tick">✓</span><div class="thumb"><div class="frame" style="box-shadow:none"><div class="poster"></div></div></div>' +
+      '<span class="c-title">' + STYLES[sk].name + '<small>' + TYPES[type].label + '</small></span><span class="c-desc">' + STYLES[sk].desc + '</span></button>');
+    grid.appendChild(card);
+    var poster = $(".poster", card), frame = $(".frame", card);
+    renderPoster(poster, sk, size, toContent(type, SAMPLES[type], state.org.name), { org: state.org.name, logo: null }, state.palette, state.grain);
+    var w = (card.clientWidth || 220) - 22; scaleInto(frame, poster, size, w, w);
+    card.addEventListener("click", function () {
+      var idx = state.styles.indexOf(sk);
+      if (idx > -1) state.styles.splice(idx, 1); else state.styles.push(sk);
+      card.setAttribute("aria-pressed", String(idx < 0)); $("#styles-err").hidden = true;
+    });
+  });
+  bindBack(main);
+  $("form", main).addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!state.styles.length) { $("#styles-err").hidden = false; return; }
+    main.innerHTML = '<div class="setup-screen"><span class="spinner" style="width:22px;height:22px"></span><h1 tabindex="-1" style="font:500 24px var(--font-display);margin:0">Setting up your studio…</h1><p>Loading ' + state.types.length + ' design type' + (state.types.length > 1 ? 's' : '') + ' and ' + state.styles.length + ' style' + (state.styles.length > 1 ? 's' : '') + '.</p></div>';
+    $("h1", main).focus();
+    setTimeout(renderDashboard, reduced() ? 200 : 1100);
+  });
+}
 
-  function fitFrames() {
+/* =====================================================================
+   DASHBOARD
+   ===================================================================== */
+var resizeBound = false;
+function renderDashboard() {
+  state.view = "dashboard";
+  app.innerHTML =
+    '<div class="dash">' +
+      '<header class="topbar">' +
+        '<div class="left"><p class="wordmark">deloo<span class="dot">.</span></p><span class="org">' + esc(state.org.name) + ' · ' + esc(orgTypeLabel()) + '</span></div>' +
+        '<div class="right"><span class="badge warm">Mock AI · no API key</span>' +
+          '<details class="proto-menu"><summary class="btn btn-secondary btn-sm">Prototype controls</summary><div class="menu"><small>Prototype only</small>' +
+            '<button type="button" data-proto="restart">Restart onboarding</button>' +
+            '<button type="button" data-proto="demo">Load the demo organisation</button>' +
+            '<button type="button" data-proto="gallery">Open the style gallery</button>' +
+          '</div></details></div>' +
+      '</header>' +
+      '<div class="workspace">' +
+        '<aside class="rail" aria-label="Your brand">' +
+          '<section><div class="sec-head"><h2>Your brand</h2><span>set by HQ</span></div>' +
+            '<div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Add or replace your logo"><span id="logo-preview">' + logoPreviewHtml() + '</span></div>' +
+            '<p class="hint">Stays in this browser tab. Deloo never redraws or recolours your logo.</p></section>' +
+          '<section><div class="sec-head"><h2 style="font-size:14px">Colours</h2><span id="pal-src">' + paletteSourceLabel() + '</span></div>' +
+            '<div class="swatches" id="swatches"></div><div class="presets" id="presets" aria-label="Colour presets"></div>' +
+            '<button type="button" class="btn btn-secondary btn-sm" id="match-logo"' + (state.logo ? '' : ' hidden') + '>Match my logo again</button></section>' +
+          '<section><div class="sec-head"><h2 style="font-size:14px">Finish</h2></div>' +
+            '<label class="switch"><input type="checkbox" id="grain-toggle"' + (state.grain ? ' checked' : '') + '><span class="track"></span>Paper grain texture</label></section>' +
+          '<p class="locked-note"><span aria-hidden="true">🔒</span><span>Branch volunteers design with these but can\'t change them. That keeps every design on-brand.</span></p>' +
+        '</aside>' +
+        '<section class="canvas" aria-labelledby="canvas-h"><div class="canvas-head" id="canvas-head"></div><div class="artboard" id="artboard"></div><div class="canvas-foot" id="canvas-foot"></div></section>' +
+        '<aside class="chat" aria-label="Chat with Deloo">' +
+          '<div class="chat-head"><h2>Deloo</h2><span class="badge">Mock AI</span></div>' +
+          '<div class="chat-log" id="chat-log" role="log" aria-live="polite"></div>' +
+          '<form class="composer" id="composer-form"><label class="sr-only" for="composer">Message Deloo</label>' +
+            '<textarea class="control" id="composer" rows="1" placeholder="Describe it, or ask for a change"></textarea>' +
+            '<button class="btn" type="submit">Send</button><p class="hint">Enter to send · Shift+Enter for a new line</p></form>' +
+        '</aside>' +
+      '</div>' +
+    '</div>';
+  bindDashboard(); drawSwatches(); drawPresets(); drawCanvas();
+  if (!state.chatStarted) startChat();
+}
+function orgTypeLabel() { if (state.org.type === "other") return state.org.typeOther || "Organisation"; var t = ORG_TYPES.filter(function (x) { return x.key === state.org.type; })[0]; return t ? t.label : ""; }
+function logoPreviewHtml() { return state.logo ? '<img src="' + state.logo + '" alt="Your logo"><b>Replace logo</b>' : '<b>Add your logo</b><span>PNG, JPG or SVG. Drag it here or click.</span>'; }
+function paletteSourceLabel() { return { "default": "starter colours", logo: "from your logo", custom: "your choice" }[state.paletteSource]; }
+function bindDashboard() {
+  var dz = $("#dropzone");
+  dz.addEventListener("click", function () { fileInput.click(); });
+  dz.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); } });
+  ["dragenter", "dragover"].forEach(function (ev) { dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.add("drag"); }); });
+  ["dragleave", "drop"].forEach(function (ev) { dz.addEventListener(ev, function (e) { e.preventDefault(); dz.classList.remove("drag"); }); });
+  dz.addEventListener("drop", function (e) { var f = e.dataTransfer.files[0]; if (f) readLogo(f); });
+  $("#grain-toggle").addEventListener("change", function () { state.grain = this.checked; refreshPoster(false); });
+  $("#match-logo").addEventListener("click", function () { if (state.logo) applyLogoPalette(true); });
+  $$("[data-proto]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var a = b.dataset.proto; $(".proto-menu").open = false;
+      if (a === "restart") { state = freshState(); chatQueue = Promise.resolve(); renderOnboarding(); }
+      if (a === "demo") loadDemo();
+      if (a === "gallery") renderGallery();
+    });
+  });
+  var comp = $("#composer");
+  comp.addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#composer-form").requestSubmit(); } });
+  comp.addEventListener("input", function () { comp.style.height = "auto"; comp.style.height = Math.min(140, comp.scrollHeight) + "px"; });
+  $("#composer-form").addEventListener("submit", function (e) {
+    e.preventDefault(); var text = comp.value.trim(); if (!text) return;
+    comp.value = ""; comp.style.height = ""; userSay(text); handleUser(text);
+  });
+  if (!resizeBound) { resizeBound = true; window.addEventListener("resize", debounce(function () { if (state.view === "dashboard") fitCanvas(); }, 120)); }
+}
+fileInput.addEventListener("change", function () { var f = fileInput.files[0]; if (f) readLogo(f); fileInput.value = ""; });
+
+function drawSwatches() {
+  var names = [["primary", "Main"], ["accent", "Accent"], ["paper", "Paper"], ["ink", "Ink"]];
+  $("#swatches").innerHTML = names.map(function (n) { return '<label class="swatch"><input type="color" id="sw-' + n[0] + '" value="' + state.palette[n[0]].toLowerCase() + '">' + n[1] + '</label>'; }).join("");
+  names.forEach(function (n) {
+    $("#sw-" + n[0]).addEventListener("input", debounce(function (e) {
+      var v = e.target.value.toUpperCase();
+      if (n[0] === "primary") state.palette = buildPalette(v, state.palette.accent); else state.palette[n[0]] = v;
+      state.paletteSource = "custom"; $("#pal-src").textContent = paletteSourceLabel();
+      if (n[0] === "primary") { $("#sw-paper").value = state.palette.paper.toLowerCase(); $("#sw-ink").value = state.palette.ink.toLowerCase(); }
+      refreshPoster(false);
+    }, 60));
+  });
+}
+function drawPresets() {
+  $("#presets").innerHTML = PRESETS.map(function (p, i) { return '<button type="button" class="preset" data-i="' + i + '" title="' + p.name + '" aria-label="Use ' + p.name + '"><i style="background:' + p.p + '"></i><i style="background:' + p.a + '"></i></button>'; }).join("");
+  $$(".preset").forEach(function (b) { b.addEventListener("click", function () { var p = PRESETS[+b.dataset.i]; setPalette(p.p, p.a, "custom"); }); });
+}
+function setPalette(primary, accent, source) {
+  state.palette = buildPalette(primary, accent); state.paletteSource = source;
+  if (state.view === "dashboard") { drawSwatches(); $("#pal-src").textContent = paletteSourceLabel(); refreshPoster(false); }
+}
+
+/* ---------- Logo ---------- */
+function readLogo(file) {
+  if (!/^image\//.test(file.type)) { botSay("That file isn't an image. Try a PNG, JPG or SVG of your logo."); return; }
+  var r = new FileReader();
+  r.onload = function () {
+    var first = !state.logo;
+    state.logo = r.result; state.logoStepDone = true;
+    $("#logo-preview").innerHTML = logoPreviewHtml(); $("#match-logo").hidden = false;
+    applyLogoPalette(false, function (found) {
+      if (!state.generated) drawCanvas(); else refreshPoster(true, true);
+      var sw = '<span class="mini-swatches"><i style="background:' + state.palette.primary + '"></i><i style="background:' + state.palette.accent + '"></i></span>';
+      botSay(found ? "Got your logo. I took these colours from it " + sw + " and every design will use them. Adjust them any time under <b>Your brand</b>." :
+        "Got your logo. I couldn't find strong colours in it, so I kept the current colours " + sw + ". Change them under <b>Your brand</b>.",
+        null, function () { if (first && !state.type) askType(); });
+    });
+  };
+  r.readAsDataURL(file);
+}
+function applyLogoPalette(announce, done) {
+  var img = new Image();
+  img.onload = function () {
+    var found = null; try { found = extractColors(img); } catch (e) {}
+    if (found) setPalette(found.primary, found.accent, "logo");
+    if (announce) botSay(found ? "Back to your logo's colours." : "I couldn't find strong colours in your logo.");
+    if (done) done(!!found);
+  };
+  img.onerror = function () { if (done) done(false); };
+  img.src = state.logo;
+}
+
+/* ---------- Canvas ---------- */
+function drawCanvas() {
+  var head = $("#canvas-head"), board = $("#artboard"), foot = $("#canvas-foot");
+  if (!head) return;
+  if (!state.generated) {
+    var step = !state.logoStepDone ? 1 : !state.type ? 2 : 3;
+    head.innerHTML = '<h2 id="canvas-h">Your canvas</h2>';
+    foot.innerHTML = "";
+    board.innerHTML =
+      '<div class="empty-canvas">' +
+        '<div class="blank">' + (state.type ? 'Your ' + esc(TYPES[state.type].label.toLowerCase()) + ' will appear here.' : 'Your design will appear here.') + '</div>' +
+        '<ol class="pointers">' +
+          pointerHtml(1, step, "Add your logo", state.logo ? "Colours matched from your logo." : "Deloo matches your colours to it.",
+            '<button type="button" class="btn btn-secondary btn-sm" id="p-logo">' + (state.logo ? "Replace" : "Add logo") + '</button>' + (!state.logoStepDone ? '<button type="button" class="btn btn-quiet btn-sm" id="p-skip">Skip</button>' : '')) +
+          pointerHtml(2, step, "Choose what you're making", state.type ? TYPES[state.type].label : "Pick one of your types.", "") +
+          pointerHtml(3, step, "Describe it in the chat", "Type it the way you'd text it.", '<span aria-hidden="true">→</span>') +
+        '</ol>' +
+      '</div>';
+    var chips = h('<div class="type-chips">' + state.types.map(function (k) { return '<button type="button" class="chip" data-type="' + k + '" aria-pressed="' + (state.type === k) + '">' + TYPES[k].label + '</button>'; }).join("") + '</div>');
+    $(".pointer:nth-child(2) > div", board).appendChild(chips);
+    $$(".chip", chips).forEach(function (c) { c.addEventListener("click", function () { if (state.type === c.dataset.type) return; userSay(TYPES[c.dataset.type].label); chooseType(c.dataset.type); }); });
+    $("#p-logo").addEventListener("click", function () { fileInput.click(); });
+    if ($("#p-skip")) $("#p-skip").addEventListener("click", function () { userSay("Skip the logo for now"); skipLogo(); });
+    $("#dropzone").classList.toggle("pulse", step === 1);
+    return;
+  }
+  $("#dropzone").classList.remove("pulse");
+  var sz = SIZES[state.size];
+  head.innerHTML =
+    '<h2 id="canvas-h" class="sr-only">Your designs</h2>' +
+    '<div class="tab-rows">' +
+      '<div class="tabs" role="tablist" aria-label="Design options">' + state.options.map(function (s, i) { return '<button type="button" role="tab" class="tab" data-opt="' + i + '" aria-selected="' + (i === state.opt) + '" tabindex="' + (i === state.opt ? 0 : -1) + '">Option ' + (i + 1) + '<small>' + STYLES[s].name + '</small></button>'; }).join("") + '</div>' +
+      '<div class="tabs" role="tablist" aria-label="Sizes">' + SIZES.map(function (s, i) { return '<button type="button" role="tab" class="tab" data-size="' + i + '" aria-selected="' + (i === state.size) + '" tabindex="' + (i === state.size ? 0 : -1) + '">' + s.name + '</button>'; }).join("") + '</div>' +
+    '</div>';
+  board.innerHTML = '<div class="frame" id="canvas-frame" role="img" aria-label="' + esc(STYLES[state.options[state.opt]].name + ", " + sz.long) + '"><div class="poster" id="canvas-poster"></div></div>';
+  foot.innerHTML = '<span class="meta">' + esc(sz.long) + ' · ' + sz.w + ' × ' + sz.h + ' px · ' + esc(fileName()) + '</span>' +
+    '<div class="acts"><button type="button" class="btn btn-secondary btn-sm" id="edit-details">Edit details</button><button type="button" class="btn" id="download">Download PNG</button></div>';
+  bindTabs("[data-opt]", function (i) { state.opt = i; drawCanvas(); refreshPoster(true, true); });
+  bindTabs("[data-size]", function (i) { state.size = i; drawCanvas(); });
+  $("#download").addEventListener("click", download);
+  $("#edit-details").addEventListener("click", function () { showFieldCard("Edit anything here, then update your designs.", "Update designs"); });
+  refreshPoster(false);
+}
+function bindTabs(sel, onPick) {
+  var tabs = $$(sel);
+  tabs.forEach(function (t, i) {
+    t.addEventListener("click", function () { if (t.getAttribute("aria-selected") === "true") return; onPick(i); var again = $$(sel)[i]; if (again) again.focus(); });
+    t.addEventListener("keydown", function (e) {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      e.preventDefault(); var n = (i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length; onPick(n); var again = $$(sel)[n]; if (again) again.focus();
+    });
+  });
+}
+function pointerHtml(n, cur, title, sub, extra) {
+  var cls = n < cur ? "done" : n === cur ? "current" : "";
+  return '<li class="pointer ' + cls + '"><span class="num">' + (n < cur ? "✓" : n) + '</span><div><b>' + title + '</b><span class="sub">' + esc(sub) + '</span></div><span class="dir">' + (extra || "") + '</span></li>';
+}
+function fitCanvas() {
+  var board = $("#artboard"), frame = $("#canvas-frame"), poster = $("#canvas-poster"); if (!frame) return;
+  var maxW = board.clientWidth - 40, maxH = Math.max(320, Math.min(window.innerHeight - 250, 760));
+  scaleInto(frame, poster, SIZES[state.size], maxW, maxH);
+}
+function currentContent() { return toContent(state.type, state.fields[state.type] || {}, state.org.name); }
+function refreshPoster(animate, quick) {
+  if (!state.generated || state.view !== "dashboard") return;
+  var poster = $("#canvas-poster"), frame = $("#canvas-frame"); if (!poster) return;
+  fitCanvas();
+  renderPoster(poster, state.options[state.opt], SIZES[state.size], currentContent(), ctx(), state.palette, state.grain);
+  if (animate) develop(frame, quick);
+}
+function develop(frame, quick, done) {
+  var old = $(".gen-pill"); if (old) old.remove();
+  frame.classList.remove("developing", "quick"); void frame.offsetWidth;
+  frame.classList.add("developing"); if (quick) frame.classList.add("quick");
+  var pill = h('<div class="gen-pill" role="status"><span class="spinner" aria-hidden="true"></span><span class="gen-text">' + (quick ? "Updating…" : "Generating… 0%") + '</span></div>');
+  $("#artboard").appendChild(pill);
+  var dl = $("#download"); if (dl) dl.disabled = true;
+  var dur = reduced() ? 300 : quick ? 700 : 1900, t0 = performance.now();
+  (function tick(now) {
+    var p = Math.min(1, (now - t0) / dur), txt = $(".gen-text", pill);
+    if (!quick && txt) txt.textContent = p < 1 ? "Generating… " + Math.round(p * 100) + "%" : "Done";
+    if (p < 1) requestAnimationFrame(tick);
+    else { pill.remove(); frame.classList.remove("developing", "quick"); var d2 = $("#download"); if (d2) d2.disabled = false; if (done) done(); }
+  })(t0);
+}
+function fileName() { return "deloo-" + (state.type || "design") + "-" + (state.options[state.opt] || "") + "-" + SIZES[state.size].key + ".png"; }
+function download() {
+  var poster = $("#canvas-poster"), btn = $("#download"), sz = SIZES[state.size], name = fileName();
+  if (!window.htmlToImage) { botSay("Downloading needs an internet connection to load the image library. Reconnect, then reload the page."); return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner" aria-hidden="true"></span>Saving…';
+  toPng(poster, sz).then(function (url) {
+    var a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    btn.textContent = "Saved";
+    botSay("Saved <b>" + esc(name) + "</b> to your downloads. It's " + sz.w + " × " + sz.h + " px, sized for " + (sz.key === "a5" ? "your printer" : sz.key === "banner" ? "X or LinkedIn" : "Instagram and WhatsApp") + ".", [
+      { label: "Another size", fn: function () { botSay("Pick a size in the tabs above the canvas, then press Download PNG."); } },
+      { label: "Make something else", fn: askType }
+    ]);
+  }).catch(function () {
+    btn.textContent = "Try again";
+    botSay("I couldn't save that image. Give the fonts a moment to load, then press Download PNG again.");
+  }).then(function () { setTimeout(function () { var b = $("#download"); if (b) { b.disabled = false; b.textContent = "Download PNG"; } }, 1500); });
+}
+
+/* =====================================================================
+   CHAT (mocked and guided)
+   ===================================================================== */
+var chatQueue = Promise.resolve();
+function scrollLog() { var log = $("#chat-log"); if (log) log.scrollTop = log.scrollHeight; }
+function userSay(text) { var log = $("#chat-log"); if (!log) return; log.appendChild(h('<div class="msg user"><div class="bubble">' + esc(text) + '</div></div>')); scrollLog(); }
+function botSay(html, chips, after, widget) {
+  chatQueue = chatQueue.then(function () {
+    return new Promise(function (resolve) {
+      var log = $("#chat-log"); if (!log) { resolve(); return; }
+      var typing = h('<div class="typing" aria-hidden="true"><i></i><i></i><i></i></div>'); log.appendChild(typing); scrollLog();
+      setTimeout(function () {
+        typing.remove();
+        var msg = h('<div class="msg bot"><div class="bubble">' + html + '</div></div>');
+        if (widget) msg.appendChild(widget);
+        if (chips && chips.length) {
+          var row = h('<div class="chips"></div>');
+          chips.forEach(function (c) {
+            var b = h('<button type="button" class="chip">' + esc(c.label) + '</button>');
+            b.addEventListener("click", function () { $$(".chip", row).forEach(function (x) { x.disabled = true; }); b.setAttribute("aria-pressed", "true"); if (!c.silent) userSay(c.label); c.fn(); });
+            row.appendChild(b);
+          });
+          msg.appendChild(row);
+        }
+        log.appendChild(msg); scrollLog();
+        if (after) after(); resolve();
+      }, reduced() ? 60 : 480);
+    });
+  });
+  return chatQueue;
+}
+function startChat() {
+  state.chatStarted = true;
+  botSay("Hi " + esc(state.org.name) + ". I'm your Deloo designer. This preview is a mock that follows a script, but it shows how Deloo works.");
+  botSay("First, add your logo so I can match your colours. Use <b>Your brand</b> on the left, or here:", [
+    { label: "Add my logo", silent: true, fn: function () { fileInput.click(); } },
+    { label: "Skip for now", fn: skipLogo }
+  ]);
+}
+function skipLogo() {
+  state.logoStepDone = true; drawCanvas();
+  botSay("No problem. I'll use starter colours until you add it.", null, askType);
+}
+function askType() {
+  state.logoStepDone = true;
+  if (state.generated) { state.generated = false; state.type = null; }
+  drawCanvas();
+  botSay("What are we making?", state.types.map(function (k) { return { label: TYPES[k].label, fn: function () { chooseType(k); } }; }).concat([{ label: "Something else", fn: somethingElse }]));
+}
+function somethingElse() {
+  var form = h('<form class="card-form" novalidate><div class="field"><label class="field-label" for="se-name">What do you need?</label><input class="control" id="se-name" placeholder="e.g. Church bulletin"></div><button class="btn btn-secondary btn-sm" type="submit">Send request</button></form>');
+  form.addEventListener("submit", function (e) {
+    e.preventDefault(); var inp = $("#se-name", form), v = inp.value.trim();
+    if (!v) { inp.setAttribute("aria-invalid", "true"); inp.focus(); return; }
+    state.requests.push({ name: v, desc: "" }); $("button", form).disabled = true; inp.readOnly = true;
+    botSay("Thanks. I've noted <b>" + esc(v) + "</b> as a request. For now, pick one of your available types.", null, askType);
+  });
+  botSay("That type isn't available yet. Tell me what it is and I'll pass it on:", null, function () { $("#se-name", form).focus(); }, form);
+}
+function chooseType(k) {
+  state.type = k; state.fields[k] = state.fields[k] || {}; state.generated = false; state.logoStepDone = true;
+  drawCanvas();
+  botSay("An <b>" + esc(TYPES[k].label.toLowerCase()) + "</b>. Tell me about it the way you'd text it. For example: <i>" + esc(TYPES[k].example) + "</i>", [
+    { label: "Fill in the details instead", fn: function () { showFieldCard("Fill in what you know. Required details are marked.", "Generate designs"); } },
+    { label: "Use the example", silent: true, fn: function () { var c = $("#composer"); c.value = TYPES[k].example; c.dispatchEvent(new Event("input")); c.focus(); } }
+  ]);
+}
+function handleUser(text) {
+  if (!state.type) {
+    var g = guessType(text);
+    if (state.types.indexOf(g) < 0) state.types.push(g);
+    state.type = g; state.fields[g] = {}; state.logoStepDone = true; drawCanvas();
+    botSay("Sounds like an <b>" + esc(TYPES[g].label.toLowerCase()) + "</b>. Let me read the details.", null, function () { understand(text); });
+    return;
+  }
+  if (!state.generated) { understand(text); return; }
+  command(text);
+}
+function understand(text) {
+  var found = parseBrief(state.type, text), f = state.fields[state.type], got = [];
+  Object.keys(found).forEach(function (k) { if (k !== "_unplaced" && found[k] && TYPES[state.type].fields.some(function (x) { return x.k === k; })) { f[k] = found[k]; got.push(k); } });
+  var extra = found._unplaced && found._unplaced.length ? " I couldn't place <i>" + esc(found._unplaced.join(", ")) + "</i>, so I left it out." : "";
+  showFieldCard("Here's what I understood." + extra + " Check it and fill in anything missing.", state.generated ? "Update designs" : "Generate designs", got);
+}
+function showFieldCard(intro, buttonLabel, foundKeys) {
+  var t = TYPES[state.type], f = state.fields[state.type] || (state.fields[state.type] = {}), stamp = Date.now();
+  var parsed = foundKeys !== undefined; foundKeys = foundKeys || [];
+  var form = h('<form class="card-form" novalidate></form>');
+  t.fields.forEach(function (fd) {
+    var id = "fc-" + fd.k + "-" + stamp, has = !!f[fd.k];
+    var tag = parsed ? (foundKeys.indexOf(fd.k) > -1 ? '<span class="found yes">found</span>' : has ? '' : '<span class="found no">not found</span>') : '';
+    var control = fd.long ? '<textarea class="control" id="' + id + '" data-k="' + fd.k + '" placeholder="' + esc(fd.ph) + '" aria-describedby="' + id + '-e">' + esc(f[fd.k] || "") + '</textarea>'
+      : '<input class="control" id="' + id + '" data-k="' + fd.k + '" placeholder="' + esc(fd.ph) + '" value="' + esc(f[fd.k] || "") + '" aria-describedby="' + id + '-e">';
+    form.appendChild(h('<div class="field"><label class="field-label" for="' + id + '"><span>' + esc(fd.label) + (fd.req ? '' : ' <span class="opt">optional</span>') + '</span>' + tag + '</label>' + control +
+      (fd.hint ? '<p class="hint">' + esc(fd.hint) + '</p>' : '') + '<p class="error" id="' + id + '-e" hidden>' + (fd.k === "date" ? "Add the date so it prints on every size." : "Deloo needs this one.") + '</p></div>'));
+  });
+  var btn = h('<button type="submit" class="btn btn-generate">' + esc(buttonLabel) + '</button>');
+  form.appendChild(btn);
+  form.addEventListener("submit", function (e) {
+    e.preventDefault(); var firstBad = null;
+    $$("[data-k]", form).forEach(function (inp) {
+      var fd = t.fields.filter(function (x) { return x.k === inp.dataset.k; })[0], v = inp.value.trim();
+      f[fd.k] = v;
+      var bad = fd.req && !v; inp.setAttribute("aria-invalid", String(bad)); $(".error", inp.parentNode).hidden = !bad;
+      if (bad && !firstBad) firstBad = inp;
+    });
+    if (firstBad) { firstBad.focus(); return; }
+    btn.disabled = true; $$("input,textarea", form).forEach(function (i) { i.readOnly = true; });
+    userSay(buttonLabel);
+    if (state.generated) { refreshPoster(true, true); botSay("Updated. Every size uses the new details."); }
+    else generate();
+  });
+  botSay(intro, null, function () { var first = $$("[data-k]", form).filter(function (i) { return !i.value; })[0]; if (first) first.focus({ preventScroll: true }); }, form);
+}
+function pickOptions(type) {
+  var out = [];
+  state.styles.concat(RECOMMEND[type], STYLE_ORDER).forEach(function (s) { if (out.indexOf(s) < 0 && out.length < 3) out.push(s); });
+  return out;
+}
+function generate() {
+  state.options = pickOptions(state.type); state.opt = 0; state.size = 0; state.generated = true;
+  botSay("Making 3 options in your colours…", null, function () {
+    drawCanvas();
+    develop($("#canvas-frame"), false, function () {
+      botSay("Your <b>" + esc(currentContent().headline) + "</b> designs are ready: 3 options, each in 4 sizes, in " + esc(state.org.name) + "'s colours. Switch with the tabs above the canvas, then download the one you like.", doneChips());
+    });
+  });
+}
+function doneChips() {
+  return [
+    { label: "Change a detail", fn: function () { showFieldCard("Edit anything here, then update your designs.", "Update designs"); } },
+    { label: "Try another style", fn: styleChips },
+    { label: "Change colours", fn: colourChips },
+    { label: "Make something else", fn: askType }
+  ];
+}
+function styleChips() { botSay("Pick a style for Option " + (state.opt + 1) + ":", STYLE_ORDER.map(function (s) { return { label: STYLES[s].name, fn: function () { setStyle(s); } }; })); }
+function setStyle(s) {
+  var at = state.options.indexOf(s);
+  if (at > -1) state.opt = at; else state.options[state.opt] = s;
+  drawCanvas(); refreshPoster(true, true);
+  botSay("Option " + (state.opt + 1) + " is now <b>" + STYLES[s].name + "</b>.");
+}
+function colourChips() {
+  var chips = PRESETS.map(function (p) { return { label: p.name, fn: function () { setPalette(p.p, p.a, "custom"); botSay("Switched to " + p.name.toLowerCase() + ". The layouts stay the same."); } }; });
+  if (state.logo) chips.unshift({ label: "Match my logo", fn: function () { applyLogoPalette(true); } });
+  botSay("Pick colours, or fine-tune them under <b>Your brand</b>. You can also type something like <i>make it green and gold</i>.", chips);
+}
+
+/* Free-form requests after generating. The mock handles a set of
+   instructions; anything else gets steered back to the fields. */
+var FIELD_WORDS = { date: "date", time: "time", venue: "venue", place: "venue", location: "venue", title: "title", name: "name", theme: "theme", speaker: "speaker", minister: "speaker", host: "host", headline: "headline", message: "message", quote: "quote", verse: "quote", reference: "reference", "dress code": "dress", dress: "dress", rsvp: "rsvp", day: "day", tagline: "tagline", from: "from", contact: "contact", occasion: "occasion", milestone: "milestone", "closing line": "cta" };
+var TITLE_KEY = { event: "title", invite: "occasion", announce: "headline", birthday: "name", service: "headline", thanks: "headline", quote: "quote" };
+function command(text) {
+  var t = text.toLowerCase(), f = state.fields[state.type], keys = TYPES[state.type].fields.map(function (x) { return x.k; }), m;
+  m = text.match(/(?:change|set|make|update|put)\s+(?:the\s+)?([a-z ]+?)\s+(?:to|as|into)\s+(.+)$/i) || text.match(/^(?:the\s+)?([a-z ]+?)\s+(?:is|should be)\s+(.+)$/i);
+  if (m) {
+    var word = m[1].trim().toLowerCase(), key = FIELD_WORDS[word];
+    if ((key === "title" || key === "name" || key === "headline") && keys.indexOf(key) < 0) key = TITLE_KEY[state.type];
+    if (key && keys.indexOf(key) > -1) {
+      var v = m[2].trim().replace(/[.!]$/, "");
+      if (key === "date") v = findDate(v) || v; if (key === "time") v = findTime(v) || v;
+      f[key] = v; refreshPoster(true, true);
+      botSay("Done. " + esc(fieldLabel(key)) + " is now <b>" + esc(v) + "</b>.");
+      return;
+    }
+  }
+  var colours = Object.keys(COLOR_WORDS).filter(function (w) { return new RegExp("\\b" + w + "\\b").test(t); });
+  if (colours.length && /colou?r|make it|use|switch|try|palette|\band\b/.test(t)) {
+    setPalette(COLOR_WORDS[colours[0]], colours[1] ? COLOR_WORDS[colours[1]] : null, "custom");
+    botSay("Switched to " + esc(colours.slice(0, 2).join(" and ")) + ". The layout stays the same; only the colours changed.");
+    return;
+  }
+  if (/logo/.test(t) && /colou?r|match/.test(t)) { if (state.logo) applyLogoPalette(true); else botSay("Add your logo under <b>Your brand</b> first, then I can match it."); return; }
+  if (/grain|texture|noise/.test(t)) {
+    state.grain = !/\b(off|remove|no|without|clean|smooth)\b/.test(t); $("#grain-toggle").checked = state.grain; refreshPoster(false);
+    botSay(state.grain ? "Grain is back on." : "Grain is off. The designs are clean now."); return;
+  }
+  var style = STYLE_ORDER.filter(function (s) { return new RegExp("\\b" + STYLES[s].name.toLowerCase().split(" ")[0] + "\\b").test(t); })[0];
+  if (style) { setStyle(style); return; }
+  if (/another|different|other (style|option|look)|next option/.test(t)) { state.opt = (state.opt + 1) % state.options.length; drawCanvas(); refreshPoster(true, true); botSay("Here's Option " + (state.opt + 1) + ", <b>" + STYLES[state.options[state.opt]].name + "</b>."); return; }
+  var sizeWords = [[/\b(story|stories|status)\b/, 1], [/\b(banner|twitter|linkedin)\b/, 2], [/\b(a5|handbill|print|flyer)\b/, 3], [/\b(post|square|instagram)\b/, 0]];
+  for (var i = 0; i < sizeWords.length; i++) if (sizeWords[i][0].test(t) && /size|show|see|view|switch|want|need|open/.test(t)) { state.size = sizeWords[i][1]; drawCanvas(); botSay("Showing the " + esc(SIZES[state.size].long) + " size."); return; }
+  if (/download|save|export/.test(t)) { download(); return; }
+  if (/\b(new|another) design|something else|start over/.test(t)) { askType(); return; }
+  var found = parseBrief(state.type, text), applied = [];
+  Object.keys(found).forEach(function (k) { if (k !== "_unplaced" && keys.indexOf(k) > -1 && found[k] && k !== TITLE_KEY[state.type]) { f[k] = found[k]; applied.push(fieldLabel(k).toLowerCase() + " → " + found[k]); } });
+  if (applied.length) { refreshPoster(true, true); botSay("Updated " + esc(applied.join(", ")) + "."); return; }
+  botSay("I can't do that one yet in this preview. I can change details, colours, style, size or grain. Try <i>change the date to 5 Oct</i>, <i>make it green and gold</i> or <i>try the receipt style</i>, or use these:", doneChips());
+}
+
+/* =====================================================================
+   DEMO, GALLERY
+   ===================================================================== */
+function testLogo() {
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#1B2A4A"/><circle cx="50" cy="50" r="41" fill="none" stroke="#E8B84A" stroke-width="2"/><text x="50" y="61" text-anchor="middle" font-family="Georgia, serif" font-size="32" font-weight="700" fill="#E8B84A">GH</text></svg>';
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+}
+function loadDemo() {
+  state = freshState(); chatQueue = Promise.resolve();
+  state.org = { name: "Grace Harbour Chapel", type: "church", typeOther: "", structure: "branches" };
+  state.types = ["event", "invite", "quote", "service", "thanks"]; state.styles = ["block", "badge", "ticket"];
+  state.logo = testLogo(); state.logoStepDone = true; state.palette = buildPalette("#1B2A4A", "#E8B84A"); state.paletteSource = "logo";
+  state.type = "event"; state.fields.event = Object.assign({}, SAMPLES.event);
+  state.options = pickOptions("event"); state.generated = true; state.chatStarted = true;
+  renderDashboard();
+  botSay("Demo loaded: <b>Grace Harbour Chapel</b> (test data), with an event flyer already made. Try the tabs, or ask for a change like <i>make it red and cream</i>.", doneChips());
+}
+function renderGallery() {
+  state.view = "gallery";
+  var type = state.type || "event", fields = state.type ? state.fields[type] : SAMPLES[type];
+  var org = state.org.name || "Grace Harbour Chapel", content = toContent(type, fields, org);
+  app.innerHTML = '<div class="gallery"><div class="ob-actions"><p class="wordmark">deloo<span class="dot">.</span></p><span class="badge">Style gallery · ' + esc(TYPES[type].label) + '</span><span class="spacer"></span>' +
+    '<button type="button" class="btn btn-secondary btn-sm" id="g-back">Back to dashboard</button></div><div id="g-rows"></div></div>';
+  $("#g-back").addEventListener("click", function () { renderDashboard(); });
+  var rows = $("#g-rows");
+  STYLE_ORDER.forEach(function (sk) {
+    var sec = h('<section><h2>' + STYLES[sk].name + '</h2><div class="row"></div></section>'); rows.appendChild(sec);
     SIZES.forEach(function (sz) {
-      var f = frames[sz.key], w = f.frame.clientWidth, scale = w / sz.w;
-      f.frame.style.height = Math.round(sz.h * scale) + "px";
-      f.poster.style.transform = "scale(" + scale + ")";
-    });
-  }
-  if (window.ResizeObserver) new ResizeObserver(fitFrames).observe(previewsEl); else window.addEventListener("resize", fitFrames);
-
-  function renderPosters() {
-    if (!state.slots) return;
-    var kit = BRAND_KITS[state.kitId];
-    var tpl = TEMPLATES[state.category];
-    SIZES.forEach(function (sz) {
-      var p = frames[sz.key].poster;
-      p.setAttribute("style", "width:" + sz.w + "px;height:" + sz.h + "px;" + kitStyle(kit) + "transform:" + p.style.transform);
-      p.innerHTML = '<div class="tpl ' + sz.cls + " " + TEMPLATE_CLASS[state.category] + " v-" + state.variant + '">' + tpl(state.slots, kit) + '</div>';
-    });
-    fitFrames();
-  }
-
-  /* Copy editor, built from the current slots */
-  var LABELS = { eyebrow: "Eyebrow", title: "Title", theme: "Theme", date_line: "Date", time_venue: "Time & venue", cta: "Call to action",
-                 headline: "Headline", body: "Message", quote: "Quote / scripture", reference: "Reference", footer: "Footer line" };
-  function renderEditor() {
-    var s = state.slots, html = "";
-    Object.keys(s).forEach(function (key) {
-      if (key === "roles") {
-        html += '<div class="field"><span class="field-label">People</span><div class="roles">';
-        var roles = s.roles.slice(0, 3);
-        while (roles.length < 2) roles.push({ role: "Host", name: "" });
-        s.roles = roles;
-        roles.forEach(function (r, i) {
-          html += '<div class="role-row"><select class="control" id="role-' + i + '" data-role-index="' + i + '" aria-label="Role ' + (i + 1) + '">' +
-            ROLE_OPTIONS.map(function (o) { return '<option' + (o === r.role ? ' selected' : '') + '>' + o + '</option>'; }).join("") +
-            '</select><input class="control" id="role-name-' + i + '" data-role-name="' + i + '" aria-label="Name ' + (i + 1) + '" placeholder="e.g. Pastor, Evang., Chief…" value="' + esc(r.name) + '"></div>';
-        });
-        html += '</div><p class="hint">Keep honorifics as written: Pastor, Evang., Chief, Alhaji, HRM.</p></div>';
-        return;
-      }
-      var long = key === "body" || key === "quote";
-      html += '<div class="field"><label class="field-label" for="slot-' + key + '">' + (LABELS[key] || key) + '</label>' +
-        (long ? '<textarea class="control" id="slot-' + key + '" data-slot="' + key + '">' + esc(s[key]) + '</textarea>'
-              : '<input class="control" id="slot-' + key + '" data-slot="' + key + '" value="' + esc(s[key]) + '">') + '</div>';
-    });
-    editorEl.innerHTML = html;
-  }
-
-  editorEl.addEventListener("input", function (e) {
-    var t = e.target;
-    if (t.dataset.slot) state.slots[t.dataset.slot] = t.value;
-    else if (t.dataset.roleName) state.slots.roles[+t.dataset.roleName].name = t.value;
-    renderPosters();
-  });
-  editorEl.addEventListener("change", function (e) {
-    var t = e.target;
-    if (t.dataset.roleIndex) { state.slots.roles[+t.dataset.roleIndex].role = t.value; renderPosters(); }
-  });
-
-  function setBusy(on) {
-    state.busy = on;
-    genBtn.disabled = on;
-    genBtn.innerHTML = on ? '<span class="spinner" aria-hidden="true"></span>Generating…' : "Generate assets";
-    Object.keys(frames).forEach(function (k) { frames[k].frame.classList.toggle("busy", on); });
-    statusEl.className = "stage-status";
-    if (on) statusEl.textContent = "Writing copy (mocked)…";
-  }
-
-  function generate() {
-    var text = briefEl.value.trim();
-    var err = $("brief-error");
-    if (!text) { briefEl.setAttribute("aria-invalid", "true"); err.hidden = false; briefEl.focus(); return; }
-    briefEl.removeAttribute("aria-invalid"); err.hidden = true;
-    setBusy(true);
-    mockGenerateCopy(text, state.category, BRAND_KITS[state.kitId]).then(function (slots) {
-      state.slots = slots;
-      renderEditor();
-      renderPosters();
-      setBusy(false);
-      statusEl.className = "stage-status ok";
-      statusEl.textContent = "4 sizes ready · " + BRAND_KITS[state.kitId].name;
-    });
-  }
-
-  $("brief-form").addEventListener("submit", function (e) { e.preventDefault(); generate(); });
-  document.querySelectorAll('input[name="category"]').forEach(function (r) {
-    r.addEventListener("change", function () { state.category = r.value; generate(); });
-  });
-  document.querySelectorAll('input[name="variant"]').forEach(function (r) {
-    r.addEventListener("change", function () { state.variant = r.value; renderPosters(); });
-  });
-  kitSelect.addEventListener("change", function () {
-    state.kitId = kitSelect.value;
-    renderKitSummary();
-    if (state.slots && state.slots.eyebrow && /presents$/.test(state.slots.eyebrow)) state.slots.eyebrow = BRAND_KITS[state.kitId].short + " presents";
-    renderEditor();
-    renderPosters();
-    statusEl.textContent = "Restyled from brand tokens · " + BRAND_KITS[state.kitId].name;
-  });
-  function updateCount() { countEl.textContent = briefEl.value.length + " / 280"; }
-  briefEl.addEventListener("input", updateCount);
-
-  /* PNG export at full pixel size */
-  previewsEl.addEventListener("click", function (e) {
-    var btn = e.target.closest("[data-download]");
-    if (!btn || !state.slots) return;
-    var f = frames[btn.dataset.download], sz = f.size;
-    if (!window.htmlToImage) { statusEl.className = "stage-status"; statusEl.textContent = "PNG export needs an internet connection to load its library. Reconnect and reload."; return; }
-    var label = btn.textContent;
-    btn.disabled = true; btn.textContent = "Rendering…";
-    htmlToImage.toPng(f.poster, { width: sz.w, height: sz.h, pixelRatio: 1, style: { transform: "none" } })
-      .then(function (url) {
-        var a = document.createElement("a");
-        a.href = url;
-        a.download = "deloo-" + state.kitId + "-" + state.category + "-" + sz.key + ".png";
-        document.body.appendChild(a); a.click(); a.remove();
-        btn.textContent = "Downloaded";
-      })
-      .catch(function () { btn.textContent = "Try again"; statusEl.className = "stage-status"; statusEl.textContent = "Couldn't render that PNG. Wait for fonts to load, then try again."; })
-      .then(function () { setTimeout(function () { btn.disabled = false; btn.textContent = label; }, 1400); });
-  });
-
-  /* Start in a working state: sample brief already generated */
-  renderKitSummary();
-  updateCount();
-  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(function () {
-    mockGenerateCopy(briefEl.value, state.category, BRAND_KITS[state.kitId]).then(function (slots) {
-      state.slots = slots; renderEditor(); renderPosters();
-      statusEl.className = "stage-status ok";
-      statusEl.textContent = "4 sizes ready · " + BRAND_KITS[state.kitId].name;
-      /* Self-test hook for headless checks: open with #selftest */
-      if (location.hash === "#selftest" && window.htmlToImage) {
-        Promise.all(SIZES.map(function (sz) {
-          return htmlToImage.toPng(frames[sz.key].poster, { width: sz.w, height: sz.h, pixelRatio: 1, style: { transform: "none" } })
-            .then(function (u) { return sz.key + ":" + u.length; }, function (e) { return sz.key + ":ERR " + e; });
-        })).then(function (r) { document.body.setAttribute("data-selftest", r.join(" ")); });
-      }
+      var cell = h('<div><div class="frame"><div class="poster"></div></div><p class="hint">' + sz.name + '</p></div>'); $(".row", sec).appendChild(cell);
+      var poster = $(".poster", cell); renderPoster(poster, sk, sz, content, { org: org, logo: state.logo || testLogo() }, state.palette, state.grain);
+      var w = cell.clientWidth || 240; scaleInto($(".frame", cell), poster, sz, w, w * 1.25);
     });
   });
+}
+
+/* =====================================================================
+   BOOT. Load poster fonts first so text fitting measures real glyphs.
+   #demo opens the demo, #gallery shows every style, #selftest checks export.
+   ===================================================================== */
+var FONT_PROBES = ["900 40px Archivo", "800 40px Archivo", "expanded 900 40px Archivo", "condensed 800 40px Archivo", "40px Anton", "400 40px 'Space Mono'", "700 40px 'Space Mono'",
+  "40px Yellowtail", "40px 'Mrs Saint Delafield'", "40px 'Instrument Serif'", "800 40px 'Inter Tight'", "600 40px 'Inter Tight'", "700 40px Caveat"];
+var fontsReady = document.fonts && document.fonts.load
+  ? Promise.all(FONT_PROBES.map(function (f) { return document.fonts.load(f).catch(function () {}); })).then(function () { return document.fonts.ready; })
+  : Promise.resolve();
+Promise.race([fontsReady, new Promise(function (r) { setTimeout(r, 4000); })]).then(function () {
+  getFontEmbedCSS();
+  var hash = location.hash.replace("#", "");
+  if (hash === "demo") loadDemo();
+  else if (hash === "gallery") { loadDemo(); renderGallery(); }
+  else if (hash === "selftest") {
+    loadDemo();
+    var content = currentContent(), results = [], host = document.createElement("div");
+    host.style.cssText = "position:absolute;left:-99999px;top:0"; document.body.appendChild(host);
+    var jobs = []; STYLE_ORDER.forEach(function (sk) { SIZES.forEach(function (sz) { jobs.push([sk, sz]); }); });
+    jobs.reduce(function (p, j) {
+      return p.then(function () {
+        var el = document.createElement("div"); host.appendChild(el);
+        renderPoster(el, j[0], j[1], content, ctx(), state.palette, state.grain);
+        return toPng(el, j[1])
+          .then(function (u) { results.push(j[0] + "/" + j[1].key + ":" + (u.length > 5000 ? "ok" : "small")); }, function () { results.push(j[0] + "/" + j[1].key + ":ERR"); })
+          .then(function () { el.remove(); });
+      });
+    }, Promise.resolve()).then(function () { document.body.setAttribute("data-selftest", results.join(" ")); });
+  }
+  else renderOnboarding();
+});
 })();
 </script>
 </body>
