@@ -20,6 +20,7 @@
     "check:ai": "tsx scripts/ai-check.ts"
   },
   "dependencies": {
+    "@sentry/nextjs": "^11.4.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "fflate": "^0.8.3",

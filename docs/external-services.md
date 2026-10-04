@@ -68,9 +68,9 @@ Legend: **MVP** = needed by Week 4 · **Next** = right after the program · **La
 
 | Service | Use | When |
 |---|---|---|
-| **Supabase** hosted (Chosen) | DB, Auth, Storage once we leave localhost | Hosting time (Open Question 4) |
-| **Vercel** (Chosen) | Next.js hosting | Hosting time |
-| Rendering worker: **Browserless**, or a small container on **Fly.io** / **Render** with Playwright | **Likely needed.** The Phase 1 templates use CSS that Satori can't render (container units, grid, clip-path, font-stretch), so server-side PNGs will probably use headless Chrome. That doesn't fit well in Vercel functions. | Phase 3 decision |
+| **Supabase** hosted (Chosen, in use) | DB, Auth, Storage (free tier) | Now |
+| **Netlify** (Chosen, in use; replaced Vercel 4 Oct 2026) | Next.js hosting from `main` | Now |
+| Rendering worker: **Browserless**, or a small container on **Fly.io** / **Render** with Playwright | **Not needed for now.** Posters render in the browser (`html-to-image`). Revisit only if server-side rendering is needed (e.g. WhatsApp bot output). | Later, if ever |
 | Cloudflare **R2** | Cheaper file downloads if Storage bills grow (PRD §5 fallback) | Later |
 
 ## 8. Publishing and content sources

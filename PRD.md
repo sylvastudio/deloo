@@ -78,18 +78,20 @@ WhatsApp-native input.
 | Authentication | **Supabase Auth (email magic link + password)** | It lives in the same service as the database, so a user's org/role is checked by RLS policies without a separate auth system. Magic links suit volunteers who log in rarely. |
 | File storage | **Supabase Storage** | Logos, fonts, sample posts and exported PNGs live in buckets scoped per organisation, under the same RLS rules as the data. |
 | AI / LLM | **Anthropic Claude (Claude Sonnet 5) with JSON-schema structured output**, behind a thin `generateCopy()` interface | The LLM only fills template slots (headline, date line, "Ministering:/Host:" roles, honorifics, captions) as validated JSON. It never draws, so the logo and palette can't drift. The interface keeps a swap to OpenAI to one file if the program standardises on it. |
-| Image rendering | **Satori (JSX → SVG) + resvg-js (SVG → PNG)** | Deterministic, fast, and needs no headless browser. Brand tokens (colours, fonts, logo file) go straight into the SVG, so every size is exact. **Playwright** is the fallback only if a template needs CSS that Satori doesn't support. |
+| Image rendering | **In the browser: HTML/CSS templates → `html-to-image`** (decided 4 Oct 2026, see §9) | The templates need CSS Satori can't render (container units, grid, clip-path, font-stretch). Rendering on the user's device gives exact pixels with embedded fonts and costs nothing to host. Print sizes export as JPEG under iPhone's canvas limit. Server-side Playwright stays an option if server rendering is ever needed. |
 | Video (MVP stretch) | **Remotion** | Video templates are React too, so countdown reels and quote clips reuse the same brand tokens and components as the posters. |
 
-**What runs locally for now (no deployment yet):**
+**Where it runs (updated 4 Oct 2026):**
 
 - **Phase 1:** a single `prototype/index.html` opened straight from disk. No server, no database, no API keys.
-- **Phase 2 onward:** everything runs on the developer's machine. That means the Next.js dev server
-  (`localhost:3000`), plus Postgres, Auth and Storage through the **Supabase CLI local stack (Docker)**,
-  plus PNG rendering inside Next.js route handlers.
-- **The only outbound network call** is the LLM API from Phase 3 on. It uses a key kept in `.env.local`,
-  and that file is never committed.
-- **Not set up yet:** Vercel hosting, a hosted Supabase project, custom domain (deloo.space), payments.
+- **Hosting:** **Netlify**, deploying `main` on every push (`netlify.toml`). Production domain **deloo.space**
+  (to be connected; see `docs/launch.md`).
+- **Backend:** a **hosted Supabase free-tier project** (Postgres, Auth, Storage). The local Docker stack didn't
+  fit the development machine.
+- **AI:** Groq (main) with Gemini as fallback, behind `lib/ai/`. Keys live in Netlify and `.env.local` (never committed).
+- **Launch extras, each off until its key is set:** Cloudflare Turnstile on sign-up and sign-in, Sentry error
+  tracking, Resend as Supabase's email sender, branded email templates in `supabase/templates/`.
+- **Not set up yet:** payments.
 
 ### Decision note: file storage (27 Sep 2026)
 
@@ -204,7 +206,7 @@ rejected by RLS.
    JSON schema per category and validate the response. On invalid output, retry once, then show an
    error.
 2. Parse the free-text brief into structured Brief fields (event, date, speaker, theme) and save it.
-3. Render every size server-side with Satori + resvg. Upload to `exports/` and create Asset rows.
+3. Render every size (in the browser, see §5). Upload to `exports/` and create Asset rows.
 4. Add edit & regenerate: editing copy re-renders without calling the LLM. Regenerate calls the LLM
    again and saves a new Asset version.
 5. Log each LLM call's tokens and cost locally, so the Phase 5 cost controls start from real numbers.
@@ -264,9 +266,7 @@ recorded, Free-plan limits and watermarks are enforced, and a fresh clone runs f
 2. **LLM provider:** the program's standard is still to be confirmed in Week 1. Claude is the
    confirmed pick, and OpenAI can be swapped in behind the interface if the program requires it.
 3. **Validation user:** who? (README: _TBD_)
-4. **Deployment vs Week 4:** the README's Week 4 row says "Deployed MVP", but this PRD keeps everything
-   local for now. When does hosting (Vercel + hosted Supabase) come in, and is it required for
-   certification?
+4. ~~**Deployment vs Week 4**~~ Answered 4 Oct 2026: deployed on Netlify with hosted Supabase (§5).
 5. **Roles in the MVP:** is Org Admin + Volunteer enough for Week 4, or does the validation user need an
    approver step before "team seats/approvals" arrive post-program?
 6. **Sub-brands:** can a department's kit override colours/fonts, or only add a department logo/name?

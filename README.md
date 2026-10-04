@@ -91,7 +91,7 @@ multilingual captions (Yoruba, Hausa, Igbo, Pidgin, French), WhatsApp-native inp
 - Next.js + Tailwind (web app; templates as HTML/SVG components) · Cursor as editor · GitHub
 - LLM API (Claude or OpenAI — whichever the program standardises on) with structured/JSON output
 - Server-side HTML/SVG → PNG (satori/resvg or Playwright); video via Remotion or ffmpeg templates
-- Supabase (auth, DB, storage for logos/exports) · Vercel (hosting)
+- Supabase (auth, DB, storage for logos/exports) · Netlify (hosting)
 
 ## Validation plan
 
