@@ -1,0 +1,11 @@
+# Netlify build for the Next.js app. Env vars (Supabase, AI keys) are set in the Netlify UI, not here.
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Next 16 needs Node >= 20.9; matches local dev.
+  NODE_VERSION = "22"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
