@@ -1,0 +1,145 @@
+"use client";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { Poster } from "@/components/poster";
+import { getCategory } from "@/lib/catalog";
+import type { Kit } from "@/lib/kit";
+import { posterToBlob, saveBlob, urlToDataURL } from "@/lib/posters/export";
+import { RECOMMEND, SIZES, STYLE_ORDER, STYLES, toContent, type StyleKey } from "@/lib/posters/render";
+import { createClient } from "@/lib/supabase/client";
+import { recordAsset, updateBrief } from "../actions";
+import { FieldsEditor } from "../fields";
+
+type Brief = { id: string; category: string; rawText: string; fields: Record<string, string> };
+type Props = { brief: Brief; canEdit: boolean; kit: Kit; orgId: string; orgName: string; orgStyles: StyleKey[] };
+
+/** Three starting options: the org's favourite styles, then the ones that suit this type, then the rest. */
+function pickOptions(type: string, orgStyles: StyleKey[]): StyleKey[] {
+  const out: StyleKey[] = [];
+  for (const s of [...orgStyles, ...(RECOMMEND[type] ?? []), ...STYLE_ORDER]) if (!out.includes(s) && out.length < 3) out.push(s);
+  return out;
+}
+
+export function Studio({ brief, canEdit, kit, orgId, orgName, orgStyles }: Props) {
+  const category = getCategory(brief.category)!;
+  const [options, setOptions] = useState(() => pickOptions(brief.category, orgStyles));
+  const [opt, setOpt] = useState(0);
+  const [sizeIdx, setSizeIdx] = useState(0);
+  const [fields, setFields] = useState(brief.fields);
+  const [savedFields, setSavedFields] = useState(brief.fields);
+  const [logo, setLogo] = useState<string | null>(kit.logoUrl);
+  const [msg, setMsg] = useState<{ error?: string; notice?: string }>({});
+  const [busy, setBusy] = useState<"" | "download" | "regenerate">("");
+  const [pending, start] = useTransition();
+  const posterEl = useRef<HTMLDivElement>(null);
+
+  // A data URL keeps the logo working in exports after the signed link expires.
+  useEffect(() => { if (kit.logoUrl) urlToDataURL(kit.logoUrl).then(setLogo).catch(() => {}); }, [kit.logoUrl]);
+
+  const style = options[opt], size = SIZES[sizeIdx];
+  const content = useMemo(() => toContent(brief.category, fields), [brief.category, fields]);
+  const ctx = useMemo(() => ({ org: orgName, logo }), [orgName, logo]);
+  const dirty = JSON.stringify(fields) !== JSON.stringify(savedFields);
+  const missing = category.schema.fields.filter((f) => f.required && !fields[f.key]?.trim());
+
+  function save(next = fields): Promise<boolean> {
+    return new Promise((resolve) => start(async () => {
+      const res = await updateBrief({ id: brief.id, category: brief.category, fields: next });
+      setMsg(res);
+      if (!res.error) setSavedFields(next);
+      resolve(!res.error);
+    }));
+  }
+
+  async function regenerate() {
+    if (!brief.rawText.trim()) return setMsg({ error: "This design was filled in by hand, so there's no brief to read again." });
+    setBusy("regenerate"); setMsg({});
+    try {
+      const res = await fetch("/api/understand", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brief: brief.rawText, category: brief.category }) });
+      const data = await res.json();
+      if (!res.ok) setMsg({ error: data.error ?? "Couldn't read the brief again." });
+      else { setFields(data.fields ?? {}); setMsg({ notice: canEdit ? "Read your brief again. Save to keep these details." : "Read your brief again." }); }
+    } catch { setMsg({ error: "Couldn't reach Deloo. Check your connection." }); }
+    finally { setBusy(""); }
+  }
+
+  async function download() {
+    const node = posterEl.current;
+    if (!node) return;
+    if (missing.length) return setMsg({ error: `Add “${missing[0].label}” first.` });
+    setBusy("download"); setMsg({});
+    try {
+      if (canEdit && dirty && !(await save())) return;
+      await document.fonts?.ready;
+      const blob = await posterToBlob(node, size);
+      saveBlob(blob, `deloo-${brief.category}-${style}-${size.key}.png`);
+      setMsg({ notice: `Downloaded the ${size.name.toLowerCase()} (${size.w}×${size.h}).` });
+      if (!canEdit) return;
+      // Keep a copy with the design. RLS (outputs_write, assets_write) checks the folder and the author.
+      const path = `${orgId}/${brief.id}/${style}-${size.key}-${Date.now()}.png`;
+      const { error } = await createClient().storage.from("exports").upload(path, blob, { contentType: "image/png" });
+      const rec = error ? { error: "Downloaded, but couldn't save a copy to the design." } : await recordAsset({ briefId: brief.id, style, size: size.key, path, copy: fields });
+      if (rec.error) setMsg({ notice: `Downloaded the ${size.name.toLowerCase()}.`, error: rec.error });
+    } catch {
+      setMsg({ error: "The download didn't work. Try again, or try another browser." });
+    } finally { setBusy(""); }
+  }
+
+  return (
+    <div className="studio">
+      <section className="grid gap-3 min-w-0">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="tabs" role="tablist" aria-label="Options">
+            {options.map((s, i) => (
+              <button key={i} type="button" role="tab" className="tab" aria-selected={i === opt} onClick={() => setOpt(i)}>Option {i + 1}<small>{STYLES[s].name}</small></button>
+            ))}
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <span className="hint">Style</span>
+            <select className="control" style={{ width: "auto", minHeight: 36 }} value={style}
+              onChange={(e) => setOptions((o) => o.map((s, i) => (i === opt ? (e.target.value as StyleKey) : s)))}>
+              {STYLE_ORDER.map((s) => <option key={s} value={s}>{STYLES[s].name}</option>)}
+            </select>
+          </label>
+        </div>
+        <div className="tabs" role="tablist" aria-label="Sizes">
+          {SIZES.map((s, i) => (
+            <button key={s.key} type="button" role="tab" className="tab" aria-selected={i === sizeIdx} onClick={() => setSizeIdx(i)} title={s.long}>{s.name}<small>{s.w}×{s.h}</small></button>
+          ))}
+        </div>
+        <div className="artboard">
+          <Poster posterRef={posterEl} style={style} size={size} content={content} ctx={ctx} palette={kit.colours} grain={kit.grain}
+            maxHeight="min(62vh, 640px)" label={`${STYLES[style].name}, ${size.long}`} />
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="hint font-mono">{STYLES[style].name} · {size.long}</p>
+          <button type="button" className="btn btn-generate" onClick={download} disabled={busy !== ""}>{busy === "download" ? "Preparing…" : "Download PNG"}</button>
+        </div>
+        {msg.notice && <p className="notice" role="status">{msg.notice}</p>}
+        {msg.error && <p className="error" role="alert">{msg.error}</p>}
+      </section>
+
+      <aside className="card grid gap-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <h2 className="h2">Details</h2>
+          {canEdit && <span className="hint">{dirty ? "Unsaved changes" : "Saved"}</span>}
+        </div>
+        {!canEdit && <p className="hint">Only the person who made this design (or HQ) can change its details. You can still try styles and download it.</p>}
+        <p className="hint">Edits show on the poster straight away. They don&apos;t use the AI.</p>
+        <FieldsEditor category={category} values={fields} readOnly={!canEdit} showErrors idPrefix="d" onChange={(k, v) => { setFields((f) => ({ ...f, [k]: v })); setMsg({}); }} />
+        {canEdit && (
+          <div className="actions">
+            <button type="button" className="btn" onClick={() => save()} disabled={pending || !dirty || missing.length > 0}>{pending ? "Saving…" : "Save details"}</button>
+            {dirty && <button type="button" className="btn btn-quiet" onClick={() => setFields(savedFields)}>Undo changes</button>}
+          </div>
+        )}
+        {brief.rawText && (
+          <details className="grid gap-2">
+            <summary className="hint" style={{ cursor: "pointer" }}>Original brief</summary>
+            <p className="hint" style={{ whiteSpace: "pre-wrap", marginTop: 6 }}>{brief.rawText}</p>
+            <div><button type="button" className="btn btn-secondary btn-sm" onClick={regenerate} disabled={busy !== ""}>{busy === "regenerate" ? "Reading…" : "Read the brief again"}</button></div>
+          </details>
+        )}
+      </aside>
+    </div>
+  );
+}

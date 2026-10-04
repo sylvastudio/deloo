@@ -301,3 +301,18 @@ export const CATEGORIES: Category[] = [
 export function getCategory(key: string): Category | undefined {
   return CATEGORIES.find((c) => c.key === key);
 }
+
+/** A short name for a saved design, from its main field. */
+export function briefTitle(categoryKey: string, fields: Record<string, string>): string {
+  const f = fields ?? {};
+  switch (categoryKey) {
+    case "event": return f.title || "Event";
+    case "invite": return f.occasion || "Invitation";
+    case "announce": return f.headline || "Announcement";
+    case "quote": return f.quote ? `“${f.quote.replace(/^["“]|["”]$/g, "")}”` : "Quote";
+    case "birthday": return f.name ? `${f.name}${f.milestone ? " " + f.milestone : ""}` : "Celebration";
+    case "service": return f.headline || [f.day, f.time].filter(Boolean).join(" · ") || "Service times";
+    case "thanks": return f.for_what || f.headline || "Thank-you";
+    default: return getCategory(categoryKey)?.label ?? "Design";
+  }
+}

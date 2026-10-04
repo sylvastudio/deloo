@@ -142,3 +142,41 @@ textarea.control { resize: vertical; min-height: 84px; }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .actions .spacer { flex: 1; }
 @media (max-width: 760px) { .actions.stack-phone .btn { flex: 1; } }
+
+/* Brand kit editor */
+.logo-drop { min-height: 120px; display: grid; place-items: center; padding: 16px; border-radius: var(--radius); border: 1px solid var(--line);
+  background: repeating-conic-gradient(color-mix(in srgb, var(--ink) 6%, transparent) 0 25%, transparent 0 50%) 0 0 / 16px 16px, var(--surface); }
+.logo-drop[data-empty="true"] { border-style: dashed; background: var(--paper); }
+.logo-drop img { max-height: 120px; max-width: 100%; object-fit: contain; }
+.colour-input { display: flex; gap: 6px; align-items: stretch; }
+.colour-input input[type="color"] { width: var(--control-h); min-height: var(--control-h); padding: 3px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); cursor: pointer; flex: none; }
+.colour-input input[type="color"]:disabled { cursor: default; }
+.preset { display: inline-flex; align-items: center; padding: 3px; border: 1px solid var(--line); border-radius: 99px; background: var(--surface); cursor: pointer; }
+.preset i { width: 16px; height: 16px; border-radius: 50%; display: block; }
+.preset i + i { margin-left: -4px; }
+.preset:hover { border-color: var(--ink); }
+.save-bar { position: sticky; bottom: 64px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.08); }
+.save-bar[data-dirty="true"] { border-color: var(--marigold); }
+.save-bar:not([data-dirty="true"]) { position: static; box-shadow: none; }
+@media (min-width: 761px) { .save-bar { bottom: 16px; } }
+.preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 18px 14px; }
+
+/* Design studio */
+.artboard { position: relative; display: grid; place-items: center; padding: 16px; min-height: 280px; border-radius: 10px; border: 1px solid var(--line); overflow: hidden;
+  background: radial-gradient(color-mix(in srgb, var(--ink) 12%, transparent) 1px, transparent 1.4px) 0 0 / 18px 18px, color-mix(in srgb, var(--paper) 60%, var(--surface)); }
+.tabs { display: inline-flex; flex-wrap: wrap; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 7px; padding: 3px; }
+.tab { border: 0; background: transparent; padding: 6px 10px; border-radius: 5px; font: 400 13px var(--font-body); color: var(--slate); cursor: pointer; white-space: nowrap; min-height: 32px; }
+.tab small { font: 400 10px var(--font-code); margin-left: 5px; opacity: .85; }
+.tab[aria-selected="true"] { background: var(--lagoon-tint); color: var(--ink); font-weight: 500; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 400 13px/1.2 var(--font-body); padding: 7px 12px; min-height: 36px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); cursor: pointer; color: var(--ink); }
+.chip:hover { border-color: var(--lagoon); background: var(--lagoon-tint); }
+.chip[aria-pressed="true"] { border-color: var(--lagoon); background: var(--lagoon-tint); font-weight: 500; }
+.found { font: 400 11px var(--font-code); border-radius: 99px; padding: 2px 7px; }
+.found.yes { color: var(--approve); background: color-mix(in srgb, var(--approve) 12%, transparent); }
+.found.no { color: var(--slate); background: var(--paper); }
+.studio { display: grid; gap: 16px; align-items: start; }
+@media (min-width: 1000px) { .studio { grid-template-columns: minmax(0, 1fr) 340px; } }
+.design-list { display: grid; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.design-list a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); text-decoration: none; }
+.design-list a:hover { border-color: var(--lagoon); }

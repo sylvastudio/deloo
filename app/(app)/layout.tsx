@@ -7,6 +7,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const m = await requireMembership();
   const items = [
     { href: "/", label: "Home", icon: "home" as const },
+    { href: "/designs/new", label: "New design", icon: "create" as const },
     { href: "/brand-kit", label: "Brand kit", icon: "brand" as const },
     ...(m.role === "admin" ? [{ href: "/settings/members", label: "Members", icon: "members" as const }] : []),
   ];
