@@ -1,10 +1,13 @@
 "use client";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { Poster } from "@/components/poster";
 import { getCategory } from "@/lib/catalog";
 import type { Kit } from "@/lib/kit";
-import { posterToBlob, saveBlob, urlToDataURL } from "@/lib/posters/export";
+import { posterVars } from "@/lib/posters/colour";
+import { posterToBlob, saveBlob } from "@/lib/posters/export";
+import { logoLabel, pickLogo } from "@/lib/posters/logos";
 import { RECOMMEND, SIZES, STYLE_ORDER, STYLES, toContent, type StyleKey } from "@/lib/posters/render";
+import { useResolvedLogos } from "@/lib/posters/use-logos";
 import { createClient } from "@/lib/supabase/client";
 import { recordAsset, updateBrief } from "../actions";
 import { FieldsEditor } from "../fields";
@@ -26,18 +29,18 @@ export function Studio({ brief, canEdit, kit, orgId, orgName, orgStyles }: Props
   const [sizeIdx, setSizeIdx] = useState(0);
   const [fields, setFields] = useState(brief.fields);
   const [savedFields, setSavedFields] = useState(brief.fields);
-  const [logo, setLogo] = useState<string | null>(kit.logoUrl);
+  const { logos } = useResolvedLogos(kit.logos);
+  const [logoOverride, setLogoOverride] = useState("");
   const [msg, setMsg] = useState<{ error?: string; notice?: string }>({});
   const [busy, setBusy] = useState<"" | "download" | "regenerate">("");
   const [pending, start] = useTransition();
   const posterEl = useRef<HTMLDivElement>(null);
 
-  // A data URL keeps the logo working in exports after the signed link expires.
-  useEffect(() => { if (kit.logoUrl) urlToDataURL(kit.logoUrl).then(setLogo).catch(() => {}); }, [kit.logoUrl]);
-
   const style = options[opt], size = SIZES[sizeIdx];
   const content = useMemo(() => toContent(brief.category, fields), [brief.category, fields]);
-  const ctx = useMemo(() => ({ org: orgName, logo }), [orgName, logo]);
+  const ctx = useMemo(() => ({ org: orgName, logos, logoOverride: logoOverride || null }), [orgName, logos, logoOverride]);
+  const vars = useMemo(() => posterVars(kit.colours), [kit.colours]);
+  const pick = useMemo(() => pickLogo(logos, style, size.key, vars, logoOverride || null), [logos, style, size.key, vars, logoOverride]);
   const dirty = JSON.stringify(fields) !== JSON.stringify(savedFields);
   const missing = category.schema.fields.filter((f) => f.required && !fields[f.key]?.trim());
 
@@ -77,7 +80,8 @@ export function Studio({ brief, canEdit, kit, orgId, orgName, orgStyles }: Props
       // Keep a copy with the design. RLS (outputs_write, assets_write) checks the folder and the author.
       const path = `${orgId}/${brief.id}/${style}-${size.key}-${Date.now()}.png`;
       const { error } = await createClient().storage.from("exports").upload(path, blob, { contentType: "image/png" });
-      const rec = error ? { error: "Downloaded, but couldn't save a copy to the design." } : await recordAsset({ briefId: brief.id, style, size: size.key, path, copy: fields });
+      const rec = error ? { error: "Downloaded, but couldn't save a copy to the design." }
+        : await recordAsset({ briefId: brief.id, style, size: size.key, path, copy: fields, logoVariantId: pick?.logo.id ?? null, logoSha256: pick?.logo.sha256 ?? null });
       if (rec.error) setMsg({ notice: `Downloaded the ${size.name.toLowerCase()}.`, error: rec.error });
     } catch {
       setMsg({ error: "The download didn't work. Try again, or try another browser." });
@@ -101,6 +105,15 @@ export function Studio({ brief, canEdit, kit, orgId, orgName, orgStyles }: Props
             </select>
           </label>
         </div>
+        {logos.length > 1 && (
+          <label className="flex items-center gap-2 text-sm">
+            <span className="hint">Logo</span>
+            <select className="control" style={{ width: "auto", minHeight: 36 }} value={logoOverride} onChange={(e) => setLogoOverride(e.target.value)}>
+              <option value="">Automatic{pick ? ` (${logoLabel(pick.logo, logos.indexOf(pick.logo))})` : ""}</option>
+              {logos.map((l, i) => <option key={l.id} value={l.id}>{logoLabel(l, i)}</option>)}
+            </select>
+          </label>
+        )}
         <div className="tabs" role="tablist" aria-label="Sizes">
           {SIZES.map((s, i) => (
             <button key={s.key} type="button" role="tab" className="tab" aria-selected={i === sizeIdx} onClick={() => setSizeIdx(i)} title={s.long}>{s.name}<small>{s.w}×{s.h}</small></button>

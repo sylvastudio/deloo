@@ -38,7 +38,8 @@ export function mix(a: string, b: string, t: number): string {
   const A = hexToRgb(a), B = hexToRgb(b);
   return rgbToHex(A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t);
 }
-function lum(hex: string): number {
+/** WCAG relative luminance of a hex colour (0 = black, 1 = white). */
+export function lum(hex: string): number {
   const c = hexToRgb(hex).map((v) => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); });
   return .2126 * c[0] + .7152 * c[1] + .0722 * c[2];
 }

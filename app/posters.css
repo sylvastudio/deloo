@@ -326,3 +326,12 @@
 /* ---------- Preview frame (scaled poster) + paper grain ---------- */
 .frame { position: relative; overflow: hidden; border-radius: 3px; box-shadow: 0 10px 30px rgba(0,0,0,.18); max-width: 100%; flex: none; }
 .frame > .poster { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+
+/* ---------- Logo plate: when no logo version stands out on the background, it sits on a plate.
+   The logo's own pixels are never changed (PRD §4.4). Each style gives the plate its own look. ---------- */
+.tpl .logo-plate { display: inline-flex; align-items: center; justify-content: center; padding: .9cqmin 1.3cqmin; background: var(--plate); border-radius: .8cqmin; line-height: 0; flex: none; }
+.st-ticket .logo-plate { border-radius: .4cqmin; box-shadow: 0 .5cqmin 1cqmin rgba(0,0,0,.25); }
+.st-sticker .logo-plate { border-radius: 1.6cqmin; box-shadow: .6cqmin .6cqmin 0 var(--shadow); transform: rotate(-2deg); }
+.st-note .logo-plate { border-radius: .3cqmin; transform: rotate(2deg); box-shadow: .4cqmin .8cqmin 1.4cqmin rgba(0,0,0,.35); }
+.st-billboard .logo-plate { border-radius: .4cqmin; box-shadow: 0 .5cqmin 0 rgba(0,0,0,.35); }
+.st-editorial .logo-plate { padding: .4cqmin .7cqmin; border-radius: .3cqmin; }

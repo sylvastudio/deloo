@@ -1,6 +1,7 @@
 // Poster content + the 9 style renderers, ported from prototype/index.html (CONTENT, STYLE RENDERERS).
 // Content + context in, markup out. Every value is escaped; empty pieces are skipped.
 // Pure string functions, so they run the same on the server and in the browser.
+import { pickLogo, type LogoPick, type ResolvedLogo } from "./logos";
 
 export type StyleKey = "badge" | "receipt" | "ticket" | "form" | "editorial" | "note" | "sticker" | "billboard" | "block";
 export type SizeKey = "post" | "story" | "banner" | "a5";
@@ -48,7 +49,14 @@ export const SAMPLES: Record<string, Record<string, string>> = {
 
 type Detail = { label: string; value: string };
 export type Content = { kicker: string; headline: string; subhead: string; details: Detail[]; people: { role: string; name: string }[]; body: string; signoff: string; isQuote: boolean };
-export type PosterContext = { org: string; logo: string | null };
+export type PosterContext = {
+  org: string;
+  /** The kit's approved logo versions, ready to draw. The picker chooses one per style and size. */
+  logos: ResolvedLogo[];
+  /** A version the volunteer chose instead of the automatic pick. */
+  logoOverride?: string | null;
+};
+type DrawContext = PosterContext & { pick: LogoPick | null };
 
 function cap(s: string) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
@@ -95,13 +103,21 @@ const dText = (d: Detail) => (d.label ? d.label + ": " : "") + d.value;
 export function esc(s: unknown): string {
   return String(s ?? "").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]!);
 }
-const logo = (ctx: PosterContext) => ctx.logo ? '<img class="logo-img" src="' + esc(ctx.logo) + '" alt="">' : '<span class="logo-text">' + esc(ctx.org) + "</span>";
+/** The picked logo at its fitted size (inline size wins over the slot's CSS height), on a plate if it needs one. */
+const logo = (ctx: DrawContext) => {
+  const p = ctx.pick;
+  if (!p) return '<span class="logo-text">' + esc(ctx.org) + "</span>";
+  const img = '<img class="logo-img" src="' + esc(p.logo.src) + '" alt="" style="height:' + p.hCq.toFixed(2) + 'cqmin;width:' + p.wCq.toFixed(2) + 'cqmin">';
+  return p.plate ? '<span class="logo-plate" style="--plate:var(' + p.plate + ')">' + img + '</span>' : img;
+};
+/** Styles that print the org name beside the logo skip it when the chosen logo already shows the name. */
+const orgBeside = (ctx: DrawContext) => (ctx.pick?.logo.includesName ? "" : '<span>' + esc(ctx.org) + '</span>');
 const when = (c: Content) => [D(c, "Date"), D(c, "Time")].filter(Boolean).join(" · ");
 const namesLine = (c: Content) => c.people.map((p) => p.name).join(" · ");
 const rolesLine = (c: Content) => c.people.map((p) => p.role + ": " + p.name).join("  ·  ");
 const lines = (arr: string[]) => arr.filter(Boolean).map(esc).join("<br>");
 
-const RENDER: Record<StyleKey, (c: Content, ctx: PosterContext) => string> = {
+const RENDER: Record<StyleKey, (c: Content, ctx: DrawContext) => string> = {
   badge: (c, ctx) =>
     '<div class="box">' +
       '<div class="b-row"><span>' + esc(c.kicker || ctx.org) + '</span><span>' + esc(D(c, "Time")) + '</span></div>' +
@@ -146,7 +162,7 @@ const RENDER: Record<StyleKey, (c: Content, ctx: PosterContext) => string> = {
         '<div class="t-bar"></div>' +
         (c.signoff ? '<p class="t-sign">' + esc(c.signoff) + '</p>' : '') +
       '</div>' +
-      '<div class="t-org">' + (ctx.logo ? logo(ctx) : '') + '<span>' + esc(ctx.org) + '</span></div>' +
+      '<div class="t-org">' + (ctx.pick ? logo(ctx) : '') + orgBeside(ctx) + '</div>' +
     '</div>';
   },
   form: (c, ctx) => {
@@ -187,7 +203,7 @@ const RENDER: Record<StyleKey, (c: Content, ctx: PosterContext) => string> = {
         (c.signoff ? '<p class="e-meta">' + esc(c.signoff) + '</p>' : '') +
       '</div>' +
     '</div></div>' +
-    '<div class="e-org">' + (ctx.logo ? logo(ctx) : '') + '<span>' + esc(ctx.org) + '</span></div>';
+    '<div class="e-org">' + (ctx.pick ? logo(ctx) : '') + orgBeside(ctx) + '</div>';
   },
   note: (c, ctx) => {
     const words = c.headline.split(/\s+/).filter(Boolean);
@@ -255,6 +271,7 @@ const RENDER: Record<StyleKey, (c: Content, ctx: PosterContext) => string> = {
 };
 
 /** Inner markup of a poster: the .tpl element with the style's layout. */
-export function posterMarkup(style: StyleKey, size: Size, content: Content, ctx: PosterContext, grain: boolean): string {
-  return '<div class="tpl st-' + style + ' ' + size.cls + (content.isQuote ? ' is-quote' : '') + '">' + RENDER[style](content, ctx) + (grain ? '<div class="grain"></div>' : '') + '</div>';
+export function posterMarkup(style: StyleKey, size: Size, content: Content, ctx: PosterContext, grain: boolean, vars: Record<string, string>): string {
+  const draw: DrawContext = { ...ctx, pick: pickLogo(ctx.logos, style, size.key, vars, ctx.logoOverride) };
+  return '<div class="tpl st-' + style + ' ' + size.cls + (content.isQuote ? ' is-quote' : '') + '">' + RENDER[style](content, draw) + (grain ? '<div class="grain"></div>' : '') + '</div>';
 }

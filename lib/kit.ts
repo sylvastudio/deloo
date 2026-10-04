@@ -1,12 +1,15 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { Palette } from "@/lib/posters/colour";
+import { normaliseLogos, type LogoVariant } from "@/lib/posters/logos";
 import { isStyle, type StyleKey } from "@/lib/posters/render";
 
 export type ColourSource = "default" | "logo" | "custom";
-export type Kit = { colours: Palette; colourSource: ColourSource; tone: string; grain: boolean; logos: string[]; logoUrl: string | null };
+/** A logo version plus a short-lived signed link to its file (the brand bucket is private). */
+export type KitLogo = LogoVariant & { url: string | null };
+export type Kit = { colours: Palette; colourSource: ColourSource; tone: string; grain: boolean; logos: KitLogo[] };
 
-/** The org's master brand kit, with a short-lived signed link to its logo (the brand bucket is private). */
+/** The org's master brand kit, with signed links to every logo version. */
 export async function getKit(orgId: string): Promise<Kit | null> {
   const supabase = await createClient();
   const { data } = await supabase
@@ -14,14 +17,17 @@ export async function getKit(orgId: string): Promise<Kit | null> {
     .select("colours, colour_source, tone, grain, logos")
     .eq("org_id", orgId)
     .is("unit_id", null)
-    .maybeSingle<{ colours: Palette; colour_source: ColourSource; tone: string; grain: boolean; logos: string[] }>();
+    .maybeSingle<{ colours: Palette; colour_source: ColourSource; tone: string; grain: boolean; logos: unknown }>();
   if (!data) return null;
-  let logoUrl: string | null = null;
-  if (data.logos[0]) {
-    const { data: signed } = await supabase.storage.from("brand").createSignedUrl(data.logos[0], 60 * 60);
-    logoUrl = signed?.signedUrl ?? null;
-  }
-  return { colours: data.colours, colourSource: data.colour_source, tone: data.tone, grain: data.grain, logos: data.logos, logoUrl };
+  const variants = normaliseLogos(data.logos);
+  const { data: signed } = variants.length
+    ? await supabase.storage.from("brand").createSignedUrls(variants.map((v) => v.path), 60 * 60)
+    : { data: [] };
+  const urls = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
+  return {
+    colours: data.colours, colourSource: data.colour_source, tone: data.tone, grain: data.grain,
+    logos: variants.map((v) => ({ ...v, url: urls.get(v.path) ?? null })),
+  };
 }
 
 /** Styles the org picked during onboarding, in their order. */

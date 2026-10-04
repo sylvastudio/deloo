@@ -55,7 +55,11 @@ export async function updateBrief(input: { id: string; category: string; fields:
 }
 
 /** Records a downloaded PNG that the browser already uploaded to exports/{org}/{brief}/…. */
-export async function recordAsset(input: { briefId: string; style: string; size: string; path: string; copy: Record<string, string> }): Promise<{ error?: string; version?: number }> {
+export async function recordAsset(input: {
+  briefId: string; style: string; size: string; path: string; copy: Record<string, string>;
+  /** Which approved logo version the PNG used, and that file's SHA-256 (PRD Phase 3 logo fidelity). */
+  logoVariantId: string | null; logoSha256: string | null;
+}): Promise<{ error?: string; version?: number }> {
   const m = await requireMembership();
   const size = SIZES.find((s) => s.key === input.size);
   if (!size || !isStyle(input.style)) return { error: "Unknown style or size." };
@@ -66,7 +70,11 @@ export async function recordAsset(input: { briefId: string; style: string; size:
       .order("version", { ascending: false }).limit(1).maybeSingle();
     const version = (last?.version ?? 0) + 1;
     // RLS (assets_write) allows the brief's author and HQ admins.
-    const { error } = await supabase.from("assets").insert({ brief_id: input.briefId, org_id: m.org.id, template_key: input.style, size: size.asset, copy: input.copy, file_path: input.path, version });
+    const row = { brief_id: input.briefId, org_id: m.org.id, template_key: input.style, size: size.asset, copy: input.copy, file_path: input.path, version };
+    const logo = { logo_variant_id: input.logoVariantId?.slice(0, 64) ?? null, logo_sha256: input.logoSha256 && /^[0-9a-f]{64}$/.test(input.logoSha256) ? input.logoSha256 : null };
+    let { error } = await supabase.from("assets").insert({ ...row, ...logo });
+    // Before migration 0004 has run, the logo columns don't exist yet: record the asset without them.
+    if (error?.code === "42703" || error?.code === "PGRST204") ({ error } = await supabase.from("assets").insert(row));
     if (!error) return { version };
     if (error.code !== "23505") return { error: "Downloaded, but couldn't add it to the design's history." };
   }

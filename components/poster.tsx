@@ -60,8 +60,8 @@ export function Poster({ style, size, content, ctx, palette, grain, maxHeight = 
   const ownPoster = useRef<HTMLDivElement | null>(null);
   const poster = posterRef ?? ownPoster;
   const [scale, setScale] = useState(0);
-  const html = useMemo(() => posterMarkup(style, size, content, ctx, grain), [style, size, content, ctx, grain]);
   const vars = useMemo(() => posterVars(palette), [palette]);
+  const html = useMemo(() => posterMarkup(style, size, content, ctx, grain, vars), [style, size, content, ctx, grain, vars]);
 
   useEffect(ensureGrain, []);
 
