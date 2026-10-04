@@ -6,6 +6,10 @@
 [build.environment]
   # Next 16 needs Node >= 20.9; matches local dev.
   NODE_VERSION = "22"
+  # Turbopack's build cache snapshots server env vars (incl. secret keys). It is kept privately
+  # between builds and never published, so don't fail secrets scanning on it. Published output
+  # (.next/static, functions) is still scanned.
+  SECRETS_SCAN_OMIT_PATHS = ".netlify/.next/cache/**,.next/cache/**"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
