@@ -5,7 +5,7 @@
 // only because an admin created and approved them in the brand kit, and each keeps a link to its source.
 
 import { lum } from "./colour";
-import type { SizeKey, StyleKey } from "./render";
+import { SIZES, type Size, type StyleKey } from "./render";
 
 export type LogoKind = "main" | "mark";
 export type LogoTreatment = "full_colour" | "mono_white" | "mono_black";
@@ -79,8 +79,9 @@ export const SLOTS: Partial<Record<StyleKey, Slot>> = {
   // badge prints the org name as text and has no logo slot.
 };
 
-/** Pixels per cqmin for each size (1cqmin = 1% of the poster's shorter side). */
-const CQ: Record<SizeKey, number> = { post: 10.8, story: 10.8, banner: 5, a5: 8.74 };
+/** Output pixels per cqmin (1cqmin = 1% of the poster's shorter side). */
+const cqPx = (s: Size) => (Math.min(s.w, s.h) / 100) * (s.ratio ?? 1);
+const isBanner = (s: Size) => s.cls.includes("sz-banner");
 /** Smallest a logo may print, in px: an icon stays readable smaller than a full logo with lettering. */
 const MIN_PX: Record<LogoKind, number> = { mark: 16, main: 28 };
 /** Share of a logo's visible pixels that must stand out (3:1) from the background. */
@@ -112,11 +113,11 @@ export type LogoPick = {
 };
 
 /** The best version of the logo for this style and size, or null to print the org name instead. */
-export function pickLogo(logos: ResolvedLogo[], style: StyleKey, size: SizeKey, vars: Record<string, string>, overrideId?: string | null): LogoPick | null {
+export function pickLogo(logos: ResolvedLogo[], style: StyleKey, size: Size, vars: Record<string, string>, overrideId?: string | null): LogoPick | null {
   const slot = SLOTS[style];
   logos = logos.filter((l) => l.src); // a file that failed to load can't be drawn
   if (!slot || !logos.length) return null;
-  const banner = size === "banner";
+  const banner = isBanner(size), CQ = cqPx(size);
   const slotH = (banner && slot.bannerH) || slot.h, maxW = (banner && slot.bannerMaxW) || slot.maxW;
   const bgs = slot.bg.map((k) => vars[k]).filter(Boolean);
 
@@ -124,7 +125,7 @@ export function pickLogo(logos: ResolvedLogo[], style: StyleKey, size: SizeKey, 
     const aspect = v.w && v.h ? v.w / v.h : 1;
     let h = slotH, w = h * aspect;
     if (w > maxW) { w = maxW; h = w / aspect; }
-    return { h, w, px: h * CQ[size] };
+    return { h, w, px: h * CQ };
   };
   const leg = (v: ResolvedLogo) => Math.min(...bgs.map((b) => legibility(v, b)));
   const plateFor = (v: ResolvedLogo) => {
@@ -140,7 +141,7 @@ export function pickLogo(logos: ResolvedLogo[], style: StyleKey, size: SizeKey, 
   if (chosen) return make(chosen);
 
   // Small slots, and slots that already print the name, prefer the icon.
-  const wantsMark = slot.nameBeside || slotH * CQ[size] < 60;
+  const wantsMark = slot.nameBeside || slotH * CQ < 60;
   const scored = logos.map((v) => {
     const f = fit(v), l = leg(v);
     return {
@@ -164,7 +165,7 @@ export function logoTroubles(logos: ResolvedLogo[], vars: Record<string, string>
   const plated: StyleKey[] = [], tooSmall: StyleKey[] = [];
   for (const s of styles) {
     if (!SLOTS[s]) continue;
-    for (const size of ["post", "banner"] as SizeKey[]) {
+    for (const size of [SIZES[0], SIZES[2]]) {
       const p = pickLogo(logos, s, size, vars);
       if (!p) { if (!tooSmall.includes(s)) tooSmall.push(s); }
       else if (p.plate && !plated.includes(s)) plated.push(s);

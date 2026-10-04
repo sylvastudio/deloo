@@ -38,6 +38,11 @@ const CASES: { category: string; brief: string; expect?: Record<string, RegExp>;
   { category: "event", brief: "Men's breakfast meeting with Evang. Chinedu Okoro as guest, theme Building Strong Homes", absent: ["date", "venue", "time"] },
   { category: "announce", brief: "Midweek service now holds by 6pm instead of 5pm starting this wednesday", expect: { headline: /\S/, date: nextDay("Wednesday") }, aiOnly: true },
   { category: "event", brief: "Prayer vigil this friday 10pm at the church, minister: Rev. Grace Obi", expect: { date: nextDay("Friday"), time: /10pm/i, speaker: /^Rev\. Grace Obi$/ }, aiOnly: true },
+  // Phase 4 conventions: role lines and honorifics exactly as written, for the 3 launch types.
+  { category: "event", brief: "December crusade 12 dec 5pm at the stadium. minister pst. femi okoro, anchor bro. tayo, host deaconess ruth", expect: { speaker: /^Pst\.? Femi Okoro$/, anchor: /^Bro\. Tayo$/, host: /^Deaconess Ruth$/ }, aiOnly: true },
+  { category: "event", brief: "Couples dinner 14 Feb, guest speaker Pastor (Mrs.) Funke Adeyemi", expect: { speaker: /^Pastor \(Mrs\.\) Funke Adeyemi$/, speaker_role: /guest speaker/i }, aiOnly: true },
+  { category: "quote", brief: "\"Faith without works is dead\" - Rev. Dr. Grace Obi, Sunday sermon", expect: { quote: /faith without works is dead/i, reference: /^Rev\. Dr\. Grace Obi$/ }, aiOnly: true },
+  { category: "announce", brief: "Choir rehearsal moved to saturday 4pm this week. for enquiries contact sister bola", expect: { headline: /\S/, contact: /^Sister Bola$/ }, aiOnly: true },
 ];
 
 async function main() {

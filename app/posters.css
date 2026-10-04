@@ -335,3 +335,6 @@
 .st-note .logo-plate { border-radius: .3cqmin; transform: rotate(2deg); box-shadow: .4cqmin .8cqmin 1.4cqmin rgba(0,0,0,.35); }
 .st-billboard .logo-plate { border-radius: .4cqmin; box-shadow: 0 .5cqmin 0 rgba(0,0,0,.35); }
 .st-editorial .logo-plate { padding: .4cqmin .7cqmin; border-radius: .3cqmin; }
+
+/* Roll-up banners: the bottom 10 cm sits inside the stand, so keep the layout clear of it. */
+.tpl.sz-rollup { padding-bottom: 5%; }

@@ -23,7 +23,9 @@ export function buildPrompt(input: UnderstandInput): { system: string; user: str
     "4. Expand obvious abbreviations (\"main aud\" means \"Main Auditorium\", \"conf\" means \"Conference\") and use title case for event names and venues.",
     "5. Fix obvious typos and use sentence case for taglines, messages and list items. Don't reword quotes or scripture.",
     "6. A required title or headline may be written as a short phrase built only from facts in the brief (\"Midweek service moves to 6pm\"). Never invent new facts to fill it.",
-    "7. Put anything useful that fits no field into \"unplaced\".",
+    "7. The event or occasion name usually comes first: in \"flyer for youth fest\" or \"pls design for choir night\" the title is \"Youth Fest\" or \"Choir Night\". Use it for the title or occasion field, not \"unplaced\".",
+    "8. Put a person's role (\"guest speaker\", \"minister\", \"host\", \"anchor\") in the matching field or role line, never inside the name.",
+    "9. Put anything useful that fits no field into \"unplaced\".",
     'Reply with JSON only, in this shape: {"fields": {"<field key>": "<value>"}, "unplaced": ["<text>"]}',
   ].join("\n");
   const user = `Today is ${input.today}.\nCalendar (today first): ${upcomingDates()}.\nPoster type: ${input.categoryLabel}\nFields:\n${fieldList}\n\nBrief:\n"""${input.brief.slice(0, 2000)}"""`;

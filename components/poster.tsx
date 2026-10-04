@@ -26,8 +26,9 @@ function ensureGrain() {
  */
 function fitPoster(tpl: HTMLElement, size: Size) {
   tpl.querySelectorAll<HTMLElement>("[data-giant]").forEach((g) => {
-    const len = Math.max(3, (g.getAttribute("data-giant") ?? "").length), avail = size.key === "banner" ? 128 : 104;
-    g.style.fontSize = Math.min(size.key === "banner" ? 44 : 36, avail / (len * .5)) + "cqmin";
+    const banner = size.cls.includes("sz-banner");
+    const len = Math.max(3, (g.getAttribute("data-giant") ?? "").length), avail = banner ? 128 : 104;
+    g.style.fontSize = Math.min(banner ? 44 : 36, avail / (len * .5)) + "cqmin";
   });
   const boxes = Array.from(tpl.querySelectorAll<HTMLElement>(".box")), hls = Array.from(tpl.querySelectorAll<HTMLElement>(".hl"));
   const spills = (b: HTMLElement) => {

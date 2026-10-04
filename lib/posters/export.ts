@@ -26,16 +26,49 @@ function getFontEmbedCSS(): Promise<string> {
   return fontEmbed;
 }
 
-/** The full-size poster element → PNG at the size's exact pixel dimensions. */
-export async function posterToBlob(node: HTMLElement, size: Size): Promise<Blob> {
-  const [{ toBlob }, fontEmbedCSS] = await Promise.all([import("html-to-image"), getFontEmbedCSS()]);
-  const blob = await toBlob(node, {
-    width: size.w, height: size.h, pixelRatio: 1,
+/** Any element → image file at w×h layout px times `ratio`. PNG by default; JPEG for big print files. */
+export async function elementToBlob(node: HTMLElement, w: number, h: number, opts: { ratio?: number; mime?: "image/png" | "image/jpeg" } = {}): Promise<Blob> {
+  const [{ toCanvas }, fontEmbedCSS] = await Promise.all([import("html-to-image"), getFontEmbedCSS()]);
+  const canvas = await toCanvas(node, {
+    width: w, height: h, pixelRatio: opts.ratio ?? 1,
     style: { transform: "none", visibility: "visible" },
     ...(fontEmbedCSS ? { fontEmbedCSS } : {}),
   });
+  const mime = opts.mime ?? "image/png";
+  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, mime, mime === "image/jpeg" ? 0.92 : undefined));
+  canvas.width = canvas.height = 0; // free the (possibly huge) canvas straight away
   if (!blob) throw new Error("export produced no image");
   return blob;
+}
+
+/** The full-size poster element → the size's file: exact pixels, PNG for social, high-quality JPEG for print. */
+export function posterToBlob(node: HTMLElement, size: Size): Promise<Blob> {
+  return elementToBlob(node, size.w, size.h, { ratio: size.ratio, mime: size.mime });
+}
+
+/** A small JPEG data URL of an image file (for the printer spec sheet). */
+export async function thumbnail(blob: Blob, maxSide = 640): Promise<string> {
+  const bmp = await createImageBitmap(blob);
+  const s = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas"); c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+  c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
+  bmp.close();
+  return c.toDataURL("image/jpeg", 0.85);
+}
+
+/** Zip several files (no recompression: PNG and JPEG are already compressed). */
+export async function zipFiles(files: { name: string; blob: Blob }[]): Promise<Blob> {
+  const { zipSync } = await import("fflate");
+  const entries: Record<string, [Uint8Array, { level: 0 }]> = {};
+  for (const f of files) entries[f.name] = [new Uint8Array(await f.blob.arrayBuffer()), { level: 0 }];
+  return new Blob([zipSync(entries) as Uint8Array<ArrayBuffer>], { type: "application/zip" });
+}
+
+/** Phone share sheet (WhatsApp etc.) when the browser can share files; false if it can't. */
+export async function shareFiles(files: File[], text: string): Promise<boolean> {
+  if (!navigator.canShare?.({ files })) return false;
+  try { await navigator.share({ files, text }); } catch (e) { if ((e as Error).name !== "AbortError") throw e; }
+  return true;
 }
 
 /** Fetch an image (e.g. a signed storage URL) as a data URL, so previews and exports never depend on the link staying valid. */

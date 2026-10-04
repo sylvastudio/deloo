@@ -4,9 +4,21 @@
 import { pickLogo, type LogoPick, type ResolvedLogo } from "./logos";
 
 export type StyleKey = "badge" | "receipt" | "ticket" | "form" | "editorial" | "note" | "sticker" | "billboard" | "block";
-export type SizeKey = "post" | "story" | "banner" | "a5";
-/** Sizes map onto public.asset_size in the database. */
-export type Size = { key: SizeKey; name: string; long: string; w: number; h: number; cls: string; asset: "ig_post" | "ig_story" | "x_banner" | "a5_handbill" };
+export type SizeKey = "post" | "story" | "banner" | "a5" | "a5_print" | "flex_3x6" | "flex_4x8" | "rollup";
+/** What a printer needs to know about a print size (shown on the spec sheet). */
+export type PrintSpec = {
+  label: string; outMm: [number, number]; trimMm?: [number, number]; bleedMm: number; dpi: number;
+  material: string; finishing: string;
+};
+/**
+ * A poster size. Layout happens at w×h CSS px; the file is ratio× that (print sizes), as mime.
+ * Sizes map onto public.asset_size in the database.
+ */
+export type Size = {
+  key: SizeKey; name: string; long: string; w: number; h: number; cls: string;
+  asset: "ig_post" | "ig_story" | "x_banner" | "a5_handbill" | "a5_handbill_bleed" | "flex_3x6ft" | "flex_4x8ft" | "rollup_85x200cm";
+  ratio?: number; mime?: "image/png" | "image/jpeg"; print?: PrintSpec;
+};
 
 export const SIZES: Size[] = [
   { key: "post", name: "Post", long: "Instagram post", w: 1080, h: 1080, cls: "sz-square", asset: "ig_post" },
@@ -14,7 +26,24 @@ export const SIZES: Size[] = [
   { key: "banner", name: "Banner", long: "X / LinkedIn banner", w: 1500, h: 500, cls: "sz-banner", asset: "x_banner" },
   { key: "a5", name: "A5 print", long: "A5 handbill, 148 × 210 mm at 150 dpi", w: 874, h: 1240, cls: "sz-a5", asset: "a5_handbill" },
 ];
-export function getSize(key: string): Size { return SIZES.find((s) => s.key === key) ?? SIZES[0]; }
+/**
+ * Print sizes (PRD Phase 4). Output pixels stay under 16.7M so they export on iPhones too (Safari's canvas limit);
+ * flex banners are viewed from metres away, where 60–72 dpi at full size prints clean.
+ */
+export const PRINT_SIZES: Size[] = [
+  { key: "a5_print", name: "A5 handbill", long: "A5 handbill with 3 mm bleed, 300 dpi", w: 909, h: 1276, ratio: 2, cls: "sz-a5", asset: "a5_handbill_bleed", mime: "image/jpeg",
+    print: { label: "A5 handbill (148 × 210 mm)", outMm: [154, 216], trimMm: [148, 210], bleedMm: 3, dpi: 300, material: "Gloss or matt paper, 130–170 gsm", finishing: "Trim 3 mm off every edge, to 148 × 210 mm." } },
+  { key: "flex_3x6", name: "Flex 6×3 ft", long: "Flex banner, 6 ft wide × 3 ft tall", w: 1728, h: 864, ratio: 3, cls: "sz-banner", asset: "flex_3x6ft", mime: "image/jpeg",
+    print: { label: "Flex banner, 6 ft wide × 3 ft tall (1829 × 914 mm)", outMm: [1829, 914], bleedMm: 0, dpi: 72, material: "Frontlit flex", finishing: "Hem the edges and add eyelets about every 2 ft (60 cm)." } },
+  { key: "flex_4x8", name: "Flex 8×4 ft", long: "Flex banner, 8 ft wide × 4 ft tall", w: 1920, h: 960, ratio: 3, cls: "sz-banner", asset: "flex_4x8ft", mime: "image/jpeg",
+    print: { label: "Flex banner, 8 ft wide × 4 ft tall (2438 × 1219 mm)", outMm: [2438, 1219], bleedMm: 0, dpi: 60, material: "Frontlit flex", finishing: "Hem the edges and add eyelets about every 2 ft (60 cm)." } },
+  { key: "rollup", name: "Roll-up", long: "Roll-up banner, 85 × 200 cm", w: 837, h: 1969, ratio: 3, cls: "sz-story sz-rollup", asset: "rollup_85x200cm", mime: "image/jpeg",
+    print: { label: "Roll-up banner (850 × 2000 mm)", outMm: [850, 2000], bleedMm: 0, dpi: 75, material: "Roll-up banner film (PVC or polyester) with stand", finishing: "The bottom 10 cm goes inside the stand; Deloo keeps text out of it." } },
+];
+export const ALL_SIZES: Size[] = [...SIZES, ...PRINT_SIZES];
+export function getSize(key: string): Size { return ALL_SIZES.find((s) => s.key === key) ?? SIZES[0]; }
+/** Output pixels of a size (print sizes export at ratio× their layout size). */
+export const outPx = (s: Size) => ({ w: Math.round(s.w * (s.ratio ?? 1)), h: Math.round(s.h * (s.ratio ?? 1)) });
 
 export const STYLES: Record<StyleKey, { name: string; desc: string }> = {
   badge: { name: "Badge", desc: "Title in a bold oval, date up top." },
@@ -67,8 +96,9 @@ export function toContent(type: string, f: Record<string, string | undefined>): 
   if (type === "event") {
     c.headline = f.title || ""; c.subhead = f.theme ? "Theme: " + f.theme : "";
     det("Date", f.date); det("Time", f.time); det("Venue", f.venue);
-    if (f.speaker) c.people.push({ role: "Ministering", name: f.speaker });
+    if (f.speaker) c.people.push({ role: f.speaker_role || "Ministering", name: f.speaker });
     if (f.host) c.people.push({ role: "Host", name: f.host });
+    if (f.anchor) c.people.push({ role: "Anchor", name: f.anchor });
     c.signoff = f.cta || "";
   } else if (type === "invite") {
     c.kicker = "You're invited"; c.headline = f.occasion || ""; c.subhead = f.host ? "Hosted by " + f.host : "";
@@ -272,6 +302,6 @@ const RENDER: Record<StyleKey, (c: Content, ctx: DrawContext) => string> = {
 
 /** Inner markup of a poster: the .tpl element with the style's layout. */
 export function posterMarkup(style: StyleKey, size: Size, content: Content, ctx: PosterContext, grain: boolean, vars: Record<string, string>): string {
-  const draw: DrawContext = { ...ctx, pick: pickLogo(ctx.logos, style, size.key, vars, ctx.logoOverride) };
+  const draw: DrawContext = { ...ctx, pick: pickLogo(ctx.logos, style, size, vars, ctx.logoOverride) };
   return '<div class="tpl st-' + style + ' ' + size.cls + (content.isQuote ? ' is-quote' : '') + '">' + RENDER[style](content, draw) + (grain ? '<div class="grain"></div>' : '') + '</div>';
 }

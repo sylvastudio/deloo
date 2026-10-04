@@ -2,6 +2,7 @@ import { geminiProvider } from "./gemini";
 import { groqProvider } from "./groq";
 import { mockProvider } from "./mock";
 import { AIError, type CopyProvider, type ProviderName, type UnderstandInput, type Understanding } from "./types";
+import { applyConventions } from "../conventions";
 import { validateUnderstanding } from "./validate";
 
 export { AIError } from "./types";
@@ -35,7 +36,9 @@ async function run(provider: CopyProvider, input: UnderstandInput): Promise<Unde
   for (let attempt = 1; ; attempt++) {
     try {
       const raw = await provider.understand(input);
-      return { ...validateUnderstanding(raw, input.schema), provider: provider.name };
+      const { fields, unplaced } = validateUnderstanding(raw, input.schema);
+      // Honorifics exactly as the brief wrote them (PRD Phase 4): put back dropped titles, remove invented ones.
+      return { fields: applyConventions(input.schema, input.brief, fields), unplaced, provider: provider.name };
     } catch (e) {
       if (e instanceof AIError && e.kind === "invalid" && attempt < 2) continue;
       throw e;

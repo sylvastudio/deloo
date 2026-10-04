@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCategory } from "@/lib/catalog";
 import { requireMembership } from "@/lib/org";
-import { isStyle, SIZES } from "@/lib/posters/render";
+import { ALL_SIZES, isStyle, outPx } from "@/lib/posters/render";
 import { createClient } from "@/lib/supabase/server";
 
 /** Keeps only the type's own fields, as trimmed strings within sensible lengths. */
@@ -54,14 +54,14 @@ export async function updateBrief(input: { id: string; category: string; fields:
   return { notice: "Saved." };
 }
 
-/** Records a downloaded PNG that the browser already uploaded to exports/{org}/{brief}/…. */
+/** Records a download the browser already uploaded to exports/ (social) or print/ (print sizes) under {org}/{brief}/…. */
 export async function recordAsset(input: {
   briefId: string; style: string; size: string; path: string; copy: Record<string, string>;
   /** Which approved logo version the PNG used, and that file's SHA-256 (PRD Phase 3 logo fidelity). */
   logoVariantId: string | null; logoSha256: string | null;
 }): Promise<{ error?: string; version?: number }> {
   const m = await requireMembership();
-  const size = SIZES.find((s) => s.key === input.size);
+  const size = ALL_SIZES.find((s) => s.key === input.size);
   if (!size || !isStyle(input.style)) return { error: "Unknown style or size." };
   if (!input.path.startsWith(`${m.org.id}/${input.briefId}/`)) return { error: "That file isn't in this design's folder." };
   const supabase = await createClient();
@@ -72,11 +72,21 @@ export async function recordAsset(input: {
     // RLS (assets_write) allows the brief's author and HQ admins.
     const row = { brief_id: input.briefId, org_id: m.org.id, template_key: input.style, size: size.asset, copy: input.copy, file_path: input.path, version };
     const logo = { logo_variant_id: input.logoVariantId?.slice(0, 64) ?? null, logo_sha256: input.logoSha256 && /^[0-9a-f]{64}$/.test(input.logoSha256) ? input.logoSha256 : null };
-    let { error } = await supabase.from("assets").insert({ ...row, ...logo });
+    let { data, error } = await supabase.from("assets").insert({ ...row, ...logo }).select("id").single();
     // Before migration 0004 has run, the logo columns don't exist yet: record the asset without them.
-    if (error?.code === "42703" || error?.code === "PGRST204") ({ error } = await supabase.from("assets").insert(row));
-    if (!error) return { version };
-    if (error.code !== "23505") return { error: "Downloaded, but couldn't add it to the design's history." };
+    if (error?.code === "42703" || error?.code === "PGRST204") ({ data, error } = await supabase.from("assets").insert(row).select("id").single());
+    if (!error && data) {
+      if (size.print) {
+        // What the printer was told, kept with the file (RLS print_specs_write follows the asset's brief).
+        const px = outPx(size);
+        await supabase.from("print_specs").insert({
+          asset_id: data.id, org_id: m.org.id, physical_size: size.print.label, bleed_mm: size.print.bleedMm, dpi: size.print.dpi,
+          colour_note: `RGB from screen, ${px.w}×${px.h}px. ${size.print.finishing}`,
+        });
+      }
+      return { version };
+    }
+    if (error?.code !== "23505") return { error: error?.code === "22P02" ? "Downloaded. Print history needs a database update (migration 0005)." : "Downloaded, but couldn't add it to the design's history." };
   }
   return { error: "Downloaded, but couldn't add it to the design's history." };
 }

@@ -44,15 +44,31 @@ export const CATEGORIES: Category[] = [
         },
         {
           "key": "speaker",
+          "person": true,
           "label": "Ministering",
           "required": false,
           "placeholder": "Pastor Tolu Adeyemi",
           "hint": "Keep honorifics as written: Pastor, Evang., Chief, Alhaji, HRM."
         },
         {
+          "key": "speaker_role",
+          "label": "Their role line",
+          "required": false,
+          "placeholder": "Ministering",
+          "hint": "Printed before the name. Only the words the brief uses, e.g. Guest speaker, Preacher, Special guest. Empty = “Ministering”."
+        },
+        {
           "key": "host",
+          "person": true,
           "label": "Host",
           "required": false
+        },
+        {
+          "key": "anchor",
+          "person": true,
+          "label": "Anchor",
+          "required": false,
+          "placeholder": "Bro. Femi Ade"
         },
         {
           "key": "cta",
@@ -96,6 +112,7 @@ export const CATEGORIES: Category[] = [
         },
         {
           "key": "host",
+          "person": true,
           "label": "Hosted by",
           "required": false,
           "placeholder": "The Choir"
@@ -108,6 +125,7 @@ export const CATEGORIES: Category[] = [
         },
         {
           "key": "rsvp",
+          "person": true,
           "label": "RSVP to",
           "required": false,
           "placeholder": "Sister Bola"
@@ -143,6 +161,7 @@ export const CATEGORIES: Category[] = [
         },
         {
           "key": "contact",
+          "person": true,
           "label": "Contact",
           "required": false,
           "placeholder": "Church office"
@@ -166,6 +185,7 @@ export const CATEGORIES: Category[] = [
         },
         {
           "key": "reference",
+          "person": true,
           "label": "Reference or speaker",
           "required": false,
           "placeholder": "Matthew 5:16"
@@ -188,6 +208,7 @@ export const CATEGORIES: Category[] = [
       "fields": [
         {
           "key": "name",
+          "person": true,
           "label": "Who's celebrating?",
           "required": true,
           "placeholder": "Mama Grace"
