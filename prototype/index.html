@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Deloo Prototype</title>
+<meta name="theme-color" content="#0F6B73">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Deloo">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- App UI fonts (design.html v0.2) + poster style fonts -->
@@ -299,6 +307,36 @@ textarea.control { resize: vertical; min-height: 64px; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; }
 }
 
+/* Phone: one panel at a time, switched from a bottom tab bar */
+.mnav { display: none; }
+@media (max-width: 760px) {
+  .dash { height: 100dvh; min-height: 0; grid-template-rows: auto minmax(0, 1fr) auto; }
+  .topbar { padding-block: 8px; padding-top: max(8px, env(safe-area-inset-top)); }
+  .topbar .org, .topbar .badge.warm { display: none; }
+  .workspace { display: block; padding: 0; min-height: 0; overflow: hidden; }
+  .workspace > * { display: none; }
+  .workspace[data-panel="chat"] > .chat, .workspace[data-panel="design"] > .canvas, .workspace[data-panel="brand"] > .rail { display: grid; }
+  .chat { position: static; height: 100%; min-height: 0; border: 0; border-radius: 0; grid-template-rows: minmax(0, 1fr) auto; }
+  .chat-head { display: none; }
+  .canvas, .rail { height: 100%; overflow-y: auto; padding: 12px 16px 20px; align-content: start; }
+  .rail { border: 0; border-radius: 0; grid-template-columns: 1fr; }
+  .artboard { min-height: 0; padding: 12px; }
+  .tab-rows { display: grid; gap: 6px; width: 100%; }
+  .tabs { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+  .canvas-foot .acts { width: 100%; }
+  .canvas-foot .acts .btn { flex: 1; min-height: 44px; }
+  .empty-canvas .blank { width: min(100%, 26vh, 240px); }
+  .mnav {
+    display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .mnav button { position: relative; display: grid; justify-items: center; gap: 2px; min-height: 56px; padding: 8px 4px 6px; border: 0; background: none; color: var(--slate); font: 500 11px var(--font-body); cursor: pointer; }
+  .mnav button svg { width: 22px; height: 22px; }
+  .mnav button[aria-current="page"] { color: var(--lagoon); }
+  .mnav button:focus-visible { outline: var(--ring); outline-offset: -4px; }
+  .mnav .dot { position: absolute; top: 8px; left: calc(50% + 8px); width: 8px; height: 8px; border-radius: 50%; background: var(--marigold); }
+}
+
 /* =====================================================================
    POSTERS
    Rendered at real pixel size, scaled for preview.
@@ -395,8 +433,8 @@ textarea.control { resize: vertical; min-height: 64px; }
 .st-ticket { background: var(--p); color: var(--on-p-body); }
 .st-ticket > .box { height: 100%; display: grid; grid-template-columns: 100%; grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: "big" "slot" "paper" "org"; justify-items: center; padding: 6cqmin 7cqmin 4.5cqmin; }
 .st-ticket .t-big { grid-area: big; font-family: var(--f-cond); text-transform: uppercase; font-size: calc(15cqmin * var(--hs)); line-height: .9; text-align: center; margin-bottom: 4cqmin; max-width: 100%; }
-.st-ticket .t-slot { grid-area: slot; width: 100%; height: 6.5cqmin; border-radius: 1.6cqmin; background: linear-gradient(#ececec, #a1a1a1 55%, #d2d2d2); box-shadow: 0 1cqmin 2cqmin rgba(0,0,0,.3), inset 0 -1.2cqmin 0 #6f6f6f; position: relative; z-index: 2; }
-.st-ticket .t-slot i { position: absolute; left: 6%; right: 6%; top: 42%; height: .9cqmin; background: #333; border-radius: 1cqmin; }
+.st-ticket .t-slot { grid-area: slot; width: 100%; height: 6.5cqmin; border-radius: 1.6cqmin; background: linear-gradient(var(--metal-hi), var(--metal-mid) 55%, var(--metal-lt)); box-shadow: 0 1cqmin 2cqmin rgba(0,0,0,.3), inset 0 -1.2cqmin 0 var(--metal-lo); position: relative; z-index: 2; }
+.st-ticket .t-slot i { position: absolute; left: 6%; right: 6%; top: 42%; height: .9cqmin; background: var(--prop-dark); border-radius: 1cqmin; }
 .st-ticket .t-paper {
   grid-area: paper; width: 84%; height: 100%; margin-top: -2.4cqmin; background: var(--pp-light); color: var(--k);
   padding: 6cqmin 5cqmin 7cqmin; display: flex; flex-direction: column; align-items: center; gap: 2.2cqmin; text-align: center;
@@ -500,8 +538,8 @@ textarea.control { resize: vertical; min-height: 64px; }
 .st-note .n-stage { height: 100%; display: flex; justify-content: center; align-items: center; padding: 7cqmin; }
 .st-note .n-wrap { position: relative; width: 82%; height: 86%; transform: rotate(-1.4deg); }
 .st-note .n-pin { position: absolute; top: -3.5cqmin; left: calc(50% - 3.5cqmin); width: 7cqmin; height: 11cqmin; z-index: 3; }
-.st-note .n-pin .h { position: absolute; top: 0; left: 0; width: 7cqmin; height: 7cqmin; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #6a6a6a, #111 62%); box-shadow: .6cqmin 1cqmin 1.2cqmin rgba(0,0,0,.45); }
-.st-note .n-pin .n { position: absolute; top: 5.5cqmin; left: 3.2cqmin; width: .7cqmin; height: 5cqmin; background: linear-gradient(90deg, #aaa, #555); }
+.st-note .n-pin .h { position: absolute; top: 0; left: 0; width: 7cqmin; height: 7cqmin; border-radius: 50%; background: radial-gradient(circle at 35% 30%, var(--pin-hi), var(--pin-lo) 62%); box-shadow: .6cqmin 1cqmin 1.2cqmin rgba(0,0,0,.45); }
+.st-note .n-pin .n { position: absolute; top: 5.5cqmin; left: 3.2cqmin; width: .7cqmin; height: 5cqmin; background: linear-gradient(90deg, var(--metal-mid), var(--prop-mid)); }
 .st-note .n-note { height: 100%; background: var(--p); color: var(--on-p-ink); box-shadow: 1.2cqmin 2.4cqmin 3.6cqmin rgba(0,0,0,.35); padding: 11cqmin 6.5cqmin 6cqmin; display: flex; flex-direction: column; gap: 2.8cqmin; }
 .st-note .n-a, .st-note .n-b { display: flex; flex-direction: column; gap: 2.6cqmin; }
 .st-note .n-b { margin-top: auto; }
@@ -575,9 +613,9 @@ textarea.control { resize: vertical; min-height: 64px; }
 .st-billboard .hl { margin-top: auto; font-family: var(--f-grot); font-weight: 800; letter-spacing: -.035em; font-size: calc(10.5cqmin * var(--hs)); line-height: 1; max-width: 74%; }
 .st-billboard .bb-details { font-family: var(--f-grot); font-weight: 600; font-size: calc(3cqmin * var(--ts)); line-height: 1.3; opacity: .85; max-width: 74%; }
 .st-billboard .bb-hand { position: absolute; right: 7%; top: 11%; font-family: var(--f-hand); font-weight: 700; font-size: calc(5cqmin * var(--ts)); line-height: .95; transform: rotate(8deg); text-align: center; max-width: 24%; text-transform: uppercase; }
-.st-billboard .bb-post { position: absolute; left: 62%; width: 6cqmin; top: 72%; bottom: 0; background: linear-gradient(90deg, #1d1d1d, #3d3d3d 50%, #1d1d1d); z-index: 1; }
-.st-billboard .bb-feet { position: absolute; left: 13%; right: 3%; top: 72%; height: 2.6cqmin; background: repeating-linear-gradient(90deg, #262626 0 5cqmin, transparent 5cqmin 16cqmin); z-index: 1; }
-.st-billboard .bb-rail { position: absolute; left: 0; width: 10%; top: calc(72% - 8cqmin); height: 8cqmin; border-top: .5cqmin solid #333; background: repeating-linear-gradient(90deg, #333 0 .45cqmin, transparent .45cqmin 2.2cqmin); z-index: 1; }
+.st-billboard .bb-post { position: absolute; left: 62%; width: 6cqmin; top: 72%; bottom: 0; background: linear-gradient(90deg, var(--post-lo), var(--post-hi) 50%, var(--post-lo)); z-index: 1; }
+.st-billboard .bb-feet { position: absolute; left: 13%; right: 3%; top: 72%; height: 2.6cqmin; background: repeating-linear-gradient(90deg, var(--post-lo) 0 5cqmin, transparent 5cqmin 16cqmin); z-index: 1; }
+.st-billboard .bb-rail { position: absolute; left: 0; width: 10%; top: calc(72% - 8cqmin); height: 8cqmin; border-top: .5cqmin solid var(--prop-dark); background: repeating-linear-gradient(90deg, var(--prop-dark) 0 .45cqmin, transparent .45cqmin 2.2cqmin); z-index: 1; }
 .st-billboard .bb-logo { position: absolute; left: 0; right: 0; bottom: 4cqmin; display: flex; justify-content: center; z-index: 2; }
 .st-billboard .bb-logo .logo-img { height: 8cqmin; }
 .st-billboard .bb-logo .logo-text { font-size: 2.4cqmin; color: var(--on-sky); }
@@ -818,6 +856,8 @@ function posterVars(pal) {
     "--on-a": onColor(a, [p, k, pp], 3), "--on-pp": onColor(pp, [p, k], 3), "--on-pp-script": onColor(p, [ppLight, "#FFFFFF"], 2.5),
     "--sky-top": mix(p, "#FFFFFF", .42), "--sky-bot": skyBot, "--ground": ground, "--ground-2": mix(ground, k, .35), "--on-ground": onColor(ground, [pp, "#FFFFFF"], 3),
     "--on-sky": onColor(skyBot, [k, p], 3), "--board": board, "--on-board-a": onColor(board, [a, p, k], 1.8),
+    "--metal-hi": mix(k, "#FFFFFF", .92), "--metal-mid": mix(k, "#FFFFFF", .62), "--metal-lt": mix(k, "#FFFFFF", .82), "--metal-lo": mix(k, "#FFFFFF", .42),
+    "--prop-dark": mix(k, "#FFFFFF", .18), "--prop-mid": mix(k, "#FFFFFF", .32), "--pin-hi": mix(k, "#FFFFFF", .4), "--pin-lo": k, "--post-lo": mix(k, "#FFFFFF", .08), "--post-hi": mix(k, "#FFFFFF", .22),
     "--dot": withAlpha(k, .08), "--dot-on-p": withAlpha(onColor(p, [pp, k], 3), .14), "--shadow": withAlpha(k, .55), "--zig": ZIG
   };
 }
@@ -1215,7 +1255,8 @@ function freshState() {
     view: "onboarding", step: 0,
     org: { name: "", type: "", typeOther: "", structure: "" }, types: [], requests: [], styles: [],
     logo: null, palette: buildPalette(DEFAULT_PALETTE.primary, DEFAULT_PALETTE.accent), paletteSource: "default", grain: true,
-    type: null, fields: {}, generated: false, options: [], opt: 0, size: 0, logoStepDone: false, chatStarted: false
+    type: null, fields: {}, generated: false, options: [], opt: 0, size: 0, logoStepDone: false, chatStarted: false,
+    panel: "chat", unread: false
   };
 }
 var state = freshState();
@@ -1417,7 +1458,7 @@ function renderDashboard() {
             '<button type="button" data-proto="gallery">Open the style gallery</button>' +
           '</div></details></div>' +
       '</header>' +
-      '<div class="workspace">' +
+      '<div class="workspace" id="workspace" data-panel="' + state.panel + '">' +
         '<aside class="rail" aria-label="Your brand">' +
           '<section><div class="sec-head"><h2>Your brand</h2><span>set by HQ</span></div>' +
             '<div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Add or replace your logo"><span id="logo-preview">' + logoPreviewHtml() + '</span></div>' +
@@ -1438,9 +1479,35 @@ function renderDashboard() {
             '<button class="btn" type="submit">Send</button><p class="hint">Enter to send · Shift+Enter for a new line</p></form>' +
         '</aside>' +
       '</div>' +
+      '<nav class="mnav" aria-label="Sections">' +
+        mnavBtn("chat", "Chat", '<path d="M4 5h16v11H9l-5 4z"/>') +
+        mnavBtn("design", "Design", '<rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M8 8h8M8 12h5"/>') +
+        mnavBtn("brand", "Brand", '<circle cx="12" cy="12" r="8"/><circle cx="9" cy="10" r="1.3"/><circle cx="14.5" cy="9" r="1.3"/><circle cx="15" cy="14" r="1.3"/>') +
+      '</nav>' +
     '</div>';
   bindDashboard(); drawSwatches(); drawPresets(); drawCanvas();
   if (!state.chatStarted) startChat();
+}
+function mnavBtn(key, label, icon) {
+  return '<button type="button" data-panel="' + key + '"' + (state.panel === key ? ' aria-current="page"' : '') + '><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">' + icon + '</svg>' + label + (state.unread && key === "chat" ? '<span class="dot" aria-label="New message"></span>' : '') + '</button>';
+}
+function isPhone() { return !!(window.matchMedia && matchMedia("(max-width: 760px)").matches); }
+function setPanel(p) {
+  state.panel = p; if (p === "chat") state.unread = false;
+  var ws = $("#workspace"); if (!ws) return;
+  ws.setAttribute("data-panel", p);
+  $$(".mnav [data-panel]").forEach(function (b) {
+    if (b.dataset.panel === p) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+    var d = $(".dot", b); if (d && b.dataset.panel === "chat" && !state.unread) d.remove();
+  });
+  if (p === "design") fitCanvas();
+  if (p === "chat") scrollLog();
+}
+/* On a phone, jump to the panel the next step happens in */
+function goPanel(p) { if (isPhone() && state.panel !== p) setPanel(p); }
+function markUnread() {
+  if (!isPhone() || state.panel === "chat" || state.unread) return;
+  state.unread = true; var b = $('.mnav [data-panel="chat"]'); if (b && !$(".dot", b)) b.appendChild(h('<span class="dot" aria-label="New message"></span>'));
 }
 function orgTypeLabel() { if (state.org.type === "other") return state.org.typeOther || "Organisation"; var t = ORG_TYPES.filter(function (x) { return x.key === state.org.type; })[0]; return t ? t.label : ""; }
 function logoPreviewHtml() { return state.logo ? '<img src="' + state.logo + '" alt="Your logo"><b>Replace logo</b>' : '<b>Add your logo</b><span>PNG, JPG or SVG. Drag it here or click.</span>'; }
@@ -1462,6 +1529,7 @@ function bindDashboard() {
       if (a === "gallery") renderGallery();
     });
   });
+  $$(".mnav [data-panel]").forEach(function (b) { b.addEventListener("click", function () { setPanel(b.dataset.panel); }); });
   var comp = $("#composer");
   comp.addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#composer-form").requestSubmit(); } });
   comp.addEventListener("input", function () { comp.style.height = "auto"; comp.style.height = Math.min(140, comp.scrollHeight) + "px"; });
@@ -1584,7 +1652,7 @@ function pointerHtml(n, cur, title, sub, extra) {
 }
 function fitCanvas() {
   var board = $("#artboard"), frame = $("#canvas-frame"), poster = $("#canvas-poster"); if (!frame) return;
-  var maxW = board.clientWidth - 40, maxH = Math.max(320, Math.min(window.innerHeight - 250, 760));
+  var maxW = board.clientWidth - (isPhone() ? 24 : 40), maxH = isPhone() ? Math.max(240, window.innerHeight - 330) : Math.max(320, Math.min(window.innerHeight - 250, 760));
   scaleInto(frame, poster, SIZES[state.size], maxW, maxH);
 }
 function currentContent() { return toContent(state.type, state.fields[state.type] || {}, state.org.name); }
@@ -1652,7 +1720,7 @@ function botSay(html, chips, after, widget) {
           });
           msg.appendChild(row);
         }
-        log.appendChild(msg); scrollLog();
+        log.appendChild(msg); scrollLog(); markUnread();
         if (after) after(); resolve();
       }, reduced() ? 60 : 480);
     });
@@ -1688,6 +1756,7 @@ function somethingElse() {
   botSay("That type isn't available yet. Tell me what it is and I'll pass it on:", null, function () { $("#se-name", form).focus(); }, form);
 }
 function chooseType(k) {
+  goPanel("chat");
   state.type = k; state.fields[k] = state.fields[k] || {}; state.generated = false; state.logoStepDone = true;
   drawCanvas();
   botSay("An <b>" + esc(TYPES[k].label.toLowerCase()) + "</b>. Tell me about it the way you'd text it. For example: <i>" + esc(TYPES[k].example) + "</i>", [
@@ -1713,6 +1782,7 @@ function understand(text) {
   showFieldCard("Here's what I understood." + extra + " Check it and fill in anything missing.", state.generated ? "Update designs" : "Generate designs", got);
 }
 function showFieldCard(intro, buttonLabel, foundKeys) {
+  goPanel("chat");
   var t = TYPES[state.type], f = state.fields[state.type] || (state.fields[state.type] = {}), stamp = Date.now();
   var parsed = foundKeys !== undefined; foundKeys = foundKeys || [];
   var form = h('<form class="card-form" novalidate></form>');
@@ -1750,6 +1820,7 @@ function pickOptions(type) {
 function generate() {
   state.options = pickOptions(state.type); state.opt = 0; state.size = 0; state.generated = true;
   botSay("Making 3 options in your colours…", null, function () {
+    goPanel("design");
     drawCanvas();
     develop($("#canvas-frame"), false, function () {
       botSay("Your <b>" + esc(currentContent().headline) + "</b> designs are ready: 3 options, each in 4 sizes, in " + esc(state.org.name) + "'s colours. Switch with the tabs above the canvas, then download the one you like.", doneChips());
@@ -1832,7 +1903,7 @@ function loadDemo() {
   state.types = ["event", "invite", "quote", "service", "thanks"]; state.styles = ["block", "badge", "ticket"];
   state.logo = testLogo(); state.logoStepDone = true; state.palette = buildPalette("#1B2A4A", "#E8B84A"); state.paletteSource = "logo";
   state.type = "event"; state.fields.event = Object.assign({}, SAMPLES.event);
-  state.options = pickOptions("event"); state.generated = true; state.chatStarted = true;
+  state.options = pickOptions("event"); state.generated = true; state.chatStarted = true; state.panel = "design";
   renderDashboard();
   botSay("Demo loaded: <b>Grace Harbour Chapel</b> (test data), with an event flyer already made. Try the tabs, or ask for a change like <i>make it red and cream</i>.", doneChips());
 }
@@ -1858,6 +1929,9 @@ function renderGallery() {
    BOOT. Load poster fonts first so text fitting measures real glyphs.
    #demo opens the demo, #gallery shows every style, #selftest checks export.
    ===================================================================== */
+if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+}
 var FONT_PROBES = ["900 40px Archivo", "800 40px Archivo", "expanded 900 40px Archivo", "condensed 800 40px Archivo", "40px Anton", "400 40px 'Space Mono'", "700 40px 'Space Mono'",
   "40px Yellowtail", "40px 'Mrs Saint Delafield'", "40px 'Instrument Serif'", "800 40px 'Inter Tight'", "600 40px 'Inter Tight'", "700 40px Caveat"];
 var fontsReady = document.fonts && document.fonts.load

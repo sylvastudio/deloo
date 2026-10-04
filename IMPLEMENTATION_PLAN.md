@@ -39,12 +39,29 @@ no server, no database and no API keys.
 | 1.6 | Build the UI: brief textarea, category picker, 4-size preview grid, inline copy editing, template swap, "Download PNG" per size | Preview at IG post 1080×1080, IG story 1080×1920, X banner 1500×500, A5 handbill (148×210 mm ratio); PNG export via one CDN library (`html-to-image`) |
 
 **Exit check (done when):**
-- [ ] Opening `prototype/index.html` from disk (`file://`) works with no server and no keys.
-- [ ] Each of the 3 categories produces 4 correctly sized previews from a typed brief.
-- [ ] Changing a single value in `BRAND_KIT` restyles every template. A search of the templates finds no
+- [x] Opening `prototype/index.html` from disk (`file://`) works with no server and no keys.
+- [x] Each of the 3 categories produces 4 correctly sized previews from a typed brief.
+- [x] Changing a single value in `BRAND_KIT` restyles every template. A search of the templates finds no
       hard-coded hex colours.
-- [ ] Copy edits and template swaps re-render instantly, and every size downloads as a PNG.
-- [ ] 12 sample PNGs are saved (3 categories × 4 sizes) in `prototype/samples/`.
+- [x] Copy edits and template swaps re-render instantly, and every size downloads as a PNG.
+- [x] 12 sample PNGs are saved (3 categories × 4 sizes) in `prototype/samples/`.
+
+**Closed 4 Oct 2026.** Checked against the expanded scope (7 types, 9 styles), driving the real UI in
+headless Chrome from `file://`:
+- Only fonts.googleapis.com, fonts.gstatic.com and cdnjs.cloudflare.com are contacted. No keys, no page errors.
+- All 7 types: typed brief → field card → generate → Post 1080×1080, Story 1080×1920, Banner 1500×500,
+  A5 874×1240, each downloaded through the Download PNG button (28 PNGs, dimensions confirmed).
+- There is no `BRAND_KIT` object any more. The palette (`state.palette` → `posterVars()`) is the single
+  source. Changing it restyles the poster. The 14 hard-coded greys (ticket slot, pin, billboard posts) now
+  derive from the palette ink, and a search of the poster CSS and renderers finds 0 hex values.
+- "change the date to 5 Oct" re-renders in under 100 ms, and "try the receipt style" swaps the template in about 30 ms.
+- Samples: 28 PNGs (7 types × 4 sizes) are generated into `prototype/samples/`, which git ignores
+  (43 MB because of the grain). `prototype/samples-contact-sheet.jpg` is committed as the record.
+- Added in the same pass: PWA (manifest, service worker, icons) and a phone layout with Chat / Design /
+  Brand bottom tabs. See PRD §9.
+
+**Known design issues carried forward:** the quote card in Editorial and the event Story in Poster block
+leave large empty areas.
 
 **Tag:** `phase-1`
 
