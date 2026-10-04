@@ -1,0 +1,39 @@
+{
+  "name": "deloo",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "db:start": "supabase start -x studio,realtime,edge-runtime,logflare,vector,imgproxy,supavisor,postgres-meta",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:types": "supabase gen types typescript --local > lib/database.types.ts",
+    "check:rls": "tsx scripts/rls-check.ts",
+    "check:prototype": "node scripts/verify-prototype.mjs",
+    "check:ai": "tsx scripts/ai-check.ts"
+  },
+  "dependencies": {
+    "next": "16.3.8",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "@supabase/supabase-js": "^2.117.2",
+    "@supabase/ssr": "^0.12.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.8",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "supabase": "^2.119.0",
+    "tsx": "^4",
+    "playwright-core": "^1"
+  }
+}

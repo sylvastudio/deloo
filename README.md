@@ -114,8 +114,21 @@ writing before scaling anything post-program.
   all unregistered; deloo.app unregistered; deloo.com registered (parked).
 - To do: Nigerian trademark registry search; grab @deloo handles (Instagram, X, TikTok).
 
+## Run it locally
+
+- **Phase 1 prototype:** open `prototype/index.html` straight from disk (`#demo` opens a ready-made demo).
+  To test on a phone as a PWA, serve the folder over HTTPS (see `docs/external-services.md` §7 for options).
+  Re-check it with `npm run check:prototype`.
+- **Phase 2 app** (needs Node 22 and a Docker runtime; this machine uses colima):
+  1. `npm install`
+  2. `npm run db:start`. This starts Postgres, Auth, Storage and the mail catcher. Copy the URL and keys it prints into `.env.local` (template: `.env.example`).
+  3. `npm run db:reset` loads the migrations plus the TEST seed (logins are listed at the top of `supabase/seed.sql`).
+  4. `npm run dev`, then open http://localhost:3000. Invite and magic-link emails arrive at http://127.0.0.1:54324.
+  5. `npm run check:rls` runs the row-level security exit check.
+
 ## Related docs
 
+- `docs/external-services.md`: AI, payments, messaging and hosting services we may use, with timing.
 - `competitors.md` — full competitor map, pricing, gaps, and the study plan (run the same brief
   through each tool; record results in `resources/competitor-tests/`).
 
