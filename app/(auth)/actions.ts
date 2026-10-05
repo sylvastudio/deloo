@@ -15,7 +15,10 @@ const isCaptcha = (e: { message?: string } | null) => !!e?.message && /captcha/i
 function mailError(e: { message?: string; status?: number } | null, what: string): string | null {
   if (!e) return null;
   console.error(`[auth] ${what} email failed:`, e.status, e.message);
-  if (e.status === 429 || /rate limit/i.test(e.message ?? "")) return "Too many emails were sent in the last hour. Wait a few minutes, then try again.";
+  // Per-address cooldown: "For security purposes, you can only request this after 42 seconds."
+  const wait = (e.message ?? "").match(/after (\d+) seconds?/i);
+  if (wait) return `You just asked for an email. Wait ${wait[1]} seconds, then try again.`;
+  if (e.status === 429 || /rate limit/i.test(e.message ?? "")) return "Deloo has sent a lot of emails in the last hour. Wait a few minutes, then try again.";
   return "We couldn't send the email just now. Try again in a few minutes. If it keeps happening, tell your Deloo contact.";
 }
 
