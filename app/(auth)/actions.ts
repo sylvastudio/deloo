@@ -11,6 +11,13 @@ function captcha(form: FormData) {
 }
 const CAPTCHA_FAILED = "Please complete the security check above, then try again.";
 const isCaptcha = (e: { message?: string } | null) => !!e?.message && /captcha/i.test(e.message);
+/** Supabase couldn't send an email (SMTP problem or rate limit). Never report "sent" when it wasn't. */
+function mailError(e: { message?: string; status?: number } | null, what: string): string | null {
+  if (!e) return null;
+  console.error(`[auth] ${what} email failed:`, e.status, e.message);
+  if (e.status === 429 || /rate limit/i.test(e.message ?? "")) return "Too many emails were sent in the last hour. Wait a few minutes, then try again.";
+  return "We couldn't send the email just now. Try again in a few minutes. If it keeps happening, tell your Deloo contact.";
+}
 
 function safeNext(v: FormDataEntryValue | null) {
   const s = typeof v === "string" ? v : "";
@@ -29,6 +36,8 @@ export async function signIn(_: AuthState, form: FormData): Promise<AuthState> {
       options: { shouldCreateUser: false, captchaToken: captcha(form), emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm?next=${safeNext(form.get("next"))}` },
     });
     if (isCaptcha(error)) return { error: CAPTCHA_FAILED, email };
+    // Unknown address (shouldCreateUser: false) comes back as a 4xx; sending failures as 429/5xx.
+    if (error && ((error.status ?? 0) >= 500 || error.status === 429)) return { error: mailError(error, "sign-in link")!, email };
     if (error) return { error: "We couldn't send a link to that address. Check it, or sign in with your password.", email };
     return { notice: `Check ${email} for a sign-in link.`, email };
   }
@@ -38,6 +47,8 @@ export async function signIn(_: AuthState, form: FormData): Promise<AuthState> {
       captchaToken: captcha(form), redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm?next=/reset-password`,
     });
     if (isCaptcha(error)) return { error: CAPTCHA_FAILED, email };
+    const failed = mailError(error, "reset");
+    if (failed) return { error: failed, email };
     // Same answer whether or not the address has an account, so the form can't be used to find members.
     return { notice: `If ${email} has a Deloo account, we've sent a link to choose a new password. Open it on this device.`, email };
   }
@@ -60,6 +71,7 @@ export async function signUp(_: AuthState, form: FormData): Promise<AuthState> {
     options: { captchaToken: captcha(form), emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm?next=/onboarding` },
   });
   if (isCaptcha(error)) return { error: CAPTCHA_FAILED, email };
+  if (error && ((error.status ?? 0) >= 500 || error.status === 429)) return { error: mailError(error, "confirmation")!, email };
   if (error) return { error: error.message, email };
   if (!data.session) return { notice: `Check ${email} to confirm your address, then continue.`, email };
   redirect("/onboarding");
