@@ -1,9 +1,10 @@
 /**
- * Phase 2 exit check: row-level security, run against the local Supabase stack.
- * Signs in as the seeded TEST users with the public (anon) key — exactly what a
- * browser or a hand-written API call could do — and tries things RLS must refuse.
+ * Phase 0 exit check: row-level security on the rental schema.
+ * Signs in as the seeded TEST users with the public (anon) key, exactly what a browser or a
+ * hand-written API call could do, and tries things RLS must refuse.
  *
- *   npm run db:reset && npm run check:rls
+ * Run against a TEST project only (migrations 0006–0007 + supabase/seed.sql), never the live one:
+ *   npm run check:rls
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
@@ -12,16 +13,18 @@ function env(name: string): string {
   if (process.env[name]) return process.env[name]!;
   const file = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
   const line = file.split("\n").find((l) => l.startsWith(name + "="));
-  if (!line) throw new Error(`${name} missing: copy .env.example to .env.local and fill it from \`npx supabase status\``);
+  if (!line) throw new Error(`${name} missing: set it in the environment or .env.local`);
   return line.slice(name.length + 1).trim();
 }
 const URL_ = env("NEXT_PUBLIC_SUPABASE_URL");
 const KEY = env("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
-const GRACE = "aaaaaaaa-0000-4000-8000-000000000001";
-const NORTHGATE = "bbbbbbbb-0000-4000-8000-000000000002";
-const CHOIR = "aaaaaaaa-1000-4000-8000-000000000002";
-const VOLUNTEER_ID = "22222222-2222-4222-8222-222222222222";
+const RENTER = "11111111-1111-4111-8111-111111111111";
+const SOUND_CITY = "aaaaaaaa-0000-4000-8000-000000000001";   // approved
+const GRACE = "bbbbbbbb-0000-4000-8000-000000000002";        // not approved
+const SPEAKER = "aaaaaaaa-2000-4000-8000-000000000001";
+const SPEAKER_UNIT = "aaaaaaaa-3000-4000-8000-000000000001";
+const GRACE_MIC = "bbbbbbbb-2000-4000-8000-000000000001";
 
 let failed = 0;
 function check(label: string, ok: boolean, detail = "") {
@@ -32,102 +35,125 @@ function check(label: string, ok: boolean, detail = "") {
 async function as(email: string): Promise<SupabaseClient> {
   const c = createClient(URL_, KEY, { auth: { persistSession: false } });
   const { error } = await c.auth.signInWithPassword({ email, password: "deloo-test-123" });
-  if (error) throw new Error(`sign-in ${email}: ${error.message}`);
+  if (error) throw new Error(`sign-in ${email}: ${error.message} (is this the TEST project with seed.sql?)`);
   return c;
 }
 
+// A fixed far-future window so repeated runs don't collide with real data.
+const period = (startDay: number, endDay: number) => `[2031-01-${String(startDay).padStart(2, "0")} 08:00+01,2031-01-${String(endDay).padStart(2, "0")} 08:00+01)`;
+
 async function main() {
   const anon = createClient(URL_, KEY, { auth: { persistSession: false } });
-  const vol = await as("volunteer@grace.test");
-  const admin = await as("admin@grace.test");
-  const other = await as("admin@northgate.test");
+  const renter = await as("renter@deloo.test");
+  const sound = await as("owner@soundcity.test");
+  const grace = await as("media@grace.test");
+  const ops = await as("ops@deloo.test");
 
-  // --- Signed-out ---------------------------------------------------------------
+  // --- Public catalogue --------------------------------------------------------
   {
-    const { data } = await anon.from("brand_kits").select("id");
-    check("signed-out visitor sees no brand kits", (data ?? []).length === 0, `${data?.length ?? 0} rows`);
-  }
-
-  // --- Volunteer: can read the kit, cannot change it --------------------------------
-  const { data: kit } = await vol.from("brand_kits").select("id, colours").eq("org_id", GRACE).single();
-  check("volunteer can read their org's brand kit", !!kit);
-  {
-    const { data, error } = await vol.from("brand_kits")
-      .update({ colours: { primary: "#FF0000", accent: "#00FF00", paper: "#FFFFFF", ink: "#000000" } })
-      .eq("org_id", GRACE).select();
-    const { data: after } = await admin.from("brand_kits").select("colours").eq("org_id", GRACE).single();
-    check("volunteer UPDATE brand_kits is refused", (data ?? []).length === 0 && after?.colours.primary === kit?.colours.primary,
-      error ? error.message : `${data?.length ?? 0} rows changed, primary still ${after?.colours.primary}`);
+    const { data } = await anon.from("items").select("id, vendor_id");
+    const vendors = new Set((data ?? []).map((r) => r.vendor_id));
+    check("signed-out visitor sees approved vendors' gear", vendors.has(SOUND_CITY));
+    check("signed-out visitor does not see unapproved vendors' gear", !vendors.has(GRACE));
+    const { data: v } = await anon.from("vendors").select("id");
+    check("signed-out visitor sees only approved vendors", (v ?? []).every((r) => r.id === SOUND_CITY) && (v ?? []).length >= 1);
   }
   {
-    const { error } = await vol.from("brand_kits").insert({ org_id: GRACE, unit_id: CHOIR });
-    check("volunteer INSERT brand_kits is refused", !!error, error?.message);
-  }
-  {
-    const { data } = await vol.from("brand_kits").delete().eq("org_id", GRACE).select();
-    check("volunteer DELETE brand_kits is refused", (data ?? []).length === 0);
-  }
-  {
-    const { error } = await vol.storage.from("brand").upload(`${GRACE}/logo-hijack.svg`, new Blob(["<svg/>"], { type: "image/svg+xml" }));
-    check("volunteer cannot upload to the brand bucket", !!error, error?.message);
-  }
-  {
-    const { data } = await vol.from("memberships").update({ role: "admin" }).eq("user_id", VOLUNTEER_ID).select();
-    const { data: m } = await admin.from("memberships").select("role").eq("user_id", VOLUNTEER_ID).single();
-    check("volunteer cannot promote themselves to admin", (data ?? []).length === 0 && m?.role === "volunteer");
-  }
-  {
-    const { error } = await vol.from("briefs").insert({ org_id: GRACE, unit_id: CHOIR, author_id: VOLUNTEER_ID, category_key: "event" });
-    check("volunteer cannot create a brief in another unit", !!error, error?.message);
-  }
-  {
-    const { data, error } = await vol.from("briefs")
-      .insert({ org_id: GRACE, unit_id: "aaaaaaaa-1000-4000-8000-000000000001", author_id: VOLUNTEER_ID, category_key: "quote", raw_text: "rls-check" })
-      .select("id").single();
-    check("volunteer can create a brief in their own unit", !!data && !error, error?.message);
-    if (data) await vol.from("briefs").delete().eq("id", data.id);
-  }
-  {
-    const { error } = await vol.rpc("create_organisation", { org_name: "Sneaky Org", org_type: "other", org_structure: "single" });
-    check("existing member cannot create a second organisation", !!error, error?.message);
+    const { data } = await grace.from("items").select("id").eq("id", GRACE_MIC);
+    check("unapproved vendor still sees their own gear", (data ?? []).length === 1);
   }
 
-  // --- Admin: can change the kit ----------------------------------------------------
+  // --- Profiles: no self-promotion --------------------------------------------
   {
-    const next = { ...kit!.colours, accent: "#E8B84B" };
-    const { data, error } = await admin.from("brand_kits").update({ colours: next }).eq("org_id", GRACE).select("colours");
-    check("admin UPDATE brand_kits succeeds", (data ?? []).length === 1 && !error, error?.message);
-    await admin.from("brand_kits").update({ colours: kit!.colours }).eq("org_id", GRACE);
+    const { error } = await renter.from("profiles").update({ is_ops: true }).eq("id", RENTER);
+    const { data: p } = await ops.from("profiles").select("is_ops").eq("id", RENTER).single();
+    check("renter cannot make themselves Ops", !!error && p?.is_ops === false, error?.message);
   }
   {
-    const path = `${GRACE}/rls-check.svg`;
-    const { error } = await admin.storage.from("brand").upload(path, new Blob(["<svg xmlns='http://www.w3.org/2000/svg'/>"], { type: "image/svg+xml" }), { upsert: true });
-    check("admin can upload to their org's brand folder", !error, error?.message);
-    const { data: seen, error: dlErr } = await vol.storage.from("brand").download(path);
-    check("volunteer can read the org's brand files", !!seen && !dlErr, dlErr?.message);
-    const { data: leak } = await other.storage.from("brand").download(path);
-    check("another org cannot read those brand files", !leak);
-    await admin.storage.from("brand").remove([path]);
+    const { error } = await renter.from("profiles").update({ trust_level: 3 }).eq("id", RENTER);
+    check("renter cannot raise their own trust level", !!error, error?.message);
+  }
+  {
+    const { data } = await renter.from("profiles").select("id");
+    check("renter sees only their own profile", (data ?? []).length === 1 && data![0].id === RENTER);
+  }
+  {
+    const { data, error } = await renter.from("profiles").update({ phone: "08030000001" }).eq("id", RENTER).select("id");
+    check("renter can edit their own phone", (data ?? []).length === 1 && !error, error?.message);
   }
 
-  // --- Org isolation ------------------------------------------------------------------
-  for (const table of ["organisations", "units", "brand_kits", "briefs", "org_categories", "org_templates"] as const) {
-    const col = table === "organisations" ? "id" : "org_id";
-    const { data } = await other.from(table).select(col);
-    const orgs = new Set((data ?? []).map((r: Record<string, string>) => r[col]));
-    check(`Northgate admin sees only Northgate rows in ${table}`, orgs.size === 1 && orgs.has(NORTHGATE), [...orgs].join(","));
+  // --- Vendors: only members edit; only Ops approves ------------------------------
+  {
+    const { data } = await renter.from("items").update({ day_rate_kobo: 1 }).eq("id", SPEAKER).select();
+    check("renter cannot change a vendor's prices", (data ?? []).length === 0);
   }
   {
-    const { data } = await other.from("brand_kits").update({ tone: "hijacked" }).eq("org_id", GRACE).select();
-    check("Northgate admin cannot edit Grace's brand kit", (data ?? []).length === 0);
+    const { data } = await grace.from("items").update({ day_rate_kobo: 1 }).eq("id", SPEAKER).select();
+    check("another vendor cannot change Sound City's prices", (data ?? []).length === 0);
   }
   {
-    const { error } = await other.storage.from("brand").upload(`${GRACE}/x.svg`, new Blob(["<svg/>"], { type: "image/svg+xml" }));
-    check("Northgate admin cannot upload into Grace's folder", !!error, error?.message);
+    const { error } = await grace.from("items").insert({ vendor_id: SOUND_CITY, category_key: "mic", name: "Hijack", day_rate_kobo: 1, replacement_value_kobo: 100 });
+    check("vendor cannot list gear under another vendor", !!error, error?.message);
   }
   {
-    const { data } = await vol.from("briefs").select("org_id");
-    check("Grace volunteer sees no Northgate briefs", (data ?? []).every((r) => r.org_id === GRACE), `${data?.length ?? 0} rows`);
+    const { error } = await grace.from("vendors").update({ approved_at: new Date().toISOString() }).eq("id", GRACE);
+    check("vendor cannot approve themselves", !!error, error?.message);
+    const { error: rpcErr } = await grace.rpc("approve_vendor", { target: GRACE });
+    check("vendor cannot call approve_vendor", !!rpcErr, rpcErr?.message);
+  }
+  {
+    const { error } = await ops.rpc("approve_vendor", { target: GRACE });
+    const { data: v } = await anon.from("vendors").select("id").eq("id", GRACE);
+    check("Ops can approve a vendor, and its gear goes public", !error && (v ?? []).length === 1, error?.message);
+    await ops.rpc("approve_vendor", { target: GRACE, approve: false });
+  }
+  {
+    const { data, error } = await sound.from("items").insert({
+      vendor_id: SOUND_CITY, category_key: "led_wall", name: "rls-check LED", day_rate_kobo: 1, replacement_value_kobo: 500000000, technician_required: false,
+    }).select();
+    check("tier-3 gear without a technician is refused", !!error && !data, error?.message);
+  }
+
+  // --- Reservations: the database refuses a double booking -------------------------
+  {
+    const { data: first, error: e1 } = await sound.from("reservations").insert({ unit_id: SPEAKER_UNIT, period: period(10, 12), note: "rls-check" }).select("id").single();
+    check("vendor can block their own unit", !!first && !e1, e1?.message);
+    const { error: e2 } = await sound.from("reservations").insert({ unit_id: SPEAKER_UNIT, period: period(11, 13), note: "rls-check overlap" });
+    check("an overlapping reservation of the same unit is refused", !!e2 && /reservations_no_overlap|exclusion|conflict/i.test(e2.message), e2?.message);
+    const { error: e3 } = await sound.from("reservations").insert({ unit_id: SPEAKER_UNIT, period: period(12, 14), note: "rls-check back-to-back" });
+    check("a back-to-back reservation is allowed", !e3, e3?.message);
+    const { error: e4 } = await grace.from("reservations").insert({ unit_id: SPEAKER_UNIT, period: period(20, 21), note: "rls-check foreign" });
+    check("another vendor cannot block Sound City's unit", !!e4, e4?.message);
+    const { error: e5 } = await renter.from("reservations").insert({ unit_id: SPEAKER_UNIT, period: period(22, 23), note: "rls-check renter" });
+    check("a renter cannot reserve directly", !!e5, e5?.message);
+    const { data: seen } = await renter.from("reservations").select("id").eq("unit_id", SPEAKER_UNIT);
+    check("a renter cannot read a vendor's calendar", (seen ?? []).length === 0);
+    await sound.from("reservations").delete().eq("unit_id", SPEAKER_UNIT).like("note", "rls-check%");
+  }
+
+  // --- Events, unmet demand, waitlist ------------------------------------------------
+  {
+    const { data: ev, error } = await renter.from("events").insert({ raw_text: "rls-check", answers: { type: "service" } }).select("id").single();
+    check("renter can create an event", !!ev && !error, error?.message);
+    const { data: peek } = await sound.from("events").select("id").eq("id", ev?.id ?? "");
+    check("a vendor cannot read a renter's event", (peek ?? []).length === 0);
+    const { error: uErr } = await renter.from("unmet_demand").insert({ event_id: ev?.id, category_key: "led_wall", quantity: 1 });
+    check("renter can record unmet demand for their event", !uErr, uErr?.message);
+    const { data: ud } = await renter.from("unmet_demand").select("id");
+    check("only Ops reads unmet demand", (ud ?? []).length === 0);
+    const { data: udOps } = await ops.from("unmet_demand").select("id").eq("event_id", ev?.id ?? "");
+    check("Ops sees unmet demand", (udOps ?? []).length === 1);
+    if (ev) await renter.from("events").delete().eq("id", ev.id);
+  }
+  {
+    const { error } = await anon.from("waitlist").insert({ vertical: "studio", name: "rls-check (TEST)", contact: "test@deloo.test" });
+    check("a signed-out visitor can join a waitlist", !error, error?.message);
+    const { data } = await anon.from("waitlist").select("id");
+    check("a signed-out visitor cannot read the waitlist", (data ?? []).length === 0);
+  }
+  {
+    const { error } = await renter.from("bookings").insert({ event_id: RENTER, renter_id: RENTER, vendor_id: SOUND_CITY, starts_at: "2031-01-01", ends_at: "2031-01-02" });
+    check("bookings cannot be inserted directly", !!error, error?.message);
   }
 
   console.log(failed ? `\n${failed} check(s) failed` : "\nAll RLS checks passed");

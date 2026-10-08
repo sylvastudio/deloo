@@ -4,10 +4,19 @@ Everything here is a dashboard step for the account owner. The code is already i
 stays switched off until its key is added, so do these in order and nothing breaks in between.
 Current live URL: `https://peaceful-bonbon-42fa32.netlify.app` → target: `https://deloo.space`.
 
-## 1. Database is up to date
-Supabase → **SQL Editor** → run, in order, any you haven't run yet:
-`supabase/migrations/0004_asset_logo_variant.sql`, `supabase/migrations/0005_print_sizes.sql`.
-Check: on a design, download a print size. The message shouldn't say "couldn't save a copy".
+## 1. Database is up to date (rental pivot, 8 Oct 2026)
+Run these **before** pushing the rental code to `main`, or the live app will look for tables that aren't there.
+1. Supabase → **SQL Editor** → `select name, created_at from public.organisations;`. These are poster-tool
+   organisations. If they can all go, run `delete from public.organisations;`.
+2. Run `supabase/migrations/0006_drop_poster.sql`. It refuses to run while any organisation exists.
+3. Run `supabase/migrations/0007_rental_core.sql`.
+4. Storage: empty and delete the old `brand`, `exports` and `print` buckets. The new `items` bucket is created by 0007.
+5. Make yourself Ops: `update public.profiles set is_ops = true where id = (select id from auth.users where email = 'YOUR EMAIL');`
+   (after you've signed up and finished onboarding).
+Check: sign up a new account, finish onboarding as "Both", and land on Plan with Plan · Bookings · Gear · Account tabs.
+
+For `npm run check:rls`, use a **separate test Supabase project**: run 0007 there (skip 0006), then `supabase/seed.sql`,
+and point the check at it with `NEXT_PUBLIC_SUPABASE_URL=… NEXT_PUBLIC_SUPABASE_ANON_KEY=… npm run check:rls`.
 
 ## 2. Connect deloo.space (Namecheap → Netlify)
 1. Netlify → your site → **Domain management → Add a domain** → `deloo.space` → **Set up Netlify DNS**.

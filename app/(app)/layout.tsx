@@ -1,25 +1,27 @@
 import Link from "next/link";
 import { signOut } from "@/app/(auth)/actions";
 import { TabNav } from "@/components/tab-nav";
-import { requireMembership } from "@/lib/org";
+import { isRenter, isVendor, requireAccount } from "@/lib/account";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
-  const m = await requireMembership();
+  const a = await requireAccount();
+  const vendor = a.vendors[0];
+  // Renters: Plan · Bookings · Account. Vendors: Bookings · Gear · Account. Both get all four (IMPLEMENTATION_PLAN Phase 0).
   const items = [
-    { href: "/", label: "Home", icon: "home" as const },
-    { href: "/designs/new", label: "New design", icon: "create" as const },
-    { href: "/brand-kit", label: "Brand kit", icon: "brand" as const },
-    ...(m.role === "admin" ? [{ href: "/settings/members", label: "Members", icon: "members" as const }] : []),
+    ...(isRenter(a) ? [{ href: "/plan", label: "Plan", icon: "plan" as const }] : []),
+    { href: "/bookings", label: "Bookings", icon: "bookings" as const },
+    ...(isVendor(a) ? [{ href: "/gear", label: "Gear", icon: "gear" as const }] : []),
+    { href: "/account", label: "Account", icon: "account" as const },
   ];
   return (
     <div className="shell">
       <header className="topbar">
         <div className="flex min-w-0 items-baseline gap-3">
           <Link href="/" className="wordmark">deloo<span className="dot">.</span></Link>
-          <span className="org">{m.org.name}{m.unit ? ` · ${m.unit.name}` : ""}</span>
+          {vendor && <span className="org">{vendor.name}</span>}
         </div>
         <div className="flex items-center gap-2">
-          <span className={`badge ${m.role === "admin" ? "warm" : ""}`}>{m.role === "admin" ? "HQ admin" : "Volunteer"}</span>
+          {a.profile.is_ops && <span className="badge warm">Ops</span>}
           <form action={signOut}><button className="btn btn-quiet btn-sm" type="submit">Sign out</button></form>
         </div>
       </header>

@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Atkinson_Hyperlegible_Next, Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import { RegisterSW } from "@/components/register-sw";
 import "./globals.css";
-import "./posters.css";
 
 const atkinson = Atkinson_Hyperlegible_Next({ variable: "--font-atkinson", subsets: ["latin"] });
 const bricolage = Bricolage_Grotesque({ variable: "--font-bricolage", subsets: ["latin"] });
@@ -10,7 +9,7 @@ const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["lati
 
 export const metadata: Metadata = {
   title: "Deloo",
-  description: "A designer and a brand guardian for organisations that run on volunteers.",
+  description: "Tell us your event, we'll supply the setup. Sound, screens, cameras and lights for events in Lagos.",
   appleWebApp: { capable: true, title: "Deloo", statusBarStyle: "default" },
   icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
 };

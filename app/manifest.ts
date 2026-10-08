@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Deloo",
     short_name: "Deloo",
-    description: "A designer and a brand guardian for organisations that run on volunteers.",
+    description: "Tell us your event, we'll supply the setup. Sound, screens, cameras and lights for events in Lagos.",
     start_url: "/",
     scope: "/",
     display: "standalone",

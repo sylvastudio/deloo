@@ -15,16 +15,12 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > lib/database.types.ts",
-    "check:rls": "tsx scripts/rls-check.ts",
-    "check:prototype": "node scripts/verify-prototype.mjs",
-    "check:ai": "tsx scripts/ai-check.ts"
+    "check:rls": "tsx scripts/rls-check.ts"
   },
   "dependencies": {
     "@sentry/nextjs": "^11.4.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
-    "fflate": "^0.8.3",
-    "html-to-image": "^1.11.13",
     "next": "16.3.8",
     "react": "19.2.8",
     "react-dom": "19.2.8"

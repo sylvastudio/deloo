@@ -1,7 +1,5 @@
 export type SlotField = {
   key: string; label: string; required: boolean; long?: boolean; placeholder?: string; hint?: string;
-  /** Holds a person's name: honorifics from the brief are kept, and none are invented (lib/conventions.ts). */
-  person?: boolean;
 };
 export type SlotSchema = { fields: SlotField[]; example?: string };
 

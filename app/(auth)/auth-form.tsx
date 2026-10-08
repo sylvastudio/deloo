@@ -11,10 +11,10 @@ export function AuthForm({ kind, next, linkError }: { kind: "login" | "signup"; 
   return (
     <form action={action} className="solo-step" noValidate>
       <p className="kicker">{kind === "login" ? "Welcome back" : "Create your account"}</p>
-      <h1 className="h1">{reset ? "Choose a new password" : kind === "login" ? "Sign in to Deloo" : "Set up Deloo for your organisation"}</h1>
+      <h1 className="h1">{reset ? "Choose a new password" : kind === "login" ? "Sign in to Deloo" : "Create your Deloo account"}</h1>
       {linkError && !state && <p className="notice" role="status">That email link has expired or was already used. Each link works once. Request a new one below.</p>}
       {reset && <p className="hint" style={{ fontSize: 15 }}>We&apos;ll email you a link. Open it on this device to set a new password.</p>}
-      {kind === "signup" && <p className="hint" style={{ fontSize: 15 }}>You&apos;ll be the admin. Next, Deloo asks four quick questions about your organisation.</p>}
+      {kind === "signup" && <p className="hint" style={{ fontSize: 15 }}>Rent sound, screens, cameras and lights for your event, or list your own gear. Next, a few quick questions.</p>}
       <input type="hidden" name="mode" value={mode} />
       <input type="hidden" name="next" value={next ?? "/"} />
       <div className="field">
