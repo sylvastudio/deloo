@@ -1,5 +1,9 @@
 # Deloo — Implementation Plan (rental)
 
+> **8 Oct 2026: from Phase 1 on, this plan is replaced by `docs/native-app-plan.md`** (native Expo app,
+> Android first; steps N0–N7). Phase 0 below is done and still applies: the schema, RLS and demo catalogue
+> are shared by the native app. The rest is kept for reference: its product steps carry over into N2–N6.
+
 **Source:** `PRD.md` v2 (8 Oct 2026). Replaces the poster-tool plan (archived at
 `docs/archive/poster-tool/IMPLEMENTATION_PLAN.md`).
 **Stack:** the live stack: Next.js + TypeScript + Tailwind on Netlify, hosted Supabase, `lib/ai/`
