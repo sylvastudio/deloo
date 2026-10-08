@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Your Deloo sign-in link</title></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Your Deloo sign-in code</title></head>
 <body style="margin:0;padding:0;background:#F3F5F4;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3F5F4;padding:24px 12px;">
 <tr><td align="center">
@@ -8,14 +8,16 @@
 <tr><td style="padding:28px 28px 8px;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;color:#12161C;letter-spacing:-0.5px;">deloo<span style="color:#F2A900;">.</span></td></tr>
 <tr><td style="padding:8px 28px 0;font-family:Arial,Helvetica,sans-serif;">
 <h1 style="margin:0 0 12px;font-size:22px;line-height:1.25;color:#12161C;font-weight:bold;">Sign in to Deloo</h1>
-<p style="margin:0 0 20px;font-size:15px;line-height:1.55;color:#12161C;">Tap the button to sign in. No password needed.</p>
+<p style="margin:0 0 8px;font-size:15px;line-height:1.55;color:#12161C;">Enter this code in the Deloo app:</p>
+<p style="margin:0 0 20px;font-family:'Courier New',Courier,monospace;font-size:34px;line-height:1.2;font-weight:bold;letter-spacing:8px;color:#0F6B73;">{{ .Token }}</p>
+<p style="margin:0 0 12px;font-size:13px;line-height:1.5;color:#4A5560;">On the website instead? Use the button.</p>
 <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:6px;background:#0F6B73;">
 <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:13px 22px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#FFFFFF;text-decoration:none;border-radius:6px;">Sign me in</a>
 </td></tr></table>
-<p style="margin:20px 0 0;font-size:13px;line-height:1.5;color:#4A5560;">The link works once and expires in 1 hour. Open it on the same phone or computer where you asked for it.</p>
+<p style="margin:20px 0 0;font-size:13px;line-height:1.5;color:#4A5560;">The code and link work once and expire in 1 hour.</p>
 <p style="margin:12px 0 0;font-size:12px;line-height:1.5;color:#4A5560;word-break:break-all;">If the button doesn't work, copy this link into your browser:<br><a href="{{ .ConfirmationURL }}" style="color:#0F6B73;">{{ .ConfirmationURL }}</a></p>
 </td></tr>
-<tr><td style="padding:24px 28px 28px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#4A5560;border-top:1px solid #E6EAEA;">Deloo: a designer and a brand guardian for organisations that run on volunteers.<br>You got this email because someone used {{ .Email }} on Deloo. If that wasn't you, you can ignore it.</td></tr>
+<tr><td style="padding:24px 28px 28px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#4A5560;border-top:1px solid #E6EAEA;">Deloo: sound, screens, cameras and lights for your event, from trusted owners in Lagos.<br>You got this email because someone used {{ .Email }} on Deloo. If that wasn't you, you can ignore it.</td></tr>
 </table>
 </td></tr></table>
 </body>
