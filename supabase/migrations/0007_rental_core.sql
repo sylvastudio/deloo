@@ -5,6 +5,14 @@
 create extension if not exists pgcrypto;
 create extension if not exists btree_gist;   -- lets the reservation rule combine "same unit" with "overlapping time"
 
+-- Also made by 0001; defined here too so a fresh test project can start from this file.
+create or replace function public.touch_updated_at() returns trigger
+language plpgsql as $$
+begin
+  new.updated_at = now();
+  return new;
+end $$;
+
 create schema if not exists private;
 revoke all on schema private from public;
 grant usage on schema private to authenticated, anon;
