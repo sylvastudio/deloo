@@ -1,188 +1,209 @@
-# Deloo — Implementation Plan
+# Deloo — Implementation Plan (rental)
 
-**Source:** `PRD.md` §5–7. This plan breaks each PRD phase into ordered steps. Every step names the
-files, tables, routes or records it must produce.
-**Stack:** the PRD's tech stack, confirmed 27 Sep 2026 (Next.js + TypeScript + Tailwind, Supabase local stack,
-Claude with structured output, Satori + resvg, Remotion). If the stack changes, the outputs in
-Phases 2–5 change with it.
-**Deployment:** none. Every phase runs on the developer's machine.
+**Source:** `PRD.md` v2 (8 Oct 2026). Replaces the poster-tool plan (archived at
+`docs/archive/poster-tool/IMPLEMENTATION_PLAN.md`).
+**Stack:** the live stack: Next.js + TypeScript + Tailwind on Netlify, hosted Supabase, `lib/ai/`
+(Groq/Gemini/mock). New: Paystack, an identity-check provider behind `lib/kyc/`.
+**Deadline:** Phases 0–2 live on deloo.space by about **22 Oct 2026** (incubator, working MVP).
+**Platform:** a **PWA first**, phone-first layouts at 390 px. Then an **Android APK** wrapping the same PWA
+as a Trusted Web Activity (Bubblewrap or PWABuilder), published to the Play Store (Phase 6). Every feature
+must work in the browser, because the APK is the same web app.
 
 **Rules for every phase**
 - A phase starts only after the previous phase's **Exit check** passes.
-- Each step is one or more commits. Every phase ends with a git tag (`phase-1` … `phase-5`).
-- Each phase adds an entry to `PRD.md` §9 Agent Steering Notes for any instruction that changed the
-  plan, and to §10 Design Refinement Notes for any visual/template change.
-- Test data is fictional and labelled `TEST DATA`. No real organisation's logo or name is used without
-  permission.
+- Each phase ends with a git tag (`rental-0` … `rental-6`).
+- Instructions that change the plan go in `PRD.md` §9.
+- Test data is fictional and labelled `TEST DATA`. No real vendor's name or gear without permission.
+- Read the relevant guide in `node_modules/next/dist/docs/` before writing Next.js code (see `AGENTS.md`).
+
+**What we keep from the poster app:**
+- Supabase auth, sign-up and password reset flows
+- Turnstile, Sentry, Resend email templates
+- the PWA shell (`app/manifest.ts`, service worker, offline page)
+- `lib/ai/` provider layer (validation, retry, fallback)
+- `tab-nav` and the design tokens in `design.html`
+
+**What goes:** posters, brand kit, designs, print. They stay in git history and in
+`docs/archive/poster-tool/`.
 
 ---
 
-## Phase 1 — Single-page local prototype
+## Phase 0 — Reset
 
-> **Scope update, 27 Sep 2026 (owner direction, see PRD §9).** Phase 1 now includes onboarding
-> (organisation, structure, poster types, style picks), a chat-plus-canvas dashboard, 7 poster types
-> (event flyer, invitation, announcement, quote/scripture, birthday/celebration, service times,
-> thank-you) and 9 text-only styles instead of 3 categories × 2 layouts. Brand colours come from
-> the uploaded logo or presets; each style keeps its own layout and type. The steps below are the
-> original plan and stay as the baseline; the exit check still applies.
+**Goal:** a clean rental app shell with no poster features exposed.
 
-**Goal:** Prove the core loop (brand kit + brief → on-brand graphics in 4 sizes) in one HTML file, with
-no server, no database and no API keys.
+1. Delete the poster routes (`app/(app)/brand-kit`, `designs`, `app/api/understand`) and poster libraries
+   (`lib/posters`, `lib/kit.ts`, `lib/catalog.ts`, `lib/conventions.ts`, `components/poster.tsx`,
+   `spec-sheet.tsx`, `app/posters.css`). Decided 8 Oct 2026.
+2. Migration `0006_rental_core.sql`:
+   - drop the poster tables (after confirming there's no real data)
+   - create the PRD §6 tables except payments, claims, verifications and reviews
+   - include the `booking_units` exclusion constraint (`btree_gist`, `exclude using gist (unit_id with =, period with &&)`
+     where the booking is active)
+3. RLS:
+   - renters see their own events and bookings
+   - vendors see their own items, units and the bookings that use them
+   - Ops (`profiles.is_ops`) sees everything
+   - the catalogue (active items) is readable by anyone
+4. Navigation for renters: **Plan · Bookings · Account**. For vendors: **Bookings · Gear · Account**.
+   Sign-up asks: "I want to rent" / "I have gear to rent out" / both.
+5. Update the manifest name, description and icons for the rental product.
 
-| # | Step | Concrete output |
-|---|---|---|
-| 1.1 | Create the prototype file with inline CSS/JS | `prototype/index.html` |
-| 1.2 | Define the test brand kit as a JS object: placeholder logo SVG, 5 colours, 2 Google Fonts, tone line | `const BRAND_KIT = {…}` in `index.html`; colours and fonts exposed as CSS custom properties (`--brand-primary`, `--font-heading`, …) |
-| 1.3 | Define the slot schema per category. The same shape is reused as the LLM JSON schema in Phase 3. | `const SLOT_SCHEMAS = { event_flyer, announcement, quote_card }`, also copied to `prototype/slot-schemas.json` |
-| 1.4 | Write mocked AI output: one canned JSON response per category that matches its schema | `const MOCK_RESPONSES = {…}`; a `mockGenerateCopy(brief, category)` function with a 600 ms fake delay |
-| 1.5 | Build 3 templates that use only brand tokens and slot data (no hard-coded colours or fonts) | `renderEventFlyer()`, `renderAnnouncement()`, `renderQuoteCard()` |
-| 1.6 | Build the UI: brief textarea, category picker, 4-size preview grid, inline copy editing, template swap, "Download PNG" per size | Preview at IG post 1080×1080, IG story 1080×1920, X banner 1500×500, A5 handbill (148×210 mm ratio); PNG export via one CDN library (`html-to-image`) |
+**Exit check:**
+- A renter and a vendor can each sign up and land in their own navigation.
+- `npm run check:rls` (rewritten for the new tables) passes, including the case where an attempted
+  double booking of one unit is refused by the database.
 
-**Exit check (done when):**
-- [x] Opening `prototype/index.html` from disk (`file://`) works with no server and no keys.
-- [x] Each of the 3 categories produces 4 correctly sized previews from a typed brief.
-- [x] Changing a single value in `BRAND_KIT` restyles every template. A search of the templates finds no
-      hard-coded hex colours.
-- [x] Copy edits and template swaps re-render instantly, and every size downloads as a PNG.
-- [x] 12 sample PNGs are saved (3 categories × 4 sizes) in `prototype/samples/`.
+## Phase 1 — Planner (incubator demo core)
 
-**Closed 4 Oct 2026.** Checked against the expanded scope (7 types, 9 styles), driving the real UI in
-headless Chrome from `file://`:
-- Only fonts.googleapis.com, fonts.gstatic.com and cdnjs.cloudflare.com are contacted. No keys, no page errors.
-- All 7 types: typed brief → field card → generate → Post 1080×1080, Story 1080×1920, Banner 1500×500,
-  A5 874×1240, each downloaded through the Download PNG button (28 PNGs, dimensions confirmed).
-- There is no `BRAND_KIT` object any more. The palette (`state.palette` → `posterVars()`) is the single
-  source. Changing it restyles the poster. The 14 hard-coded greys (ticket slot, pin, billboard posts) now
-  derive from the palette ink, and a search of the poster CSS and renderers finds 0 hex values.
-- "change the date to 5 Oct" re-renders in under 100 ms, and "try the receipt style" swaps the template in about 30 ms.
-- Samples: 28 PNGs (7 types × 4 sizes) are generated into `prototype/samples/`, which git ignores
-  (43 MB because of the grain). `prototype/samples-contact-sheet.jpg` is committed as the record.
-- Added in the same pass: PWA (manifest, service worker, icons) and a phone layout with Chat / Design /
-  Brand bottom tabs. See PRD §9.
+**Goal:** answer the questions → see Good/Better/Best setups with reasons, availability and alternatives.
 
-**Known design issues carried forward:** the quote card in Editorial and the event Story in Poster block
-leave large empty areas.
+1. `lib/planner/rules.ts`: deterministic sizing (sound, screen, daylight, power/AVR, mics/mixer, livestream
+   kit). Return categories with required specs and quantities, plus a reason key for each line.
+   Version the rules (`RULES_VERSION`).
+2. `lib/planner/rules.test.ts`: at least 20 event scenarios checked against expected setups, e.g.
+   "indoor service of 150", "outdoor crusade of 2,000 with livestream", "wedding of 300 with no grid power".
+3. `lib/planner/match.ts`: map required specs to real items and units free in the period. When nothing
+   matches, try the alternatives in PRD §4.3 order. Write `unmet_demand` rows for anything still unfilled.
+4. Intake UI at `/plan`: one question per screen, tap answers, back/forward, progress indicator. Also a free
+   text box: `lib/ai` gets an `intake` schema that turns text into answers and lists what's missing.
+5. Results at `/plan/[eventId]`:
+   - Good/Better/Best tabs; each line shows item, quantity, price, reason and availability
+   - "Swap" opens the alternatives
+   - a not-available notice when nothing works
+   - total, deposit, Protection fee
+   - the AI writes the reason text from the reason keys; a fixed reason text is used if the AI fails
+6. Seed script `scripts/seed-catalogue.ts`: 3 fictional vendors (company, church, individual), about 60
+   items, units, and some existing bookings so "limited" and "not available" appear.
 
-**Tag:** `phase-1`
+**Exit check:**
+- Rule tests pass.
+- On a 390 px phone, "outdoor crusade, 2,000 people, livestream, generator" typed as free text produces
+  three setups with reasons.
+- One item shows not available with an alternative, and an `unmet_demand` row is recorded.
+- No horizontal scroll.
+
+## Phase 2 — Vendors and coming soon (incubator MVP complete)
+
+**Goal:** real vendors can list gear and see their calendar; the coming-soon verticals collect interest.
+
+1. Vendor onboarding: type (company / church / individual), city, areas served, delivery and technician
+   offer.
+2. Gear: add an item (category picker with spec fields from `categories.spec_schema`, photos to `items/`,
+   rates, deposit, replacement value → risk tier computed), add units with serials, mark units for repair.
+3. Calendar: bookings per unit, plus blocks the vendor sets for their own use (a church's Sunday service).
+4. Coming soon pages at `/soon/ad-space`, `/soon/crew` and `/soon/studios`, each with a `waitlist` form.
+5. Ops page `/ops` with recent events, recommendations, unmet demand by category and date, and waitlist
+   sign-ups.
+
+**Exit check:**
+- A vendor lists an item with 2 units and blocks Sunday. A renter's plan for that Sunday shows it as
+  limited or not available.
+- An Ops user sees that request in unmet demand.
+- Deploy to deloo.space; this is the **incubator MVP**.
+
+## Phase 3 — Booking and payments
+
+**Goal:** a renter can book and pay; units are held and confirmed without double booking.
+
+1. Booking flow from a chosen setup:
+   - delivery or pickup, address, technician add-on
+   - creates a booking with a **30-minute hold** on its units
+   - an expiry job releases unpaid holds (Supabase cron, or check on read)
+2. Paystack (test mode):
+   - one checkout for rental + deposit + Protection fee + add-ons
+   - a webhook at `app/api/paystack/webhook` (verify the signature) confirms the booking
+   - save the card or bank authorisation for later damage charges
+   - write a `payments` row for every movement
+3. Vendor accepts or declines within a set time. If they decline, run the rescue flow (PRD §4.4):
+   suggest replacements from the matcher, alert Ops, refund if there are none.
+4. Notifications by email (Resend) and WhatsApp/SMS later; in-app status everywhere.
+
+**Exit check:** In Paystack test mode:
+- Book → pay → confirmed.
+- Two renters racing for the last unit: one succeeds and the other sees "just taken" with alternatives.
+- A vendor decline triggers replacements.
+- An unpaid hold expires and the unit is released.
+
+## Phase 4 — Trust: vetting, checklists, claims
+
+**Goal:** the tier system from PRD §4.5–4.7 is enforced.
+
+1. `lib/kyc/` with a mock and one real provider (Open Question 4):
+   - phone OTP, NIN/BVN, selfie liveness for Tier 1
+   - address and guarantor for Tier 2
+   - CAC check for organisations
+   - store results only (NDPA)
+2. Gate checkout by the item's risk tier and the renter's trust level. Tier 3 items can only be booked with
+   a technician.
+3. Pickup and return checklists:
+   - per-unit photos taken with the phone camera (`<input capture>`), serial, condition, accessories,
+     surge protector or stabiliser (AVR), covered setup for outdoor events
+   - timestamp and location; confirmation from both sides
+   - **works offline**: the service worker queues photos and uploads them when back online, since venues
+     often have poor signal
+4. Return outcomes:
+   - all fine → deposit refunded and payout scheduled
+   - damage → a claim with the evidence, settled from deposit, then Protection, then insurer
+   - renter can dispute; Ops decides
+5. Two-way reviews, trust level going up, shared blocklist, and automatic warnings (PRD §4.5).
+
+**Exit check:**
+- A new account can't book Tier 2 gear.
+- After verification it can.
+- A return with a damaged unit creates a claim charged against the deposit.
+- A checklist completed in airplane mode uploads when the connection returns.
+
+## Phase 5 — Pilot hardening
+
+**Goal:** ready for real money in one city.
+
+1. Paystack live keys, vendor payouts, the refund path, and daily reconciliation.
+2. Ops console:
+   - stuck bookings, disputes and claims
+   - vendor approval
+   - manual unit reassignment
+   - unmet-demand report (what to source or buy)
+3. Busy-period readiness: see bookings by date for December and Easter, and invite vendors from nearby
+   cities ahead of time.
+4. Terms of service, rental agreement, Protection wording reviewed by a lawyer; privacy policy (NDPA).
+5. Rate limits, Sentry alerts on payment and webhook errors, database backups.
+6. **Pilot:** 10–20 real vendors, 30 real bookings, with feedback recorded and fixed or listed.
+
+**Exit check:**
+- 30 real bookings closed with payouts.
+- Every dispute has a recorded outcome.
+- No double bookings.
+
+## Phase 6 — Android app
+
+**Goal:** Deloo is in the Play Store, running the same PWA.
+
+1. PWA audit: installable, offline shell, maskable icons, screenshots in the manifest, and Lighthouse PWA
+   checks pass.
+2. Trusted Web Activity with Bubblewrap (or PWABuilder):
+   - package name such as `space.deloo.app`
+   - signing key kept outside the repo
+   - `/.well-known/assetlinks.json` served from deloo.space so the address bar is hidden
+3. Web push for booking updates (works in the TWA); check camera and location permissions inside the TWA.
+4. Play Console listing, privacy policy link, internal testing track, then production.
+
+**Exit check:**
+- The APK installs on a low-end Android phone and opens without a browser bar.
+- A checklist with camera photos works inside it.
+- A push notification arrives for a booking update.
 
 ---
 
-## Phase 2 — Local app foundation (accounts + brand kit)
+## Blocked by open questions (PRD §8)
 
-**Goal:** Turn the prototype into a real local app with accounts, roles and a saved brand kit.
-
-| # | Step | Concrete output |
-|---|---|---|
-| 2.1 | Scaffold the app | `app/` (Next.js App Router, TypeScript, Tailwind), `package.json`, `.env.example`, `.gitignore` (ignores `.env.local`) |
-| 2.2 | Start the local Supabase stack | `supabase/config.toml`; `npx supabase start` runs Postgres, Auth and Storage in Docker |
-| 2.3 | Write the schema migrations for PRD §6 | `supabase/migrations/0001_core.sql` creating `organisations`, `units`, `memberships`, `brand_kits`, `categories`, `templates`, `briefs`, `assets`, `print_specs` |
-| 2.4 | Write row-level security policies: org isolation, and admin-only writes to `brand_kits` | `supabase/migrations/0002_rls.sql` |
-| 2.5 | Seed test data | `supabase/seed.sql`: 1 test org, 2 units, 1 admin, 1 volunteer, 3 categories, 3 templates |
-| 2.6 | Build auth and org onboarding | `/login`, `/signup` (sign-up creates the org and makes the user its admin), `/settings/members` (admin invites a volunteer to a unit) |
-| 2.7 | Build brand kit CRUD with uploads | `/brand-kit` page (editable for admins, read-only for volunteers); uploads go to Storage `brand/{org_id}/…` |
-| 2.8 | Port the templates to React | `components/templates/EventFlyer.tsx`, `Announcement.tsx`, `QuoteCard.tsx`, all taking `{ brandKit, slots, size }` props; `lib/sizes.ts` |
-
-**Exit check (done when):**
-- [ ] `npx supabase db reset` followed by `npm run dev` gives a working app with the seed data.
-- [ ] An admin can sign up, build a kit and upload a logo. A volunteer can log in, see the kit and see
-      live template previews.
-- [ ] A volunteer trying to update `brand_kits` directly (script in `scripts/rls-check.ts`) is refused
-      by RLS.
-- [ ] Two orgs in the seed data cannot see each other's rows or files.
-
-**Tag:** `phase-2`
-
----
-
-## Phase 3 — Real AI copy + server-side rendering
-
-**Goal:** Turn a free-text brief into validated copy and stored PNGs, using the real LLM.
-
-| # | Step | Concrete output |
-|---|---|---|
-| 3.1 | Build the LLM provider interface | `lib/ai/provider.ts` (interface), `lib/ai/claude.ts` (implementation), `lib/ai/mock.ts` (reuses the Phase 1 mocks); switched by `AI_PROVIDER=claude|mock` |
-| 3.2 | Validate responses against the slot schemas | `lib/ai/schemas.ts` (Zod, generated from `slot-schemas.json`); on invalid output, retry once and then return a typed error |
-| 3.3 | Parse briefs and save them | `POST /api/briefs`: free text → structured fields (event, date, speaker, theme) → `briefs` row |
-| 3.4 | Render PNGs server-side | `lib/render/renderPng.ts` (Satori → resvg); `POST /api/briefs/{id}/render` writes every size to `exports/{org_id}/{brief_id}/…` and inserts `assets` rows |
-| 3.5 | Build edit & regenerate | `/briefs/{id}` page: editing copy re-renders with no LLM call; "Regenerate" calls the LLM and saves the next `assets.version` |
-| 3.6 | Log LLM cost | `llm_calls` table (org, model, input/output tokens, estimated cost, latency) in `supabase/migrations/0003_llm_calls.sql` |
-
-**Exit check (done when):**
-- [ ] The PRD example brief ("Youth conference, 3 Oct, guest speaker X, theme Y") produces schema-valid
-      copy and 4 stored PNGs.
-- [ ] Running the same flow with `AI_PROVIDER=mock` still works with no API key.
-- [ ] A test (`tests/logo-integrity.test.ts`) confirms the logo inside a rendered SVG is byte-identical
-      to the uploaded file.
-- [ ] A forced invalid LLM response is retried once and then shown as an error, and nothing broken is
-      saved.
-- [ ] `llm_calls` has a row for every real call.
-
-**Tag:** `phase-3`
-
----
-
-## Phase 4 — Occasion intelligence, print & export
-
-**Goal:** Deliver the local-conventions and print hand-off parts of the PRD edge, then run the first
-outside test.
-
-| # | Step | Concrete output |
-|---|---|---|
-| 4.1 | Put category conventions in config | `config/categories/*.json`: role lines ("Ministering:", "Host:", "Anchor:"), honorific list (Pastor, Evang., Chief, Alhaji, HRM), required/optional slots |
-| 4.2 | Enforce conventions in the prompt and in validation | Prompt builder `lib/ai/prompt.ts` reads the category config; the validator rejects missing role lines or unknown honorifics |
-| 4.3 | Add print sizes | `lib/sizes.ts` gains `a5_handbill_bleed`, `flex_3x6ft`, `flex_4x8ft`, `rollup`; exports go to `print/{org_id}/…` (resolution set once Open Question 8 is answered) |
-| 4.4 | Generate a printer spec sheet | `components/templates/PrintSpecSheet.tsx`, rendered to PNG, plus a `print_specs` row per print asset |
-| 4.5 | Add "download all" | `GET /api/briefs/{id}/zip` returns a zip of every size plus the spec sheet |
-| 4.6 | Run the cohort test with 2–3 fellows (PRD validation plan) | `docs/validation/cohort-test.md`: a row for each fellow, brief used, what broke, fix / known issue |
-
-**Stretch:** `config/categories/celebration_of_life.json`, `thanksgiving.json` plus their templates.
-
-**Exit check (done when):**
-- [ ] A brief with "Pastor"/"Evang." and "Ministering:/Host:" details produces correctly formatted
-      role lines and honorifics in all 3 launch categories.
-- [ ] A print export and its spec sheet download together as one zip.
-- [ ] Every issue in `docs/validation/cohort-test.md` is either fixed (with a commit link) or marked as
-      a known issue.
-
-**Tag:** `phase-4`
-
----
-
-## Phase 5 — Tone, campaigns, video stretch, hardening & validation (still local)
-
-**Goal:** Make copy sound like the org, turn one brief into a whole campaign, enforce plan limits, and
-validate with a real media lead.
-
-| # | Step | Concrete output |
-|---|---|---|
-| 5.1 | Add tone retrieval | `brand_kit_chunks` table with pgvector (`0004_tone.sql`); `lib/ai/tone.ts` fetches the relevant tone text and sample-post captions into the prompt |
-| 5.2 | Build the campaign agent | `POST /api/campaigns`: one brief → announcement, flyer, quote card and reminder in all sizes; `campaigns` table linking the briefs |
-| 5.3 | **Stretch:** video template | `video/CountdownReel.tsx` *or* `video/QuoteClip.tsx` (Remotion), rendered to `video/{org_id}/…mp4` |
-| 5.4 | Enforce plan limits | `lib/limits.ts`: per-org rate limit, Free monthly export cap, Free watermark in the render pipeline (amounts wait on Open Question 9; placeholders for now) |
-| 5.5 | Run real-world validation | `docs/validation/real-campaign.md`: the validation user's event, the assets they made, their documented feedback, follow-up actions |
-| 5.6 | Write docs for a clean clone | `docs/SETUP.md` (prerequisites, `supabase start`, seed, env, run); architecture diagram in `docs/ARCHITECTURE.md` |
-
-**Exit check (done when):**
-- [ ] Two test orgs with different tone text get noticeably different copy for the same brief (side by
-      side in `docs/validation/tone-check.md`).
-- [ ] One brief produces a full campaign in a single request.
-- [ ] A Free-plan org hits its export cap and receives watermarked output.
-- [ ] `docs/validation/real-campaign.md` holds real feedback from the validation user (Open Question 3).
-- [ ] A fresh clone that follows `docs/SETUP.md` runs end to end on another machine.
-
-**Tag:** `phase-5`
-
----
-
-## Blocked by Open Questions (PRD §8)
-
-| Open Question | Blocks |
+| Question | Blocks |
 |---|---|
-| 1. First 3 categories | Phase 1 step 1.5 (assumes event flyer, announcement, quote card) |
-| 2. LLM provider | Phase 3 step 3.1 implementation file (the interface is unaffected) |
-| 3. Validation user | Phase 5 step 5.5 |
-| 4. Deployment timing | Anything after Phase 5 (hosting is not in this plan) |
-| 6. Sub-brand overrides | Phase 2 steps 2.4 and 2.7 (RLS and UI for department kits) |
-| 7. Font uploads | Phase 2 step 2.7 (upload vs picker) |
-| 8. Print format/resolution | Phase 4 step 4.3 |
-| 9. Pricing amounts | Phase 5 step 5.4 (limits use placeholders) |
+| 1. Launch areas within Lagos | Phase 1 seed areas, Phase 2 onboarding |
+| 2. Fees | Phase 1 totals (placeholders until answered), Phase 3 |
+| 3. Paystack holds and licensing | Phase 3 deposit design |
+| 4. Identity-check provider | Phase 4 |
+| 5. Insurer and legal wording | Phase 5 |
+| 6. AV engineer for rules | Phase 1 rules sign-off (rules can be built first) |
+| 7. Technicians | Phase 3 add-on, Phase 4 Tier 3 |
+| 8. First vendors | Phase 2 exit check, Phase 5 pilot |
