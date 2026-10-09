@@ -1,0 +1,325 @@
+<title>Deloo Screen Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+:root {
+  --paper: #F3F5F4; --surface: #FFFFFF; --raised: #E8EDEC; --ink: #12161C; --slate: #4A5560; --faint: #7B8791; --line: #D3DADB;
+  --lagoon: #0F6B73; --lagoon-tint: #E0EFEF; --on-lagoon: #FFFFFF;
+  --marigold: #F2A900; --marigold-tint: #FDF1D3; --on-marigold: #12161C;
+  --green: #1F7A50; --green-tint: #E1F2E9; --blue: #2F5E9E; --blue-tint: #E4ECF7; --plum: #7A4A86; --plum-tint: #F1E8F3;
+  --display: "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #0E1215; --surface: #161B20; --raised: #1F262C; --ink: #E7ECEE; --slate: #9AA7B0; --faint: #6F7C85; --line: #2A333A;
+    --lagoon: #3AAAB2; --lagoon-tint: #12292C; --on-lagoon: #081214;
+    --marigold: #F5B82E; --marigold-tint: #2D2410; --on-marigold: #12161C;
+    --green: #4CC08A; --green-tint: #11261C; --blue: #7FA8E0; --blue-tint: #15212F; --plum: #C79AD3; --plum-tint: #251A29;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0E1215; --surface: #161B20; --raised: #1F262C; --ink: #E7ECEE; --slate: #9AA7B0; --faint: #6F7C85; --line: #2A333A;
+  --lagoon: #3AAAB2; --lagoon-tint: #12292C; --on-lagoon: #081214;
+  --marigold: #F5B82E; --marigold-tint: #2D2410; --on-marigold: #12161C;
+  --green: #4CC08A; --green-tint: #11261C; --blue: #7FA8E0; --blue-tint: #15212F; --plum: #C79AD3; --plum-tint: #251A29;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font: 15px/1.5 var(--body); padding-inline: 16px; padding-block: 0 64px; }
+.wrap { max-width: 1240px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--marigold); outline-offset: 2px; border-radius: 4px; }
+
+/* Header */
+.top { padding-block: 32px 20px; display: grid; gap: 14px; }
+.brand { font: 700 18px var(--display); }
+.brand b { color: var(--marigold); }
+.top h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.05; font-weight: 700; }
+.lede { color: var(--slate); max-width: 68ch; margin: 0; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 22px; font-variant-numeric: tabular-nums; }
+.stat { display: flex; align-items: baseline; gap: 6px; }
+.stat strong { font: 700 24px var(--display); }
+.stat span { color: var(--slate); font-size: 13px; }
+.sources { font-size: 13px; color: var(--slate); margin: 0; }
+.sources code { font: 12px var(--mono); background: var(--raised); padding: 1px 5px; border-radius: 4px; }
+
+/* Toolbar */
+.toolbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: blur(6px); padding-block: 10px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.seg-label { font-size: 12px; color: var(--slate); letter-spacing: 0.04em; text-transform: uppercase; margin-right: 4px; align-self: center; }
+.pill { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: 13px; cursor: pointer; min-height: 32px; }
+.pill[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.search { flex: 1 1 200px; min-width: 0; }
+.search input { width: 100%; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 7px 14px; font: 14px var(--body); }
+
+/* Layout: inventory + detail */
+.main { display: grid; gap: 24px; padding-top: 20px; }
+@media (min-width: 980px) { .main { grid-template-columns: minmax(0, 1fr) 360px; align-items: start; } }
+.section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 8px 0 12px; }
+.section-title h2 { font-size: 22px; }
+.section-title p { margin: 0; color: var(--slate); font-size: 13px; }
+.group { margin-bottom: 22px; }
+.group h3 { font: 600 13px var(--body); color: var(--slate); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 8px; }
+.tile { text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r); padding: 10px 11px 9px; cursor: pointer;
+  display: grid; gap: 4px; align-content: start; min-height: 86px; position: relative; transition: border-color .15s, background .15s; }
+.tile:hover { border-color: var(--lagoon); }
+.tile .tid { font: 500 12px var(--mono); color: var(--lagoon); }
+.tile .tname { font-weight: 500; font-size: 14px; line-height: 1.3; }
+.tile .tmeta { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; padding-top: 4px; }
+.tile.selected { border-color: var(--marigold); background: var(--marigold-tint); box-shadow: inset 0 0 0 1px var(--marigold); }
+.tile.related { border-color: var(--lagoon); }
+.tile.dim { opacity: .38; }
+.tile.new::after { content: "new"; position: absolute; top: 8px; right: 9px; font: 500 10px var(--mono); color: var(--plum); }
+
+.tag { font: 500 11px/1 var(--body); padding: 3px 7px; border-radius: 999px; background: var(--raised); color: var(--slate); white-space: nowrap; }
+.ph-demo { background: var(--lagoon); color: var(--on-lagoon); }
+.ph-demo\+ { background: var(--lagoon-tint); color: var(--lagoon); }
+.ph-pilot { background: var(--blue-tint); color: var(--blue); }
+.ph-later { background: transparent; color: var(--faint); border: 1px dashed var(--line); }
+.built { background: var(--green-tint); color: var(--green); }
+
+/* Detail panel */
+.detail { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 14px; }
+@media (min-width: 980px) { .detail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 74px); max-height: calc(100vh - 96px); overflow: auto; } }
+.detail .did { font: 500 13px var(--mono); color: var(--lagoon); }
+.detail h2 { font-size: 26px; line-height: 1.1; }
+.detail .purpose { margin: 0; font-size: 15px; }
+.kv { display: grid; gap: 10px; margin: 0; }
+.kv dt { font-size: 12px; color: var(--slate); letter-spacing: 0.04em; text-transform: uppercase; }
+.kv dd { margin: 2px 0 0; font-size: 14px; }
+.links { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip-id { font: 500 12px var(--mono); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 3px 7px; cursor: pointer; }
+.chip-id:hover { border-color: var(--lagoon); }
+.chip-id.on { background: var(--marigold); border-color: var(--marigold); color: var(--on-marigold); }
+.flowref { font-size: 13px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 10px; color: var(--ink); text-decoration: none; }
+.flowref:hover { border-color: var(--lagoon); }
+.states { margin: 0; padding-left: 18px; font-size: 14px; color: var(--ink); }
+.states li { margin: 2px 0; }
+.empty-detail { color: var(--slate); font-size: 14px; margin: 0; }
+.close { justify-self: start; background: none; border: 0; color: var(--lagoon); cursor: pointer; padding: 0; font-size: 13px; }
+@media (max-width: 979px) {
+  .detail.open { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; max-height: 72vh; overflow: auto; border-radius: 16px 16px 0 0;
+    padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -12px 32px rgba(0,0,0,.18); }
+  .detail:not(.open) { display: none; }
+}
+
+/* Legend */
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 13px; color: var(--slate); align-items: center; margin-bottom: 16px; }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+
+/* Flows */
+.flows { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 24px; }
+.flownav { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 4px 16px; margin: 0 0 24px; }
+.flow-link { font-size: 14px; color: var(--ink); text-decoration: none; padding: 5px 0; border-bottom: 1px solid var(--line); }
+.flow-link span { font: 500 12px var(--mono); color: var(--lagoon); margin-right: 6px; }
+.flow-link.uses { color: var(--ink); font-weight: 700; }
+.flow-link.uses span { background: var(--marigold); color: var(--on-marigold); padding: 1px 4px; border-radius: 4px; }
+.flow-link.dim { opacity: .45; }
+.flow { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 16px; display: grid; gap: 12px; scroll-margin-top: 80px; }
+.flow.uses { border-color: var(--marigold); box-shadow: inset 0 0 0 1px var(--marigold); }
+.flow-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: start; }
+.flow-id { font: 700 15px var(--mono); color: var(--on-lagoon); background: var(--lagoon); border-radius: 8px; padding: 6px 8px; line-height: 1; }
+.flow h3 { font-size: 20px; line-height: 1.2; }
+.flow-goal { margin: 4px 0 0; color: var(--slate); font-size: 14px; max-width: 75ch; }
+.who { font-size: 12px; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.who-renter, .who-first { background: var(--lagoon-tint); color: var(--lagoon); }
+.who-vendor { background: var(--plum-tint); color: var(--plum); }
+.who-both { background: var(--raised); color: var(--slate); }
+.chain { display: flex; flex-wrap: wrap; gap: 5px; }
+.flow-uses { font-size: 13px; color: var(--ink); background: var(--marigold-tint); border-radius: 8px; padding: 6px 10px; }
+.diagram { overflow-x: auto; border-top: 1px solid var(--line); padding-top: 12px; }
+.diagram pre { margin: 0; min-width: 320px; background: transparent; }
+.decisions { margin-top: 32px; display: grid; gap: 10px; }
+.decisions ol { margin: 0; padding-left: 20px; max-width: 80ch; }
+.decisions li { margin: 6px 0; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">deloo<b>.</b></div>
+    <h1>Every screen, every path through the app</h1>
+    <p class="lede">The Deloo mobile app as one map: tap any screen to see what it's for, how people reach it, where it leads, the states it must handle and the flows it appears in. Below, all 17 user flows are drawn step by step.</p>
+    <div class="stats">
+      <div class="stat"><strong>{{SCREENS}}</strong><span>screens</span></div>
+      <div class="stat"><strong>{{FLOWS}}</strong><span>user flows</span></div>
+      <div class="stat"><strong>{{DEMO}}</strong><span>needed for the incubator demo</span></div>
+      <div class="stat"><strong>{{BUILT}}</strong><span>already in the app</span></div>
+      <div class="stat"><strong>{{NEW}}</strong><span>added after review</span></div>
+    </div>
+    <p class="sources">Built from <code>docs/ux/user-flows.md</code> (UX research), <code>docs/ux/screen-specs.md</code> (UI design) and <code>docs/ux/inventory.md</code> (reconciled IDs), 9 Oct 2026. These are hypotheses to test with Lagos renters and vendors, not findings.</p>
+  </header>
+
+  <div class="toolbar" role="toolbar" aria-label="Filter screens">
+    <div class="seg" aria-label="Mode"><span class="seg-label">Mode</span>
+      <button type="button" class="pill" data-mode="all" aria-pressed="true">All</button>
+      <button type="button" class="pill" data-mode="first" aria-pressed="false">First run</button>
+      <button type="button" class="pill" data-mode="renter" aria-pressed="false">Renter</button>
+      <button type="button" class="pill" data-mode="vendor" aria-pressed="false">Vendor</button>
+    </div>
+    <div class="seg" aria-label="Phase"><span class="seg-label">Phase</span>
+      <button type="button" class="pill" data-phase="all" aria-pressed="true">All</button>
+      <button type="button" class="pill" data-phase="demo" aria-pressed="false">Demo</button>
+      <button type="button" class="pill" data-phase="pilot" aria-pressed="false">Pilot</button>
+      <button type="button" class="pill" data-phase="later" aria-pressed="false">Later</button>
+    </div>
+    <label class="search"><span class="seg-label" style="position:absolute;left:-9999px">Search screens</span>
+      <input id="q" type="search" placeholder="Search screens, e.g. deposit, camera, R6" autocomplete="off"></label>
+  </div>
+
+  <div class="main">
+    <div>
+      <div class="section-title"><h2>Screens</h2><p id="shown"></p></div>
+      <div class="legend" aria-label="Legend">
+        <span><i class="tag ph-demo">Demo</i> needed by ~22 Oct</span>
+        <span><i class="tag ph-demo+">Demo if time</i></span>
+        <span><i class="tag ph-pilot">Pilot</i> before real money</span>
+        <span><i class="tag ph-later">Later</i></span>
+        <span><i class="tag built">In app</i> exists in the N0 build</span>
+      </div>
+      <div id="inventory"></div>
+    </div>
+    <aside class="detail" id="detail" aria-live="polite">
+      <p class="empty-detail">Select a screen to see what it's for, where it leads and which flows use it. Selected screens light up in every flow below.</p>
+    </aside>
+  </div>
+
+  <section class="flows" aria-labelledby="flows-title">
+    <div class="section-title"><h2 id="flows-title">User flows</h2><p>Diamonds are decisions; every unhappy path is in the docs.</p></div>
+    <nav class="flownav" aria-label="Flows"><!--FLOWNAV--></nav>
+    <!--FLOWS-->
+  </section>
+
+  <section class="decisions" aria-labelledby="dec-title">
+    <h2 id="dec-title" style="font-size:22px">Decisions waiting on you</h2>
+    <ol>
+      <li><strong>Booking timings.</strong> Vendor accepts within 2 hours (30 minutes for short notice); free cancellation until 72 hours before; deposit back within 24 hours of a clean return; vendor has 12 hours for the return checklist.</li>
+      <li><strong>Handover photos.</strong> The vendor or technician shoots them, the renter reviews and confirms. With no signal, both phones confirm with a 6-digit handover code.</li>
+      <li><strong>Tab bar.</strong> Keep the native Android/iOS bar already in the app instead of the floating pill from the plan.</li>
+      <li><strong>Technician.</strong> A switch at booking (forced on for LED walls and other top-tier gear), not a planning question.</li>
+      <li><strong>No emoji in the UI.</strong> Gear categories get proper Material/SF icons.</li>
+    </ol>
+  </section>
+</div>
+
+<script>
+const DATA = /*DATA*/;
+const S = DATA.screens;
+const PHASE_LABEL = { demo: 'Demo', 'demo+': 'Demo if time', pilot: 'Pilot', later: 'Later' };
+const state = { mode: 'all', phase: 'all', q: '', sel: null };
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const idsIn = (text) => [...new Set((String(text).match(/\b[ARVS]\d{1,2}\b/g) || []).filter((i) => S[i]))];
+
+function phaseMatch(s) {
+  if (state.phase === 'all') return true;
+  if (state.phase === 'demo') return s.phase === 'demo' || s.phase === 'demo+';
+  return s.phase === state.phase;
+}
+function matches(s) {
+  if (state.mode !== 'all' && s.mode !== state.mode) return false;
+  if (!phaseMatch(s)) return false;
+  if (state.q) {
+    const hay = `${s.id} ${s.name} ${s.purpose} ${s.states} ${s.notes}`.toLowerCase();
+    if (!hay.includes(state.q)) return false;
+  }
+  return true;
+}
+
+function renderInventory() {
+  const sel = state.sel ? S[state.sel] : null;
+  const related = new Set(sel ? [...idsIn(sel.frm), ...idsIn(sel.to)] : []);
+  let shown = 0;
+  $('#inventory').innerHTML = DATA.groups.map((g) => {
+    const tiles = g.ids.map((id) => S[id]).filter(matches);
+    shown += tiles.length;
+    if (!tiles.length) return '';
+    return `<div class="group"><h3>${esc(g.label)}</h3><div class="tiles">${tiles.map((s) => `
+      <button type="button" class="tile${s.new ? ' new' : ''}${state.sel === s.id ? ' selected' : ''}${related.has(s.id) ? ' related' : ''}${sel && state.sel !== s.id && !related.has(s.id) ? ' dim' : ''}"
+        data-id="${s.id}" aria-pressed="${state.sel === s.id}">
+        <span class="tid">${s.id}${s.id === 'R3' ? 'a–i' : ''}</span>
+        <span class="tname">${esc(s.name)}</span>
+        <span class="tmeta"><i class="tag ph-${s.phase}">${PHASE_LABEL[s.phase]}</i><i class="tag">${esc(s.type)}</i>${s.built ? '<i class="tag built">In app</i>' : ''}</span>
+      </button>`).join('')}</div></div>`;
+  }).join('') || '<p class="empty-detail">No screens match. Clear the search or pick another filter.</p>';
+  $('#shown').textContent = `${shown} of ${Object.keys(S).length} shown`;
+}
+
+function linkChips(text) {
+  const ids = idsIn(text);
+  const rest = String(text).replace(/\b[ARVS]\d{1,2}[a-z]?\b/g, '').replace(/\s*,\s*(,\s*)+/g, ', ').replace(/^[\s,]+|[\s,]+$/g, '');
+  return `<div class="links">${ids.map((i) => `<button type="button" class="chip-id" data-id="${i}" title="${esc(S[i].name)}">${i}</button>`).join('')}</div>${rest && rest !== '—' ? `<div style="color:var(--slate);font-size:13px;margin-top:4px">${esc(rest)}</div>` : ''}`;
+}
+
+function renderDetail() {
+  const d = $('#detail');
+  const s = state.sel ? S[state.sel] : null;
+  if (!s) {
+    d.classList.remove('open');
+    d.innerHTML = '<p class="empty-detail">Select a screen to see what it\'s for, where it leads and which flows use it. Selected screens light up in every flow below.</p>';
+    return;
+  }
+  const flows = DATA.flows.filter((f) => s.flows.includes(f.id));
+  const states = String(s.states || '').split(/,\s*(?![^()]*\))/).map((x) => x.trim()).filter(Boolean);
+  d.classList.add('open');
+  d.innerHTML = `
+    <button type="button" class="close" data-close>Close ✕</button>
+    <div><div class="did">${s.id}${s.id === 'R3' ? 'a–R3i' : ''} · ${esc(s.typeFull || s.type)}</div><h2>${esc(s.name)}</h2></div>
+    <div class="tmeta" style="display:flex;gap:4px;flex-wrap:wrap"><i class="tag ph-${s.phase}">${PHASE_LABEL[s.phase]}</i>${s.built ? '<i class="tag built">In app</i>' : ''}${s.new ? '<i class="tag" style="color:var(--plum)">Added after review</i>' : ''}</div>
+    <p class="purpose">${esc(s.purpose)}</p>
+    <dl class="kv">
+      ${s.frm ? `<div><dt>Reached from</dt><dd>${linkChips(s.frm)}</dd></div>` : ''}
+      ${s.to ? `<div><dt>Leads to</dt><dd>${linkChips(s.to)}</dd></div>` : ''}
+      ${states.length ? `<div><dt>States to design</dt><dd><ul class="states">${states.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></dd></div>` : ''}
+      <div><dt>Appears in ${flows.length} ${flows.length === 1 ? 'flow' : 'flows'}</dt><dd class="links">${flows.length ? flows.map((f) => `<a class="flowref" href="#${f.id}">${f.id} ${esc(f.title)}</a>`).join('') : '<span style="color:var(--slate);font-size:13px">Not in a drawn flow yet</span>'}</dd></div>
+      ${s.notes && !s.new ? `<div><dt>Notes</dt><dd>${esc(s.notes)}</dd></div>` : ''}
+    </dl>`;
+}
+
+function renderFlows() {
+  const id = state.sel;
+  $$('.chip-id[data-id]', document.querySelector('.flows')).forEach((c) => c.classList.toggle('on', c.dataset.id === id));
+  DATA.flows.forEach((f) => {
+    const uses = !!id && f.ids.includes(id);
+    const el = document.getElementById(f.id);
+    el.classList.toggle('uses', uses);
+    const note = $('.flow-uses', el);
+    note.hidden = !uses;
+    if (uses) note.textContent = `Uses ${id} ${S[id].name}`;
+    const link = $(`[data-flow-link="${f.id}"]`);
+    link.classList.toggle('uses', uses);
+    link.classList.toggle('dim', !!id && !uses);
+  });
+}
+
+function select(id) {
+  state.sel = state.sel === id ? null : id;
+  try { history.replaceState(null, '', state.sel ? `#${state.sel}` : location.pathname); } catch (e) {}
+  renderInventory(); renderDetail(); renderFlows();
+}
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-id]');
+  if (t) { select(t.dataset.id); if (window.innerWidth >= 980 && t.closest('.flows')) {} return; }
+  if (e.target.closest('[data-close]')) { select(state.sel); return; }
+  const m = e.target.closest('[data-mode]');
+  if (m) { state.mode = m.dataset.mode; $$('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', b === m)); renderInventory(); return; }
+  const p = e.target.closest('[data-phase]');
+  if (p) { state.phase = p.dataset.phase; $$('[data-phase]').forEach((b) => b.setAttribute('aria-pressed', b === p)); renderInventory(); }
+});
+$('#q').addEventListener('input', (e) => { state.q = e.target.value.trim().toLowerCase(); renderInventory(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && state.sel) select(state.sel); });
+
+renderInventory();
+const start = location.hash.slice(1);
+if (S[start]) select(start); else { renderDetail(); renderFlows(); }
+</script>
