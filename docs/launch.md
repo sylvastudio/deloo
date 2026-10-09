@@ -11,7 +11,9 @@ Run these **before** pushing the rental code to `main`, or the live app will loo
 2. Run `supabase/migrations/0006_drop_poster.sql`. It refuses to run while any organisation exists.
 3. Run `supabase/migrations/0007_rental_core.sql`.
 4. Storage: empty and delete the old `brand`, `exports` and `print` buckets. The new `items` bucket is created by 0007.
-5. Make yourself Ops: `update public.profiles set is_ops = true where id = (select id from auth.users where email = 'YOUR EMAIL');`
+5. Run `supabase/migrations/0008_availability.sql` (the planner asks it how many units are free; without it, R6 shows "Couldn't check the gear").
+6. Optional, for demos: run `supabase/demo_catalogue.sql` (fictional Lagos vendors and gear; remove later with `demo_catalogue_remove.sql`).
+7. Make yourself Ops: `update public.profiles set is_ops = true where id = (select id from auth.users where email = 'YOUR EMAIL');`
    (after you've signed up and finished onboarding).
 Check: sign up a new account, finish onboarding as "Both", and land on Plan with Plan · Bookings · Gear · Account tabs.
 

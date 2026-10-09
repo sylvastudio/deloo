@@ -1,5 +1,6 @@
+import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CATEGORY_META, displayName, GROUPS } from '@/lib/catalog';
@@ -70,7 +71,8 @@ function GearCard({ item }: { item: Item }) {
   const c = useColors();
   const units = item.units[0]?.count ?? 0;
   return (
-    <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]} accessible accessibilityLabel={`${displayName(item.name)}, ${naira(item.day_rate_kobo)} a day`}>
+    <Pressable onPress={() => router.push(`/item/${item.id}`)} android_ripple={{ color: c.lagoonTint }}
+      style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]} accessibilityRole="button" accessibilityLabel={`${displayName(item.name)}, ${naira(item.day_rate_kobo)} a day`}>
       <View style={[styles.art, { backgroundColor: c.lagoonTint }]}>
         <Icon name={categoryIcon(item.category_key)} size={40} color={c.lagoon} />
       </View>
@@ -81,7 +83,7 @@ function GearCard({ item }: { item: Item }) {
         <Text variant="caption" tone="faint" numberOfLines={1}>{item.vendors?.name.replace(/\s*\(DEMO\)$/, '')} · {units} {units === 1 ? 'unit' : 'units'}</Text>
         {item.technician_required ? <View style={{ marginTop: space.xs }}><Badge label="Technician included" /></View> : null}
       </View>
-    </View>
+    </Pressable>
   );
 }
 

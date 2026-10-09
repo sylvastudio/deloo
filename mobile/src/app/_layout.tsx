@@ -68,6 +68,8 @@ function Navigator() {
       </Stack.Protected>
       <Stack.Protected guard={ready}>
         <Stack.Screen name="coming-soon" />
+        <Stack.Screen name="item/[id]" />
+        <Stack.Screen name="vendor/[id]" />
       </Stack.Protected>
       <Stack.Protected guard={ready && mode === 'vendor'}>
         <Stack.Screen name="(vendor)" options={{ animation: 'fade' }} />
