@@ -36,7 +36,14 @@
           "imageWidth": 76
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Deloo uses the camera to photograph your gear and the condition of equipment at handover.",
+          "photosPermission": "Deloo uses your photos to list your gear."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

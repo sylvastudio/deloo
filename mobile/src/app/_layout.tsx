@@ -7,6 +7,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { PlanProvider } from '@/lib/plan';
 import { SessionProvider, useSession } from '@/lib/session';
 import { palette } from '@/theme/tokens';
 import { useIsDark } from '@/theme/use-colors';
@@ -26,7 +27,7 @@ export default function Root() {
       <ThemeProvider value={{ ...base, colors: { ...base.colors, background: p.paper, card: p.surface, text: p.ink, border: p.line, primary: p.lagoon } }}>
         <SessionProvider>
           <StatusBar style={dark ? 'light' : 'dark'} />
-          {fontsLoaded ? <Navigator /> : null}
+          <PlanProvider>{fontsLoaded ? <Navigator /> : null}</PlanProvider>
         </SessionProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
@@ -54,9 +55,23 @@ function Navigator() {
       </Stack.Protected>
       <Stack.Protected guard={ready && mode === 'renter'}>
         <Stack.Screen name="(renter)" options={{ animation: 'fade' }} />
+        <Stack.Screen name="plan/details" />
+        <Stack.Screen name="plan/ask/[q]" />
+        <Stack.Screen name="plan/sizing" options={{ animation: 'fade' }} />
+        <Stack.Screen name="plan/setup" />
+        <Stack.Screen name="plan/swap" options={{ presentation: 'formSheet', sheetAllowedDetents: [0.6, 1], sheetCornerRadius: 24, sheetGrabberVisible: true }} />
+        <Stack.Screen name="plan/share" options={{ presentation: 'formSheet', sheetAllowedDetents: [0.7], sheetCornerRadius: 24, sheetGrabberVisible: true }} />
+        <Stack.Screen name="book/review" />
+        <Stack.Screen name="book/pay" />
+        <Stack.Screen name="book/success" options={{ animation: 'fade', gestureEnabled: false }} />
+        <Stack.Screen name="booking/[id]" />
+      </Stack.Protected>
+      <Stack.Protected guard={ready}>
+        <Stack.Screen name="coming-soon" />
       </Stack.Protected>
       <Stack.Protected guard={ready && mode === 'vendor'}>
         <Stack.Screen name="(vendor)" options={{ animation: 'fade' }} />
+        <Stack.Screen name="add-gear" />
       </Stack.Protected>
     </Stack>
   );

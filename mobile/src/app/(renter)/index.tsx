@@ -1,59 +1,101 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
+import { answerChips, missingRequired } from '@/lib/answers-text';
+import { readEvent } from '@/lib/intake';
+import { QUESTION_KEYS, usePlan } from '@/lib/plan';
 import { useSession } from '@/lib/session';
 import { radius, space, type } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
+import { Button } from '@/ui/button';
+import { Notice } from '@/ui/feedback';
+import { categoryIcon, Icon } from '@/ui/icon';
 import { Card, Screen } from '@/ui/layout';
 import { Text } from '@/ui/text';
 
-const EXAMPLES = ['Outdoor crusade, 2,000 people, livestream', 'Wedding reception for 300 in a hall', 'Youth conference, 500, band and projector'];
+const EXAMPLES = ['Outdoor crusade, 2,000 people, livestream on YouTube', 'Wedding reception for 300 in a hall in Lekki', 'Youth conference, 500 people, band and projector'];
+const BROWSE = [['speaker', 'Sound'], ['led_wall', 'Screens'], ['camera', 'Cameras'], ['light', 'Lights'], ['generator', 'Power']] as const;
 
-/**
- * Plan home: the start card from docs/native-app-plan.md §4.2. The question flow and setups
- * arrive in N2; until then the card says so instead of pretending.
- */
+/** R1 Plan home: describe the event (type or voice), answer questions, or continue a saved plan. */
 export default function Plan() {
   const c = useColors();
   const { profile } = useSession();
+  const { draft, answer, update, reset, answered } = usePlan();
   const [text, setText] = useState('');
+  const [voiceTip, setVoiceTip] = useState(false);
+  const input = useRef<TextInput>(null);
   const first = profile?.full_name.split(' ')[0] ?? '';
+  const chips = answerChips(draft.answers);
+
+  function size() {
+    const words = text.trim();
+    if (!words) return;
+    reset();
+    update({ rawText: words });
+    const read = readEvent(words);
+    answer(read);
+    router.push(missingRequired(read).length ? '/plan/details' : '/plan/sizing');
+    setText('');
+  }
 
   return (
-    <Screen kicker={`Hi ${first}`} title="What’s the event?">
+    <Screen kicker={first ? `Hi ${first}` : undefined} title="What’s the event?">
       <View style={[styles.start, { backgroundColor: c.lagoon }]}>
         <Text style={[type.heading, { color: c.onLagoon }]}>Tell us about it the way you’d tell a friend.</Text>
         <View style={[styles.inputRow, { backgroundColor: c.surface }]}>
           <TextInput
-            value={text} onChangeText={setText} multiline placeholder="e.g. Outdoor crusade, about 2,000 people…"
-            placeholderTextColor={c.faint} style={[type.body, styles.input, { color: c.ink }]}
-            accessibilityLabel="Describe your event"
+            ref={input} value={text} onChangeText={setText} multiline placeholder="e.g. Outdoor crusade, about 2,000 people, Saturday in Ikeja"
+            placeholderTextColor={c.faint} style={[type.body, styles.input, { color: c.ink }]} accessibilityLabel="Describe your event"
           />
           <Pressable
             accessibilityRole="button" accessibilityLabel="Describe it by voice"
+            onPress={() => { setVoiceTip(true); input.current?.focus(); }}
             style={[styles.mic, { backgroundColor: c.marigold }]} android_ripple={{ color: '#00000022', borderless: true }}>
-            <Text style={{ fontSize: 22 }}>🎙️</Text>
+            <Icon name="mic" size={24} color={c.onMarigold} />
           </Pressable>
         </View>
-        <View style={styles.examples}>
-          {EXAMPLES.map((e) => (
-            <Pressable key={e} onPress={() => setText(e)} style={[styles.example, { borderColor: '#ffffff55' }]} accessibilityRole="button">
-              <Text variant="caption" style={{ color: c.onLagoon }}>{e}</Text>
+        {voiceTip ? <Text variant="caption" style={{ color: c.onLagoon }}>Tap the 🎙 on your keyboard and talk. We’ll read it.</Text> : null}
+        {text.trim() ? (
+          <Button kind="accent" title="Size my setup" onPress={size} />
+        ) : (
+          <View style={styles.examples}>
+            {EXAMPLES.map((e) => (
+              <Pressable key={e} onPress={() => setText(e)} style={styles.example} accessibilityRole="button" accessibilityLabel={`Use example: ${e}`}>
+                <Text variant="caption" style={{ color: c.onLagoon }}>{e}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </View>
+
+      <Button kind="secondary" title="Or answer a few quick questions" onPress={() => { reset(); router.push('/plan/ask/type'); }} />
+
+      {answered > 0 ? (
+        <Card>
+          <Text variant="label" tone="slate">Continue your plan</Text>
+          <Text variant="bodyStrong">{chips.slice(0, 3).map((ch) => ch.label).join(' · ') || 'Your event'}</Text>
+          <Text variant="caption" tone="slate">{answered} of {QUESTION_KEYS.length} answered</Text>
+          <Button title="Continue" onPress={() => router.push(missingRequired(draft.answers).length ? '/plan/details' : '/plan/setup')} />
+        </Card>
+      ) : null}
+
+      <View style={{ gap: space.sm }}>
+        <Text variant="label" tone="slate">Browse gear</Text>
+        <View style={styles.browse}>
+          {BROWSE.map(([k, label]) => (
+            <Pressable key={k} onPress={() => router.navigate('/explore')} accessibilityRole="button"
+              style={[styles.browseItem, { backgroundColor: c.surface, borderColor: c.line }]}>
+              <Icon name={categoryIcon(k)} color={c.lagoon} />
+              <Text variant="caption">{label}</Text>
             </Pressable>
           ))}
         </View>
       </View>
 
-      <Text variant="bodyStrong" tone="faint" style={styles.or}>Or answer a few quick questions (coming soon)</Text>
-
-      <Card style={{ backgroundColor: c.marigoldTint, borderColor: c.marigoldTint }}>
-        <Text variant="bodyStrong">The planner is being built</Text>
-        <Text variant="caption" tone="slate">
-          Soon this turns your description into a full setup (sound, screens, power) with what’s free on your date. Meanwhile, browse what’s available.
-        </Text>
-        <Pressable onPress={() => router.navigate('/explore')} hitSlop={8}><Text variant="label" tone="lagoon">Explore gear →</Text></Pressable>
-      </Card>
+      <Pressable onPress={() => router.push('/coming-soon')} accessibilityRole="button">
+        <Notice tone="tip" icon="sparkles">Coming soon: billboard and screen ad space, camera crews by the hour, studios. Join the list →</Notice>
+      </Pressable>
     </Screen>
   );
 }
@@ -64,6 +106,7 @@ const styles = StyleSheet.create({
   input: { flex: 1, minHeight: 72, maxHeight: 160, paddingTop: space.sm, textAlignVertical: 'top' },
   mic: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   examples: { gap: space.sm },
-  example: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: 6, alignSelf: 'flex-start' },
-  or: { paddingVertical: space.sm },
+  example: { borderWidth: 1, borderColor: '#ffffff55', borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: 6, alignSelf: 'flex-start' },
+  browse: { flexDirection: 'row', gap: space.sm },
+  browseItem: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: space.md, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth },
 });

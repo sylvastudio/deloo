@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -8,7 +9,9 @@ import { useSession } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
+import { Button } from '@/ui/button';
 import { Badge } from '@/ui/chip';
+import { EmptyState } from '@/ui/feedback';
 import { categoryIcon, Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 
@@ -28,7 +31,8 @@ export default function Gear() {
       .eq('vendor_id', vendor.id).order('category_key');
     setRows((data ?? []) as unknown as Row[]);
   }, [vendor]);
-  useEffect(() => { load(); }, [load]);
+  // Reload when returning from Add gear.
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const totalUnits = (rows ?? []).reduce((n, r) => n + (r.units[0]?.count ?? 0), 0);
 
@@ -44,9 +48,10 @@ export default function Gear() {
             <View style={styles.header}>
               <Text variant="title" accessibilityRole="header">Your gear</Text>
               <Text tone="slate">{rows.length} listings · {totalUnits} units</Text>
+              {rows.length ? <Button title="Add gear" onPress={() => router.push('/add-gear')} style={{ marginTop: space.md }} /> : null}
             </View>
           }
-          ListEmptyComponent={<Text tone="slate">No gear listed yet. Adding gear from a photo is coming next.</Text>}
+          ListEmptyComponent={<EmptyState icon="camera" title="List your first item" body="Snap a photo. We’ll suggest what it is, you check the details and set your price." action="Add gear" onAction={() => router.push('/add-gear')} />}
           renderItem={({ item }) => {
             const units = item.units[0]?.count ?? 0;
             return (
