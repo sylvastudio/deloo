@@ -3,12 +3,13 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
+import { Icon, type IconName } from './icon';
 import { Text } from './text';
 
 /** A big tappable answer card: one choice in a question, a mode, an event type. */
 export function Tile({
-  title, description, emoji, selected, onPress, multi,
-}: { title: string; description?: string; emoji?: string; selected?: boolean; onPress: () => void; multi?: boolean }) {
+  title, description, emoji, icon, selected, onPress, multi,
+}: { title: string; description?: string; emoji?: string; icon?: IconName; selected?: boolean; onPress: () => void; multi?: boolean }) {
   const c = useColors();
   return (
     <Pressable
@@ -21,7 +22,8 @@ export function Tile({
         { backgroundColor: selected ? c.lagoonTint : c.surface, borderColor: selected ? c.lagoon : c.line },
         pressed && !selected && { backgroundColor: c.raised },
       ]}>
-      {emoji ? <Text style={styles.emoji}>{emoji}</Text> : null}
+      {icon ? <View style={[styles.iconWrap, { backgroundColor: selected ? c.surface : c.lagoonTint }]}><Icon name={icon} color={c.lagoon} /></View>
+        : emoji ? <Text style={styles.emoji} accessibilityElementsHidden importantForAccessibility="no">{emoji}</Text> : null}
       <View style={styles.copy}>
         <Text variant="bodyStrong">{title}</Text>
         {description ? <Text variant="caption" tone="slate">{description}</Text> : null}
@@ -36,6 +38,7 @@ export function Tile({
 const styles = StyleSheet.create({
   tile: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg, borderRadius: radius.lg, borderWidth: 1.5, overflow: 'hidden', minHeight: 72 },
   emoji: { fontSize: 28, lineHeight: 34 },
+  iconWrap: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   copy: { flex: 1, gap: 2 },
   mark: { width: 24, height: 24, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
 });

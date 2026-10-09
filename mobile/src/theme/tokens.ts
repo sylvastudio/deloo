@@ -23,6 +23,7 @@ export const palette = {
     redTint: '#FBEAE7',
     green: '#1F8A5B',        // "available", verified
     greenTint: '#E1F2E9',
+    greenInk: '#15603F',     // text on greenTint (AA contrast)
   },
   dark: {
     paper: '#0E1215',
@@ -43,6 +44,7 @@ export const palette = {
     redTint: '#2E1714',
     green: '#4CC08A',
     greenTint: '#11261C',
+    greenInk: '#7FD9AE',
   },
 } as const;
 

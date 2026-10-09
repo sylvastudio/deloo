@@ -5,6 +5,7 @@ import { BricolageGrotesque_600SemiBold, BricolageGrotesque_700Bold, useFonts } 
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { SessionProvider, useSession } from '@/lib/session';
 import { palette } from '@/theme/tokens';
@@ -21,12 +22,14 @@ export default function Root() {
   const p = dark ? palette.dark : palette.light;
   const base = dark ? DarkTheme : DefaultTheme;
   return (
-    <ThemeProvider value={{ ...base, colors: { ...base.colors, background: p.paper, card: p.surface, text: p.ink, border: p.line, primary: p.lagoon } }}>
-      <SessionProvider>
-        <StatusBar style={dark ? 'light' : 'dark'} />
-        {fontsLoaded ? <Navigator /> : null}
-      </SessionProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={{ ...base, colors: { ...base.colors, background: p.paper, card: p.surface, text: p.ink, border: p.line, primary: p.lagoon } }}>
+        <SessionProvider>
+          <StatusBar style={dark ? 'light' : 'dark'} />
+          {fontsLoaded ? <Navigator /> : null}
+        </SessionProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 

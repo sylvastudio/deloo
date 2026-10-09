@@ -2,13 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CATEGORY_META, displayName } from '@/lib/catalog';
+import { displayName } from '@/lib/catalog';
 import { naira } from '@/lib/format';
 import { useSession } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Badge } from '@/ui/chip';
+import { categoryIcon, Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 
 type Row = { id: string; name: string; category_key: string; day_rate_kobo: number; active: boolean; risk_tier: number; units: { count: number }[] };
@@ -50,7 +51,7 @@ export default function Gear() {
             const units = item.units[0]?.count ?? 0;
             return (
               <View style={[styles.row, { backgroundColor: c.surface, borderColor: c.line }]}>
-                <View style={[styles.icon, { backgroundColor: c.lagoonTint }]}><Text style={{ fontSize: 24 }}>{CATEGORY_META[item.category_key]?.emoji ?? '📦'}</Text></View>
+                <View style={[styles.icon, { backgroundColor: c.lagoonTint }]}><Icon name={categoryIcon(item.category_key)} size={24} color={c.lagoon} /></View>
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text variant="bodyStrong" numberOfLines={1}>{displayName(item.name)}</Text>
                   <Text variant="caption" tone="slate">{units} {units === 1 ? 'unit' : 'units'} · {naira(item.day_rate_kobo)}/day</Text>

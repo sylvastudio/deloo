@@ -26,7 +26,7 @@ type Status = 'available' | 'limited' | 'unavailable' | 'neutral';
 export function Badge({ label, status = 'neutral' }: { label: string; status?: Status }) {
   const c = useColors();
   const map = {
-    available: [c.greenTint, c.green], limited: [c.marigoldTint, c.ink], unavailable: [c.redTint, c.red], neutral: [c.raised, c.slate],
+    available: [c.greenTint, c.greenInk], limited: [c.marigoldTint, c.ink], unavailable: [c.redTint, c.red], neutral: [c.raised, c.slate],
   } as const;
   const [bg, fg] = map[status];
   return (

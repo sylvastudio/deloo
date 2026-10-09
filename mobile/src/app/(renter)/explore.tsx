@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Badge, Chip } from '@/ui/chip';
+import { categoryIcon, Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 
 type Item = {
@@ -67,12 +68,11 @@ export default function Explore() {
 
 function GearCard({ item }: { item: Item }) {
   const c = useColors();
-  const meta = CATEGORY_META[item.category_key];
   const units = item.units[0]?.count ?? 0;
   return (
     <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]} accessible accessibilityLabel={`${displayName(item.name)}, ${naira(item.day_rate_kobo)} a day`}>
       <View style={[styles.art, { backgroundColor: c.lagoonTint }]}>
-        <Text style={{ fontSize: 40, lineHeight: 48 }}>{meta?.emoji ?? '📦'}</Text>
+        <Icon name={categoryIcon(item.category_key)} size={40} color={c.lagoon} />
       </View>
       <View style={{ gap: 2, padding: space.md }}>
         <Text variant="label" numberOfLines={2}>{displayName(item.name)}</Text>

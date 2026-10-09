@@ -31,9 +31,14 @@ Not added: the UI designer's separate "vendor booking detail" (UI V19). It is pa
 
 ## Decisions for the founder
 
-1. **Booking timings** (`user-flows.md` §2): vendor accepts within 2 h (30 min for short notice); free cancellation until 72 h before; deposit back within 24 h of a clean return; vendor has 12 h for the return checklist; claims raised within 24 h.
-2. **Who shoots the handover photos:** the vendor or technician; the renter reviews and confirms. With no signal, the two phones confirm with a 6-digit handover code.
-3. **Tab bar:** the native Android/iOS bar already in the app, instead of the floating pill in the plan (cheaper, works with TalkBack and large fonts).
-4. **Technician choice:** a switch on R15 (forced on for tier-3 gear), not a planning question.
+Decided 9 Oct 2026 by the founder: **1–4 approved; 6 replaced by an emoji rule** (below).
+
+1. ✅ **Booking timings** (`user-flows.md` §2): vendor accepts within 2 h (30 min for short notice); free cancellation until 72 h before; deposit back within 24 h of a clean return; vendor has 12 h for the return checklist; claims raised within 24 h.
+2. ✅ **Who shoots the handover photos:** the vendor or technician; the renter reviews and confirms. With no signal, the two phones confirm with a 6-digit handover code.
+3. ✅ **Tab bar:** the native Android/iOS bar already in the app, instead of the floating pill in the plan (cheaper, works with TalkBack and large fonts).
+4. ✅ **Technician choice:** a switch on R15 per vendor (on and locked for tier-3 gear, with the reason), shown on R6 as a line ("Includes 1 technician, required for the LED wall"). Not a planning question. If the renter's own words ask for one ("we have no sound guy"), intake turns it on.
 5. **Token fixes:** add a darker `greenInk` for badge text (green on its tint is 3.8:1, below AA); `faint` only for placeholders.
-6. **No emoji in the UI:** category emoji in the N0 build become Material/SF icons.
+6. ✅ **Emoji rule** (replaces "no emoji"): emoji where they carry feeling or speed up recognition, never where they carry meaning alone.
+   - **Use:** success and celebration moments, event-type tiles in the questions, WhatsApp share text and push notifications, light touches in empty states and tips, onboarding cards.
+   - **Avoid:** navigation and tab bar, money/prices/deposits/legal copy, availability and booking status, gear categories in lists (icons, then real photos), errors and warnings.
+   - **Guardrails:** at most one emoji per message or card; always next to words, never the only meaning.
