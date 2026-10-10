@@ -12,11 +12,16 @@ export type Staff = {
   phone: string;
 };
 
-/** The signed-in auth user (null when signed out). Cached per request. */
+/**
+ * The signed-in user (null when signed out). Cached per request. getClaims verifies the session token
+ * locally (signing keys) instead of a round trip to Supabase Auth on every admin page; the database
+ * still checks the same token on every query (RLS), so a forged token gets nothing.
+ */
 const getUser = cache(async () => {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
+  const { data } = await supabase.auth.getClaims();
+  const c = data?.claims;
+  return c?.sub ? { id: String(c.sub), email: typeof c.email === "string" ? c.email : "" } : null;
 });
 
 /**

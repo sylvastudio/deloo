@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
 import type { ReactNode } from "react";
 import { signOut } from "@/app/(auth)/actions";
@@ -6,7 +7,7 @@ import { AdminShell, type NavGroup, type NavItem, type Theme } from "@/component
 import { getStaff, homeFor, type Staff } from "@/lib/admin/auth";
 import { addDays, dayStart, lagosDay } from "@/lib/admin/format";
 import { can, ROLE_LABEL } from "@/lib/admin/roles";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import "./admin.css";
 
 export const metadata: Metadata = {
@@ -16,33 +17,37 @@ export const metadata: Metadata = {
 
 type Counts = { jobsToday: number | null; refundsQueued: number | null; paymentsAttention: number | null };
 
-/** Badge counts for the sidebar: head-only count queries, skipped for roles that can't see them. */
-async function navCounts(staff: Staff): Promise<Counts> {
-  const db = await createClient();
-  const today = lagosDay();
+/**
+ * The sidebar's numbers, shared by all staff and cached for a minute, so clicking around the portal
+ * doesn't run four count queries per page. Read with the service client (no cookies in a cache);
+ * which badges a role sees is decided outside, in navCounts.
+ */
+const sharedCounts = unstable_cache(async (today: string) => {
+  const db = createServiceClient();
   const t0 = dayStart(today), t1 = dayStart(addDays(today, 1));
   const count = async (q: PromiseLike<{ count: number | null; error: unknown }>) => {
-    try {
-      const r = await q;
-      return r.error ? null : r.count;
-    } catch {
-      return null;
-    }
+    try { const r = await q; return r.error ? null : r.count; } catch { return null; }
   };
-  const jobs = can(staff.role, "handover.capture") || staff.role === "readonly";
-  const money = can(staff.role, "payments.view");
   const [out, back, refunds, attention] = await Promise.all([
-    // Riders' jobs are filtered by name/phone on the Jobs page; the badge is for ops, so riders skip it.
-    jobs && staff.role !== "rider"
-      ? count(db.from("bookings").select("id", { count: "exact", head: true }).gte("starts_at", t0).lt("starts_at", t1).in("status", ["confirmed", "preparing", "out_for_delivery"]))
-      : null,
-    jobs && staff.role !== "rider"
-      ? count(db.from("bookings").select("id", { count: "exact", head: true }).gt("ends_at", t0).lte("ends_at", t1).eq("status", "delivered"))
-      : null,
-    money ? count(db.from("refunds").select("id", { count: "exact", head: true }).in("status", ["queued", "processing"])) : null,
-    money ? count(db.from("payments").select("id", { count: "exact", head: true }).or("status.eq.mismatch,flags.cs.{duplicate}")) : null,
+    count(db.from("bookings").select("id", { count: "exact", head: true }).gte("starts_at", t0).lt("starts_at", t1).in("status", ["confirmed", "preparing", "out_for_delivery"])),
+    count(db.from("bookings").select("id", { count: "exact", head: true }).gt("ends_at", t0).lte("ends_at", t1).eq("status", "delivered")),
+    count(db.from("refunds").select("id", { count: "exact", head: true }).in("status", ["queued", "processing"])),
+    count(db.from("payments").select("id", { count: "exact", head: true }).or("status.eq.mismatch,flags.cs.{duplicate}")),
   ]);
-  return { jobsToday: out == null && back == null ? null : (out ?? 0) + (back ?? 0), refundsQueued: refunds, paymentsAttention: attention };
+  return { out, back, refunds, attention };
+}, ["admin-nav-counts"], { revalidate: 60 });
+
+/** Badge counts for the sidebar, only the ones this role may see. */
+async function navCounts(staff: Staff): Promise<Counts> {
+  const jobs = (can(staff.role, "handover.capture") || staff.role === "readonly") && staff.role !== "rider";
+  const money = can(staff.role, "payments.view");
+  if (!jobs && !money) return { jobsToday: null, refundsQueued: null, paymentsAttention: null };
+  const { out, back, refunds, attention } = await sharedCounts(lagosDay());
+  return {
+    jobsToday: !jobs || (out == null && back == null) ? null : (out ?? 0) + (back ?? 0),
+    refundsQueued: money ? refunds : null,
+    paymentsAttention: money ? attention : null,
+  };
 }
 
 function navFor(staff: Staff, c: Counts): { groups: NavGroup[]; settings?: NavItem } {
