@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Deloo",
     short_name: "Deloo",
-    description: "Tell us your event, we'll supply the setup. Sound, screens, cameras and lights for events in Lagos.",
+    description: "Camera, light and sound gear for your shoot, delivered across Lagos. Rent by the day, no deposit.",
     start_url: "/",
     scope: "/",
     display: "standalone",

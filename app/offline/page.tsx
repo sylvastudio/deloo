@@ -7,7 +7,7 @@ export default function Offline() {
       <div className="solo-main">
         <section className="solo-step">
           <h1 className="h1">You&apos;re offline</h1>
-          <p className="hint" style={{ fontSize: 15 }}>Deloo needs a connection to load your brand kit and designs. Reconnect and try again.</p>
+          <p className="hint" style={{ fontSize: 15 }}>Deloo needs a connection to show gear, prices and bookings. Reconnect and try again.</p>
         </section>
       </div>
     </main>

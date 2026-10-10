@@ -1,11 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Atkinson_Hyperlegible_Next, Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import { RegisterSW } from "@/components/register-sw";
+import { fontVariables } from "./fonts";
 import "./globals.css";
-
-const atkinson = Atkinson_Hyperlegible_Next({ variable: "--font-atkinson", subsets: ["latin"] });
-const bricolage = Bricolage_Grotesque({ variable: "--font-bricolage", subsets: ["latin"] });
-const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"], weight: ["400", "500"] });
 
 export const metadata: Metadata = {
   title: "Deloo",
@@ -26,7 +22,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en-NG" className={`${atkinson.variable} ${bricolage.variable} ${jetbrains.variable}`}>
+    <html lang="en-NG" className={fontVariables}>
       <body>
         {children}
         <RegisterSW />

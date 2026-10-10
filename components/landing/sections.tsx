@@ -7,18 +7,34 @@ import { CtaPair } from "./chrome";
 import { faqItems } from "./faq";
 import s from "./landing.module.css";
 
+// Plain <img> throughout: Supabase already resizes, and next/image would need remotePatterns config.
+/* eslint-disable @next/next/no-img-element */
+
 export function Hero({ d }: { d: LandingData }) {
+  const shot = d.featured.find((it) => it.photoLargeUrl);
   return (
     <section className={`${s.wrap} ${s.hero}`} aria-labelledby="hero-title">
-      <h1 id="hero-title" className={s.h1}>Camera, light and sound gear for your shoot, delivered across Lagos.</h1>
-      <p className={s.sub}>
-        Tell us what you&apos;re shooting and we&apos;ll suggest a kit, or pick gear yourself. Pay online, get it delivered or pick it up. No deposit.
-      </p>
-      <CtaPair className={s.heroCtas} />
-      <p className={s.trust}>
-        {d.minDayRateKobo != null && <><strong>From {naira(d.minDayRateKobo)} a day</strong> · </>}
-        No deposit · Deloo Protection (damage cover) on every booking · Pay with Paystack
-      </p>
+      <div className={s.heroText}>
+        <h1 id="hero-title" className={s.h1}>Camera, light and sound gear for your shoot, delivered across Lagos.</h1>
+        <p className={s.sub}>
+          Tell us what you&apos;re shooting and we&apos;ll suggest a kit, or pick gear yourself. Pay online, get it delivered or pick it up. No deposit.
+        </p>
+        <CtaPair className={s.heroCtas} />
+        <p className={s.trust}>
+          {d.minDayRateKobo != null && <><strong>From {naira(d.minDayRateKobo)} a day</strong> · </>}
+          No deposit · Deloo Protection (damage cover) on every booking · Pay with Paystack
+        </p>
+      </div>
+      {shot && (
+        <figure className={s.heroShot}>
+          <a href={itemUrl(shot.id)}>
+            <img src={shot.photoLargeUrl!} alt={shot.name} width={800} height={600} fetchPriority="high" decoding="async" />
+          </a>
+          <figcaption>
+            <a href={itemUrl(shot.id)}>{shot.name}</a>, {naira(shot.dayRateKobo)} a day
+          </figcaption>
+        </figure>
+      )}
     </section>
   );
 }
@@ -27,24 +43,20 @@ export function Featured({ d }: { d: LandingData }) {
   return (
     <section id="gear" className={s.section} aria-labelledby="gear-title">
       <div className={s.wrap}>
-        <h2 id="gear-title" className={s.h2}>Popular this week</h2>
+        <h2 id="gear-title" className={s.h2}>Some of our gear</h2>
+        <p className={s.lead}>Day rates, before Deloo Protection and delivery. Everything here is Deloo&apos;s own stock.</p>
         {d.featured.length ? (
           <ul className={s.grid}>
             {d.featured.map((it) => (
               <li key={it.id}>
-                <a className={s.card} href={itemUrl(it.id)}>
+                <a className={s.item} href={itemUrl(it.id)}>
                   {it.photoUrl ? (
-                    // Plain <img>: Supabase already resizes to 400w, and next/image would need remotePatterns config.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img className={s.photo} src={it.photoUrl} alt={it.name} width={400} height={300} loading="lazy" decoding="async" />
+                    <img className={s.photo} src={it.photoUrl} alt="" width={400} height={300} loading="lazy" decoding="async" />
                   ) : (
                     <div className={s.photo} aria-hidden="true" />
                   )}
-                  <div className={s.cardBody}>
-                    <p className={s.cardName}>{it.name}</p>
-                    <p className={s.price}>{naira(it.dayRateKobo)} / day</p>
-                    {it.depositKobo > 0 && <p className={s.small}>Deposit {naira(it.depositKobo)}, refundable</p>}
-                  </div>
+                  <span className={s.itemName}>{it.name}</span>
+                  <span className={s.price}>{naira(it.dayRateKobo)} a day</span>
                 </a>
               </li>
             ))}
@@ -53,9 +65,8 @@ export function Featured({ d }: { d: LandingData }) {
           <p className={s.lead}>Cameras, lenses, gimbals, lights and podcast mics, by the day. See today&apos;s prices in the app.</p>
         )}
         <a className={`${s.link} ${s.seeAll}`} href={EXPLORE_URL}>
-          {d.itemCount ? `See all ${d.itemCount} items →` : "See all gear →"}
+          {d.itemCount ? `See all ${d.itemCount} items` : "See all gear"} →
         </a>
-        <CtaPair />
       </div>
     </section>
   );
@@ -74,7 +85,9 @@ export function Categories({ d }: { d: LandingData }) {
         <ul className={s.chips}>
           {cats.map((c) => (
             <li key={c.key}>
-              <a className={s.chip} href={categoryUrl(c.key)}>{CATEGORY_CHIP_LABELS[c.key] ?? c.label} ({c.count})</a>
+              <a className={s.chip} href={categoryUrl(c.key)}>
+                {CATEGORY_CHIP_LABELS[c.key] ?? c.label} <span className={s.count}>{c.count}</span>
+              </a>
             </li>
           ))}
         </ul>
@@ -86,14 +99,21 @@ export function Categories({ d }: { d: LandingData }) {
 export function ShootTypes() {
   return (
     <section className={s.section} aria-labelledby="shoot-title">
-      <div className={s.wrap}>
-        <h2 id="shoot-title" className={s.h2}>Not sure what you need? Describe your shoot.</h2>
-        <p className={s.lead}>Type it like you&apos;d tell a friend. We&apos;ll suggest the camera, lenses, light and sound, with a reason for each.</p>
-        <p className={s.bubble}>&ldquo;3-person podcast in Lekki on Saturday, two cameras&rdquo;</p>
-        <ul className={s.tiles}>
-          {SHOOT_TYPES.map((t) => <li key={t} className={s.tile}>{t}</li>)}
-        </ul>
-        <a className={`${s.btn} ${s.accent}`} href={APP_URL} style={{ marginTop: 16 }}>Plan my shoot</a>
+      <div className={`${s.wrap} ${s.split}`}>
+        <div>
+          <h2 id="shoot-title" className={s.h2}>Not sure what you need? Describe your shoot.</h2>
+          <p className={s.lead}>Type it like you&apos;d tell a friend. We&apos;ll suggest the camera, lenses, light and sound, with a reason for each.</p>
+          <blockquote className={s.example}>
+            <p>&ldquo;3-person podcast in Lekki on Saturday, two cameras&rdquo;</p>
+          </blockquote>
+          <a className={`${s.btn} ${s.accent}`} href={APP_URL}>Plan my shoot</a>
+        </div>
+        <div>
+          <h3 className={s.h3}>Shoots we plan for</h3>
+          <ul className={s.plainList}>
+            {SHOOT_TYPES.map((t) => <li key={t}>{t}</li>)}
+          </ul>
+        </div>
       </div>
     </section>
   );
@@ -102,7 +122,7 @@ export function ShootTypes() {
 const STEPS = [
   ["Plan or pick", "Describe your shoot or browse the gear."],
   ["Choose your days", "See what's free on a calendar. Rent from tomorrow."],
-  ["Pay securely", "Card or bank transfer on Paystack. You see the rental, Deloo Protection (damage cover) and delivery before you pay. No deposit."],
+  ["Pay", "Card or bank transfer on Paystack. You see the rental, Deloo Protection (damage cover) and delivery before you pay. No deposit."],
   ["Receive and return", "We deliver or you pick up. We both take photos of the gear at handover and return, so there are no arguments later."],
 ] as const;
 
@@ -112,11 +132,10 @@ export function HowItWorks() {
       <div className={s.wrap}>
         <h2 id="how-title" className={s.h2}>How renting works</h2>
         <ol className={s.steps}>
-          {STEPS.map(([title, body], i) => (
-            <li key={title} className={s.step}>
-              <span className={s.stepNum} aria-hidden="true">{i + 1}</span>
-              <h3>{title}</h3>
-              <p>{body}</p>
+          {STEPS.map(([title, body]) => (
+            <li key={title} className={s.row}>
+              <h3 className={s.rowTitle}>{title}</h3>
+              <p className={s.rowBody}>{body}</p>
             </li>
           ))}
         </ol>
@@ -131,26 +150,28 @@ export function Trust({ d }: { d: LandingData }) {
     <section className={s.section} aria-labelledby="trust-title">
       <div className={s.wrap}>
         <h2 id="trust-title" className={s.h2}>Your money and our gear, both protected</h2>
-        <div className={s.points}>
-          <div className={s.point}>
-            <h3>No deposit</h3>
-            <p>You pay the rental, Protection and delivery. Nothing is held back, so there&apos;s nothing to wait for after your shoot.</p>
+        <dl className={s.rows}>
+          <div className={s.row}>
+            <dt className={s.rowTitle}>No deposit</dt>
+            <dd className={s.rowBody}>You pay the rental, Protection and delivery. Nothing is held back, so there&apos;s nothing to wait for after your shoot.</dd>
           </div>
-          <div className={s.point}>
+          <div className={s.row}>
             {/* TODO(founder): confirm the cap. Rates mirror private.item_protection_rate (0019). */}
-            <h3>Deloo Protection (damage cover)</h3>
-            <p>For 10–20% of the rental, depending on the gear (cameras 20%, lenses and lights 15%, audio and stands 10%), accidental damage is covered up to a limit, so one mistake won&apos;t cost you the full price of a camera.</p>
+            <dt className={s.rowTitle}>Deloo Protection (damage cover)</dt>
+            <dd className={s.rowBody}>
+              A share of the rental, depending on the gear: cameras 20%, lenses and lights 15%, audio and stands 10%. It covers accidental damage up to a limit, so one mistake won&apos;t cost you the full price of a camera.
+            </dd>
           </div>
-          <div className={s.point}>
-            <h3>Handover photos</h3>
-            <p>At delivery and return, you and our rider photograph each item. No arguments later about who did what.</p>
+          <div className={s.row}>
+            <dt className={s.rowTitle}>Handover photos</dt>
+            <dd className={s.rowBody}>At delivery and return, you and our rider photograph each item. No arguments later about who did what.</dd>
           </div>
-        </div>
+        </dl>
 
-        <h3 className={s.zonesTitle}>Delivery across Lagos</h3>
+        <h3 className={s.h3} id="delivery">Delivery across Lagos</h3>
         {d.zones.length ? (
           <div className={s.tableWrap}>
-            <table className={s.table}>
+            <table className={s.table} aria-labelledby="delivery">
               <thead><tr><th scope="col">Zone</th><th scope="col">Areas</th><th scope="col">Drop-off and collection</th></tr></thead>
               <tbody>
                 {d.zones.map((z) => (
@@ -192,12 +213,12 @@ export function Faq({ d }: { d: LandingData }) {
 export function RentOut() {
   return (
     <section className={s.section} aria-labelledby="owner-title">
-      <div className={s.wrap}>
-        <div className={s.band}>
-          <h2 id="owner-title" className={s.h2}>Own gear that sits idle?</h2>
-          <p>Soon you&apos;ll be able to rent it out through Deloo. Leave your WhatsApp number and we&apos;ll tell you first.</p>
-          <a className={`${s.btn} ${s.secondary}`} href={WAITLIST_URL}>Join the waitlist</a>
+      <div className={`${s.wrap} ${s.inline}`}>
+        <div>
+          <h2 id="owner-title" className={s.h3}>Own gear that sits idle?</h2>
+          <p className={s.muted}>Soon you&apos;ll be able to rent it out through Deloo. Leave your WhatsApp number and we&apos;ll tell you first.</p>
         </div>
+        <a className={`${s.btn} ${s.secondary}`} href={WAITLIST_URL}>Join the waitlist</a>
       </div>
     </section>
   );
@@ -206,12 +227,13 @@ export function RentOut() {
 export function WhatsAppBand({ d }: { d: LandingData }) {
   const wa = whatsappUrl(d.supportWhatsapp);
   return (
-    <section className={s.section} aria-label="WhatsApp support">
-      <div className={s.wrap}>
-        <div className={s.band}>
-          <p><strong>Questions? Chat with us on WhatsApp.</strong> We reply between 8am and 8pm.</p>
-          {wa && <a className={`${s.btn} ${s.primary}`} href={wa}>Chat on WhatsApp</a>}
+    <section className={s.contact} aria-labelledby="wa-title">
+      <div className={`${s.wrap} ${s.inline}`}>
+        <div>
+          <h2 id="wa-title" className={s.h2}>Questions? Chat with us on WhatsApp.</h2>
+          <p>We reply between 8am and 8pm.</p>
         </div>
+        {wa && <a className={`${s.btn} ${s.accent}`} href={wa}>Chat on WhatsApp</a>}
       </div>
     </section>
   );
