@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { asGear, draftKey, getCheckout, loadShelf, saveCheckout, useBookingDraft, type DraftLine, type ShelfItem } from '@/lib/booking-draft';
 import { kitGaps } from '@/planner/complements';
 import {
-  cachedSettings, createHold, GearTaken, getActiveHold, isOffline, itemCalendar, loadSettings, plain, quoteBooking, requestCancellation,
+  cachedSettings, createHold, GearTaken, getActiveHold, isOffline, itemCalendar, loadSettings, parseTime, plain, quoteBooking, requestCancellation,
   setActiveHold, type ActiveHold, type Delivery, type PayMethod, type Quote, type QuoteLine, type Settings,
 } from '@/lib/bookings';
 import { WhatsCovered } from '@/ui/coverage-sheet';
@@ -46,7 +46,7 @@ export default function Review() {
   const [phone, setPhone] = useState(saved?.phone || profile?.phone || '');
   // A phone we already have is shown as one line with "Change", not an open field.
   const [editPhone, setEditPhone] = useState(!(saved?.phone || profile?.phone));
-  const [method, setMethod] = useState<PayMethod>(saved?.method && saved.method !== 'usdt' ? saved.method : 'card');
+  const [method, setMethod] = useState<PayMethod>(saved?.method === 'bank_transfer' ? 'bank_transfer' : 'card');
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState('');
   const [offline, setOffline] = useState(false);
@@ -63,7 +63,7 @@ export default function Review() {
   useEffect(() => {
     saveCheckout({ delivery, zoneId, address: address.trim(), phone: phone.trim(), method });
   }, [delivery, zoneId, address, phone, method]);
-  const held = !!hold && hold.draftKey === key && Date.parse(hold.hold_expires_at) > Date.now();
+  const held = !!hold && hold.draftKey === key && parseTime(hold.hold_expires_at) > Date.now();
 
   useEffect(() => {
     loadSettings().then((s) => { setSettings(s); setOffline(false); }).catch((e) => { if (isOffline(e)) setOffline(true); });
@@ -143,7 +143,7 @@ export default function Review() {
     setTouched(true);
     // Straight to Paystack: the pay screen opens checkout as soon as it loads (go=1).
     const toPay = (id: string) => router.push({ pathname: '/book/pay', params: { booking: id, go: '1', method } });
-    if (method === 'usdt') { setPayError('Paying in USDT is coming soon. Pick card, transfer or USSD for now.'); return; }
+    if (method === 'usdt') { setPayError('Paying in USDT is coming soon. Pick card or bank transfer for now.'); return; }
     saveCheckout({ delivery, zoneId, address: address.trim(), phone: phone.trim(), method });
     // The slot is saved on the booking right after the hold; losing it never blocks paying (staff set it).
     if (held && hold) { saveDeliverySlot(hold.booking_id, slot).catch(() => {}); toPay(hold.booking_id); return; }

@@ -82,12 +82,24 @@ export type Delivery = 'pickup' | 'delivery';
 
 const rpcLines = (lines: DraftLine[]) => lines.map((l) => ({ item_id: l.itemId, qty: l.qty }));
 
+/**
+ * A database timestamp as ms. Postgres sends microseconds ("…:25.877336+00:00"), which some browsers
+ * (older iOS Safari) can't parse; trimmed to milliseconds it parses everywhere. NaN only if truly bad.
+ */
+export function parseTime(s: string | null | undefined): number {
+  if (!s) return NaN;
+  const t = Date.parse(s);
+  if (Number.isFinite(t)) return t;
+  return Date.parse(s.replace(' ', 'T').replace(/(\.\d{3})\d+/, '$1'));
+}
+
 /** Server time minus phone time, in ms, so a wrong phone clock can't end a hold early. 0 when unknown. */
 export async function clockOffset(): Promise<number> {
   const t0 = Date.now();
   const { data, error } = await supabase.rpc('server_now');
   if (error || typeof data !== 'string') return 0;
-  return Date.parse(data) - (t0 + Date.now()) / 2;
+  const off = parseTime(data) - (t0 + Date.now()) / 2;
+  return Number.isFinite(off) ? off : 0;
 }
 
 export type FreeCheck =
@@ -110,7 +122,7 @@ export async function checkFree(lines: DraftLine[], first: string, last: string)
   if (q.problems.includes('starts_too_soon')) return { ok: false, tooSoon: true, message: 'Bookings start from tomorrow. Pick later days.' };
   const taken = q.lines.filter((l) => !l.ok);
   // A checkout already started for this gear: send them back to it rather than saying it's taken.
-  if (hold?.reference && Date.parse(hold.hold_expires_at) > Date.now()) {
+  if (hold?.reference && parseTime(hold.hold_expires_at) > Date.now()) {
     return { ok: false, resumeBookingId: hold.booking_id, message: 'You’ve started paying for this gear. Finish that payment, or wait for it to end.' };
   }
   if (!taken.length) return { ok: false, message: 'Some of this gear isn’t available any more.' };
@@ -163,7 +175,7 @@ export function getActiveHold(): ActiveHold | null {
     const raw = localStorage.getItem(ACTIVE_KEY);
     const h = raw ? (JSON.parse(raw) as ActiveHold) : null;
     // Keep it a little past expiry: a late payment can still confirm (contract: confirm_payment).
-    return h && Date.parse(h.hold_expires_at) > Date.now() - 60 * 60_000 ? h : null;
+    return h && parseTime(h.hold_expires_at) > Date.now() - 60 * 60_000 ? h : null;
   } catch { return null; }
 }
 export function setActiveHold(h: ActiveHold | null) {
@@ -176,14 +188,13 @@ export function setActiveHold(h: ActiveHold | null) {
 export const PAY_RETURN = 'deloo://pay';
 
 /**
- * How the renter wants to pay. Card, transfer and USSD open Paystack on just that method; USDT is
+ * How the renter wants to pay. Card and transfer open Paystack on just that method; USDT is
  * shown as coming soon (not wired to any processor yet).
  */
-export type PayMethod = 'card' | 'bank_transfer' | 'ussd' | 'usdt';
+export type PayMethod = 'card' | 'bank_transfer' | 'usdt';
 export const PAY_METHODS: { key: PayMethod; label: string; note: string; soon?: boolean }[] = [
   { key: 'card', label: 'Card', note: 'Visa, Mastercard, Verve. Quickest.' },
   { key: 'bank_transfer', label: 'Bank transfer', note: 'Paystack gives you an account number to send to.' },
-  { key: 'ussd', label: 'USSD', note: 'Dial a code from your bank’s phone line.' },
   { key: 'usdt', label: 'USDT', note: 'Pay in crypto. Coming soon.', soon: true },
 ];
 
@@ -330,7 +341,7 @@ export function stageTone(s: Stage): 'available' | 'limited' | 'unavailable' | '
 
 /** Still going (Active tab), vs. finished (Past tab). A hold counts only while it can still be paid. */
 export function isActive(b: Pick<Booking, 'status' | 'hold_expires_at' | 'needs_refund'>) {
-  if (b.status === 'hold') return !!b.hold_expires_at && Date.parse(b.hold_expires_at) > Date.now();
+  if (b.status === 'hold') return !!b.hold_expires_at && parseTime(b.hold_expires_at) > Date.now();
   if (b.needs_refund) return true;
   return !['expired', 'cancelled', 'closed', 'returned'].includes(b.status);
 }

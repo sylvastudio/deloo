@@ -9,7 +9,7 @@ const WEB_ORIGINS = ["https://app.deloo.space", "http://localhost:8081", ...(pro
 
 /**
  * The app has a booking on hold and wants to pay: creates a payment row and a Paystack checkout.
- * Body: { booking_id, return_to?: "web", channel?: "card" | "bank_transfer" | "ussd" }. Returns { authorization_url, reference }. Reuses a checkout
+ * Body: { booking_id, return_to?: "web", channel?: "card" | "bank_transfer" }. Returns { authorization_url, reference }. Reuses a checkout
  * made in the last 20 minutes for the same amount and return target, so tapping Pay twice doesn't make
  * two transactions. Paystack adds ?reference=… to the callback URL.
  *   Native app: callback deloo.space/pay/return, which hands over to deloo://pay.

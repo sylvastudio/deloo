@@ -32,7 +32,7 @@ export type BookingDraft = {
 };
 
 /** Delivery details remembered between bookings (the renter's last address and area). */
-export type Checkout = { delivery: 'pickup' | 'delivery'; zoneId?: string; address: string; phone: string; method?: 'card' | 'bank_transfer' | 'ussd' | 'usdt' };
+export type Checkout = { delivery: 'pickup' | 'delivery'; zoneId?: string; address: string; phone: string; method?: 'card' | 'bank_transfer' | 'usdt' };
 
 const KEY = 'deloo.booking.draft';
 const CHECKOUT_KEY = 'deloo.booking.checkout';

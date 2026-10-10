@@ -5,7 +5,7 @@ import { ActivityIndicator, AppState, Linking, Platform, ScrollView, StyleSheet,
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
-  bookingDays, bookingStatus, cachedSettings, clockOffset, getActiveHold, getBooking, IN_FLIGHT, isOffline, loadSettings, PAID, PAY_RETURN, plain,
+  bookingDays, bookingStatus, cachedSettings, clockOffset, getActiveHold, parseTime, getBooking, IN_FLIGHT, isOffline, loadSettings, PAID, PAY_RETURN, plain,
   setActiveHold, startPayment, verifyPayment, type BookingDetail, type PayMethod,
 } from '@/lib/bookings';
 import { getCheckout, saveCheckout } from '@/lib/booking-draft';
@@ -36,7 +36,7 @@ const POLL_FOR_MS = 10 * 60_000;
 export default function Pay() {
   const c = useColors();
   const params = useLocalSearchParams<{ booking?: string; reference?: string; go?: string; method?: PayMethod }>();
-  const [method, setMethod] = useState<PayMethod>(() => params.method ?? getCheckout()?.method ?? 'card');
+  const [method, setMethod] = useState<PayMethod>(() => { const m = params.method ?? getCheckout()?.method; return m === 'bank_transfer' ? m : 'card'; });
   const autoStarted = useRef(false);
   useEffect(() => { if (Platform.OS === 'web') preloadPaystack(); }, []);
   const bookingId = params.booking ?? getActiveHold()?.booking_id;
@@ -96,8 +96,9 @@ export default function Pay() {
       const started = row.payments.filter((p) => p.status === 'initialized' || p.status === 'success').sort((x, y) => y.created_at.localeCompare(x.created_at))[0];
       if (!reference.current && started) reference.current = started.reference;
       if (reference.current) return check();
-      const now = Date.now() + (await skewP);
-      setPhase(row.status === 'hold' && row.hold_expires_at && Date.parse(row.hold_expires_at) > now ? 'ready' : 'ended');
+      // The server's status decides: a held booking is payable, whatever this phone's clock says. If
+      // the hold really ran out, starting the payment says so (the server refuses it).
+      setPhase(row.status === 'hold' ? 'ready' : 'ended');
     } catch (e) {
       setMessage(plain(e, 'Couldn’t load your booking.'));
       setPhase('error');
@@ -111,9 +112,11 @@ export default function Pay() {
   const loaded = !!b;
   useEffect(() => {
     if (!loaded) return;
-    const until = b?.hold_expires_at ? Date.parse(b.hold_expires_at) : 0;
+    const until = parseTime(b?.hold_expires_at);
     const tick = () => {
       const ms = until - (Date.now() + skew);
+      // Unknown time (unparseable, or no expiry) shows no countdown rather than ending the hold.
+      if (!Number.isFinite(ms)) { setLeft(Number.POSITIVE_INFINITY); return; }
       setLeft(ms);
       if (ms <= 0) setPhase((p) => (p === 'ready' || p === 'unfinished' ? 'ended' : p));
     };
@@ -158,7 +161,7 @@ export default function Pay() {
     if (!bookingId) return;
     setPhase('opening'); setMessage('');
     try {
-      if (method === 'usdt') { setMessage('Paying in USDT is coming soon. Pick card, transfer or USSD.'); setPhase('ready'); return; }
+      if (method === 'usdt') { setMessage('Paying in USDT is coming soon. Pick card or bank transfer.'); setPhase('ready'); return; }
       const { authorization_url, reference: ref } = await startPayment(bookingId, method);
       reference.current = ref;
       const active = getActiveHold();
@@ -216,13 +219,14 @@ export default function Pay() {
     );
   }
 
-  const mins = Math.max(0, Math.floor(left / 60000)), secs = Math.max(0, Math.floor((left % 60000) / 1000));
-  const clock = `${mins}:${String(secs).padStart(2, '0')}`;
+  const known = Number.isFinite(left);
+  const mins = known ? Math.max(0, Math.floor(left / 60000)) : 30, secs = known ? Math.max(0, Math.floor((left % 60000) / 1000)) : 0;
+  const clock = known ? `${mins}:${String(secs).padStart(2, '0')}` : '30 minutes';
   const days = b ? bookingDays(b) : null;
   // While a transfer is landing, the hold time no longer matters: no red "Hold ended" next to "Waiting".
   const holdBadge = !b || phase === 'refund' || phase === 'pending' ? null
     : left <= 0 ? <Badge label="Hold ended" status="unavailable" />
-    : <Badge label={`Held ${clock}`} status={mins < 5 ? 'limited' : 'neutral'} />;
+    : <Badge label={known ? `Held ${clock}` : 'Held'} status={known && mins < 5 ? 'limited' : 'neutral'} />;
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: c.paper }}>
@@ -312,7 +316,7 @@ function PhaseCard({ phase, clock, left, message, stillWaiting, help, bookingRef
       <Notice tone="warning">
         <View style={{ gap: 2 }}>
           <Text variant="bodyStrong">Payment not finished</Text>
-          <Text variant="caption">{message || `Nothing was taken. Your gear is still held for ${clock}. Resume to pay by card, transfer or USSD.`}</Text>
+          <Text variant="caption">{message || `Nothing was taken. Your gear is still held for ${clock}. Resume to pay by card or bank transfer.`}</Text>
         </View>
       </Notice>
     );
