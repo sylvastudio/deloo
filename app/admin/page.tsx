@@ -3,7 +3,7 @@ import { ErrorBox, Empty, PageHead, Section, StatusChip } from "@/components/adm
 import { pageStaff } from "@/lib/admin/auth";
 import { addDays, dayStart, fmtRental, fmtWeekday, lagosDay } from "@/lib/admin/format";
 import { maskText } from "@/lib/admin/roles";
-import type { BookingStatus } from "@/lib/admin/status";
+import { LIVE_STATUSES, type BookingStatus } from "@/lib/admin/status";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Dashboard" };
@@ -21,7 +21,7 @@ export default async function Dashboard() {
   const count = { count: "exact" as const, head: true };
   const notDead = "(hold,expired,cancelled)";
 
-  const [deliveries, collections, holds, awaitingPrep, refundsQueued, needsRefund, unmet, mismatch, deliveryList, collectionList] = await Promise.all([
+  const [deliveries, collections, holds, awaitingPrep, refundsQueued, needsRefund, unmet, mismatch, deliveryList, collectionList, live, withRenters] = await Promise.all([
     db.from("bookings").select("id", count).neq("delivery", "pickup").gte("starts_at", t0).lt("starts_at", t1).not("status", "in", notDead),
     // Last rental day today ⇔ ends_at is tomorrow 00:00 Lagos.
     db.from("bookings").select("id", count).gt("ends_at", t0).lte("ends_at", t1).in("status", ["delivered", "out_for_delivery"]),
@@ -35,10 +35,16 @@ export default async function Dashboard() {
       .gte("starts_at", t0).lt("starts_at", t2).not("status", "in", notDead).order("starts_at").limit(50),
     db.from("bookings").select("id, ref, status, starts_at, ends_at, address, delivery_slot, collection_slot, rider_name")
       .gt("ends_at", t0).lte("ends_at", t2).in("status", ["delivered", "out_for_delivery", "preparing", "confirmed"]).order("ends_at").limit(50),
+    // Whatever the dates: every paid booking still in progress, and the gear that's out with renters now.
+    // (The tiles above only look at today, so a booking that starts later would otherwise vanish from here.)
+    db.from("bookings").select("id", count).in("status", LIVE_STATUSES),
+    db.from("bookings").select("id", count).in("status", ["out_for_delivery", "delivered"]),
   ]);
 
-  const failed = [deliveries, collections, holds, awaitingPrep, refundsQueued, needsRefund, unmet, mismatch].find((r) => r.error);
+  const failed = [deliveries, collections, holds, awaitingPrep, refundsQueued, needsRefund, unmet, mismatch, live, withRenters].find((r) => r.error);
   const tiles: { n: number | null; label: string; href: string; alert?: boolean }[] = [
+    { n: live.count, label: "Live bookings (any date)", href: `/admin/bookings?status=live` },
+    { n: withRenters.count, label: "Out with renters now", href: `/admin/bookings?status=live` },
     { n: deliveries.count, label: "Deliveries today", href: `/admin/bookings?view=deliveries_today` },
     { n: collections.count, label: "Collections today", href: `/admin/bookings?view=collections_today` },
     { n: holds.count, label: "Holds expiring in 15 min", href: `/admin/bookings?view=holds_expiring` },
