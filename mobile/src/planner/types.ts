@@ -40,6 +40,14 @@ export interface Answers {
   /** Lagos area, e.g. "Ikeja". */
   area: Maybe<string>;
   budget: Maybe<Budget>;
+  /** A naira ceiling the renter named ("under 100k"), in kobo. Used by "Fit my budget" (planner/fit). */
+  budgetKobo?: number;
+  /** "deliver to Ajah" → 'delivery'; "I'll pick it up" → 'pickup'. Review pre-selects it. */
+  delivery?: 'pickup' | 'delivery';
+  /** Rental length the renter said without a start day ("2 days"); the calendar pre-fills it. */
+  days?: number;
+  /** Gear named in the words ("FX3", "24-70"); the planner prefers matching listings (match pinnedItems). */
+  pinnedNames?: string[];
 }
 
 export type CategoryKey =
@@ -123,6 +131,8 @@ export interface CatalogueItem {
   riskTier: 1 | 2 | 3;
   freeUnits: number;
   totalUnits: number;
+  /** First listing photo (a path in the public `items` bucket), when it has one. */
+  photo?: string;
 }
 
 export interface MatchOptions {
@@ -130,6 +140,8 @@ export interface MatchOptions {
   days: number;
   /** Deloo Protection fee as a share of rental (PRD §4.7: 5–10%). Default 0.07. */
   protectionRate?: number;
+  /** Gear the renter named (Answers.pinnedNames): a matching free listing fills its category's line first. */
+  pinned?: string[];
 }
 
 export type Availability = 'available' | 'limited' | 'unavailable';
@@ -150,6 +162,7 @@ export interface Offer {
   servesArea: boolean;
   technicianRequired: boolean;
   riskTier: 1 | 2 | 3;
+  photo?: string;
 }
 
 /** PRD §4.3 order: same item elsewhere → equivalent item → different approach → nearby date. */
@@ -168,6 +181,11 @@ export interface Alternative {
   priceDeltaKobo: number | null;
   /** Other stock in the category: true when it meets the plan's spec, false when it's a trade-off. */
   fits?: boolean;
+  /**
+   * nearby_date only: the stocked listings that would fill the whole line on a day they're free
+   * (ignoring these dates), so the app can ask the server which nearby days are free.
+   */
+  wants?: { itemId: string; units: number }[];
 }
 
 /**

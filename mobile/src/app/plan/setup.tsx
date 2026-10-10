@@ -1,6 +1,7 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { answerChips, assumedChips } from '@/lib/answers-text';
@@ -9,14 +10,17 @@ import { cachedSettings, checkFree, isOffline, loadSettings, plain, type Setting
 import { naira } from '@/lib/format';
 import { lagosToday } from '@/ui/date-range';
 import { lineTitle, needLabel } from '@/lib/line-text';
+import { itemPhotoUrl } from '@/lib/photos';
 import { usePlan } from '@/lib/plan';
-import { applyChoices, completeAnswers, PROTECTION_RATE, saveEvent, usePlanResult, type ChosenLine } from '@/lib/plan-result';
-import { resolveAnswers, RULES_VERSION } from '@/planner';
+import {
+  applyChoices, completeAnswers, PROTECTION_RATE, saveEvent, useNearestFree, usePlanResult, wantedItems, windowAnswers, windowLabel, type ChosenLine,
+} from '@/lib/plan-result';
+import { fitBudget, resolveAnswers, RULES_VERSION, type Choices, type FitResult } from '@/planner';
 import type { Group, Level } from '@/planner/types';
-import { radius, space } from '@/theme/tokens';
+import { radius, space, type } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Button } from '@/ui/button';
-import { Badge } from '@/ui/chip';
+import { Badge, Chip } from '@/ui/chip';
 import { EmptyState, Notice, Skeleton } from '@/ui/feedback';
 import { categoryIcon, Icon } from '@/ui/icon';
 import { Segmented } from '@/ui/segmented';
@@ -29,7 +33,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric',
 /** R6 Your setup (with R7 Why? inline and R9 Nothing available as an honest card). */
 export default function Setup() {
   const c = useColors();
-  const { draft, update } = usePlan();
+  const { draft, update, answer } = usePlan();
   const { setups, matches, datesKnown, error, retry } = usePlanResult(draft);
   const [open, setOpen] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
@@ -40,7 +44,7 @@ export default function Setup() {
   const level = draft.level;
   const setup = setups.find((s) => s.level === level) ?? setups[1];
   const result = useMemo(() => (matches ? applyChoices(matches[level], draft) : null), [matches, level, draft]);
-  const chips = [...answerChips(draft.answers), ...assumedChips(draft.answers, resolveAnswers(completeAnswers(draft.answers)))];
+  const chips = [...answerChips(draft.answers, draft.aiKeys), ...assumedChips(draft.answers, resolveAnswers(completeAnswers(draft.answers)))];
   const when = typeof draft.answers.startsAt === 'string' && draft.answers.startsAt !== 'unsure' ? DAY.format(new Date(draft.answers.startsAt)) : null;
   // A saved plan whose date has come and gone: treat it as having no date (bookings start tomorrow).
   const first = result ? draftFromPlan(result, draft).first : undefined;
@@ -66,6 +70,26 @@ export default function Setup() {
   // Say plainly which gaps are "we don't have this yet" and which are "booked on your dates".
   const notStocked = missing.filter((l) => !l.swappedTo && l.shortReason === 'not_stocked');
   const booked = missing.filter((l) => !notStocked.includes(l));
+
+  // "Free if you shift a day": only when something is booked on these dates (not when we don't stock it).
+  const wants = useMemo(() => (result && hasDate && booked.length && !notStocked.length ? wantedItems(result.lines) : null), [result, hasDate, booked.length, notStocked.length]);
+  const shift = useNearestFree(wants, first, result?.match.days ?? 1);
+
+  // "Fit my budget": the plan's own lines and alternatives only; Review re-quotes on the server.
+  const [fitAsk, setFitAsk] = useState(false);
+  const [fitText, setFitText] = useState('');
+  const [fit, setFit] = useState<{ result: FitResult; before: Choices } | null>(null);
+  const budgetKobo = draft.answers.budgetKobo;
+  function runFit(kobo: number) {
+    if (!matches || !(kobo > 0)) return;
+    const before: Choices = { level, swaps: draft.swaps, removed: draft.removed };
+    const r = fitBudget(matches, before, kobo);
+    setFit({ result: r, before });
+    setFitAsk(false);
+    if (kobo !== budgetKobo) answer({ budgetKobo: kobo });
+    if (r.changes.length) update({ level: r.level, swaps: r.swaps, removed: r.removed });
+  }
+  const typed = Math.round(Number(fitText.replace(/[^\d.]/g, '')) * (/k\s*$/i.test(fitText.trim()) ? 1000 : /m\s*$/i.test(fitText.trim()) ? 1e6 : 1)) * 100;
 
   const setRemoved = (key: string, removed: boolean) => {
     setBookError('');
@@ -125,6 +149,48 @@ export default function Setup() {
               {deliveryFrom ? `Plus delivery and collection ${zone ? `to ${zone.name}` : 'from'} ${naira(deliveryFrom)}, or free pickup.` : 'Plus delivery, or free pickup.'}
             </Text>
           </View>
+
+          <View style={styles.fitRow}>
+            <Chip label={budgetKobo ? `Fit my budget · ${naira(budgetKobo, true)}` : 'Fit my budget'}
+              onPress={() => (budgetKobo && !fitAsk ? runFit(budgetKobo) : setFitAsk(!fitAsk))} />
+            {budgetKobo && !fitAsk ? <Pressable onPress={() => setFitAsk(true)} hitSlop={8} accessibilityRole="button"><Text variant="label" tone="lagoon">Change amount</Text></Pressable> : null}
+          </View>
+          {fitAsk ? (
+            <View style={[styles.fitAsk, { backgroundColor: c.surface, borderColor: c.line }]}>
+              <Text variant="label">Most you want to spend on rental</Text>
+              <View style={styles.fitRow}>
+                <View style={[styles.amount, { borderColor: c.line, backgroundColor: c.paper }]}>
+                  <Text variant="bodyStrong">₦</Text>
+                  <TextInput value={fitText} onChangeText={setFitText} keyboardType="numeric" placeholder="100,000" placeholderTextColor={c.faint} autoFocus
+                    style={[type.body, { flex: 1, color: c.ink, paddingVertical: 0 }]} accessibilityLabel="Budget in naira" returnKeyType="done" onSubmitEditing={() => runFit(typed)} />
+                </View>
+                <Button title="Fit" disabled={!(typed >= 100_000)} onPress={() => runFit(typed)} />
+              </View>
+            </View>
+          ) : null}
+          {fit && fit.result.level === level ? (
+            <Notice tone={fit.result.fits ? 'tip' : 'warning'} icon={fit.result.fits ? 'check' : 'warning'}>
+              <View style={{ gap: 4 }}>
+                <Text variant="caption" style={{ fontWeight: '600' }}>
+                  {!fit.result.changes.length && fit.result.fits ? `Already within ${naira(fit.result.budgetKobo, true)}. Nothing to change.`
+                    : fit.result.fits ? `Rental is now ${naira(fit.result.rentalKobo, true)}, within your ${naira(fit.result.budgetKobo, true)}.`
+                    : `The leanest we can do is ${naira(fit.result.rentalKobo, true)} rental, ${naira(fit.result.rentalKobo - fit.result.budgetKobo, true)} over your ${naira(fit.result.budgetKobo, true)}.`}
+                </Text>
+                {fit.result.changes.map((ch) => <Text key={ch} variant="caption">{ch}</Text>)}
+                {fit.result.changes.length ? (
+                  <Text variant="label" tone="lagoon" onPress={() => { update(fit.before); setFit(null); }} accessibilityRole="button">Undo</Text>
+                ) : null}
+              </View>
+            </Notice>
+          ) : null}
+
+          {shift ? (
+            <Pressable accessibilityRole="button" onPress={() => answer(windowAnswers(shift))}
+              style={[styles.honest, { backgroundColor: c.lagoonTint, flexDirection: 'row', alignItems: 'center', gap: space.md }]}>
+              <Icon name="calendar" color={c.lagoon} />
+              <Text variant="bodyStrong" style={{ flex: 1 }}>Everything is free {windowLabel(shift)}. <Text variant="bodyStrong" tone="lagoon">Switch?</Text></Text>
+            </Pressable>
+          ) : null}
 
           {!hasDate ? (
             <Notice tone="warning" icon="calendar">
@@ -197,7 +263,12 @@ function LineCard({ l, open, onToggle, onRemove }: { l: ChosenLine; open: boolea
   return (
     <View style={[styles.line, { backgroundColor: c.surface, borderColor: status === 'unavailable' ? c.red : c.line, opacity: l.removed ? 0.55 : 1 }]}>
       <View style={styles.lineTop}>
-        <View style={[styles.lineIcon, { backgroundColor: c.lagoonTint }]}><Icon name={categoryIcon(l.line.category)} color={c.lagoon} /></View>
+        {l.chosen[0]?.photo ? (
+          <Image source={{ uri: itemPhotoUrl(l.chosen[0].photo) }} style={[styles.lineIcon, { backgroundColor: '#fff', borderWidth: StyleSheet.hairlineWidth, borderColor: c.line }]}
+            contentFit="contain" transition={150} accessibilityIgnoresInvertColors />
+        ) : (
+          <View style={[styles.lineIcon, { backgroundColor: c.lagoonTint }]}><Icon name={categoryIcon(l.line.category)} color={c.lagoon} /></View>
+        )}
         <View style={{ flex: 1, gap: 2 }}>
           <Text variant="bodyStrong">{l.removed ? `Removed: ${needLabel(l.line)}` : lineTitle(l.line, l.chosen)}</Text>
           {l.chosen.length ? <Text variant="caption" tone="slate" numberOfLines={1}>{l.chosen.map((o) => `${naira(o.dayRateKobo, true)}/day`).join(' + ')}</Text> : null}
@@ -248,4 +319,7 @@ const styles = StyleSheet.create({
   lineActions: { flexDirection: 'row', gap: space.xl, paddingLeft: 56 },
   footer: { gap: space.sm, paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: space.lg, borderTopWidth: StyleSheet.hairlineWidth },
   footerRow: { flexDirection: 'row', gap: space.md },
+  fitRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  fitAsk: { borderRadius: radius.lg, borderWidth: 1, padding: space.md, gap: space.sm },
+  amount: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: radius.md, paddingHorizontal: space.md, minHeight: 48 },
 });

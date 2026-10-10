@@ -3,16 +3,17 @@ import { useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { answerChips, missingRequired } from '@/lib/answers-text';
 import { LAGOS_AREAS } from '@/lib/format';
 import { usePlan } from '@/lib/plan';
 import { DEFAULT_PEOPLE } from '@/planner';
 import type { Answers, Budget, Location, ShootType, SoundMode, TimeOfDay } from '@/planner/types';
-import { space } from '@/theme/tokens';
+import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Button } from '@/ui/button';
 import { Chip } from '@/ui/chip';
-import { DateRangeCalendar, dayCount, rentalWindow, windowDays } from '@/ui/date-range';
-import type { IconName } from '@/ui/icon';
+import { addDays, DateRangeCalendar, dayCount, rentalWindow, windowDays } from '@/ui/date-range';
+import { Icon, type IconName } from '@/ui/icon';
 import { Text } from '@/ui/text';
 import { Tile } from '@/ui/tile';
 import { TopBar } from '@/ui/top-bar';
@@ -41,15 +42,25 @@ const COUNTS: [number, string][] = [[1, '1'], [2, '2'], [3, '3'], [4, '4 or more
 export default function Ask() {
   const c = useColors();
   // edit=1: opened from R4/R6 to change one answer, so return instead of continuing the flow.
-  const { q, edit } = useLocalSearchParams<{ q: Q; edit?: string }>();
+  // chain=1: from the free-text reader; ask only the required answers still missing, then the setup.
+  const { q, edit, chain } = useLocalSearchParams<{ q: Q; edit?: string; chain?: string }>();
   const { draft, answer } = usePlan();
   const a = draft.answers;
   const index = Math.max(0, (QUESTIONS as readonly string[]).indexOf(q));
   const advancing = useRef(false);
+  // Auto-advance runs a beat after the tap, by when this holds the answer just given.
+  const latest = useRef(a);
+  latest.current = a;
+  const understood = chain ? answerChips(a, draft.aiKeys) : [];
 
   function next() {
     advancing.current = false;
     if (edit) { router.back(); return; }
+    if (chain) {
+      const missing = missingRequired(latest.current).filter((m) => m.q !== q);
+      router.push(missing.length ? `/plan/ask/${missing[0].q}?chain=1` : '/plan/setup');
+      return;
+    }
     const following = QUESTIONS[index + 1];
     if (following) router.push(`/plan/ask/${following}`);
     else router.push('/plan/setup');
@@ -141,9 +152,11 @@ export default function Ask() {
         typeof a.startsAt === 'string' && a.startsAt !== 'unsure' ? a.startsAt : undefined,
         typeof a.endsAt === 'string' && a.endsAt !== 'unsure' ? a.endsAt : undefined,
       );
+      // "2 days" was said without a start: the first tap fills the whole length (a second tap still changes it).
+      const said = typeof a.days === 'number' && a.days > 1 ? a.days : 0;
       title = 'Which days do you need it?';
-      helper = 'Priced per day. We check what’s free for every day you pick.';
-      body = <DateRangeCalendar first={first} last={last} onChange={(f, l) => answer(rentalWindow(f, l))} />;
+      helper = said ? `You said ${said} days. Tap the first day and we’ll fill in the rest.` : 'Priced per day. We check what’s free for every day you pick.';
+      body = <DateRangeCalendar first={first} last={last} onChange={(f, l) => answer(rentalWindow(f, said && f === l ? addDays(f, said - 1) : l))} />;
       footer = <View style={styles.footerRow}>{notSure({ startsAt: 'unsure', endsAt: 'unsure' })}
         <Button title={first && last ? `Continue · ${dayCount(first, last)} ${dayCount(first, last) === 1 ? 'day' : 'days'}` : 'Continue'} style={{ flex: 1 }} disabled={!first} onPress={next} /></View>;
       break;
@@ -172,8 +185,23 @@ export default function Ask() {
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: c.paper }}>
-      <TopBar steps={edit ? undefined : { current: index + 1, total: QUESTIONS.length }} title={edit ? 'Change answer' : undefined} />
+      <TopBar steps={edit || chain ? undefined : { current: index + 1, total: QUESTIONS.length }} title={edit ? 'Change answer' : undefined} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {understood.length ? (
+          <View style={{ gap: space.sm }}>
+            <Text variant="label" tone="slate">We understood</Text>
+            <View style={styles.wrap}>
+              {understood.map((ch) => (
+                <Pressable key={ch.key} accessibilityRole="button" accessibilityLabel={`${ch.label}. Change`}
+                  onPress={() => router.push(`/plan/ask/${ch.q}?edit=1`)}
+                  style={[styles.understood, { backgroundColor: ch.ai ? c.marigoldTint : c.lagoonTint, borderColor: ch.ai ? c.marigold : c.lagoon }]}>
+                  <Text variant="caption" style={{ color: c.ink }}>{ch.label}</Text>
+                  <Icon name="edit" size={12} color={c.lagoon} />
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ) : null}
         <Text variant="title" accessibilityRole="header">{title}</Text>
         {helper ? <Text tone="slate">{helper}</Text> : null}
         {body}
@@ -186,6 +214,7 @@ export default function Ask() {
 const styles = StyleSheet.create({
   content: { padding: space.xl, gap: space.md, paddingBottom: space.xxxl },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  understood: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: space.md, minHeight: 32, borderRadius: radius.pill, borderWidth: 1 },
   unsure: { alignSelf: 'flex-start', paddingVertical: space.sm, minHeight: 44, justifyContent: 'center' },
   footer: { paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: space.lg, borderTopWidth: StyleSheet.hairlineWidth },
   footerRow: { flexDirection: 'row', alignItems: 'center', gap: space.lg },

@@ -5,13 +5,14 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { naira } from '@/lib/format';
 import { lineTitle, needLabel } from '@/lib/line-text';
 import { usePlan } from '@/lib/plan';
-import { applyChoices, swapId, swapTarget, usePlanResult } from '@/lib/plan-result';
+import { applyChoices, swapId, swapTarget, useNearestFree, usePlanResult, windowAnswers, windowLabel } from '@/lib/plan-result';
 import type { AlternativeKind, Offer } from '@/planner/types';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Button } from '@/ui/button';
 import { Badge } from '@/ui/chip';
 import { Notice, Skeleton } from '@/ui/feedback';
+import { lagosToday, windowDays } from '@/ui/date-range';
 import { Text } from '@/ui/text';
 
 const KIND: Record<AlternativeKind, string> = {
@@ -24,10 +25,15 @@ const perDay = (offers: Offer[]) => offers.map((o) => `${naira(o.dayRateKobo, tr
 export default function Swap() {
   const c = useColors();
   const { line: key } = useLocalSearchParams<{ line: string }>();
-  const { draft, update } = usePlan();
+  const { draft, update, answer } = usePlan();
   const { matches } = usePlanResult(draft);
   const result = useMemo(() => (matches ? applyChoices(matches[draft.level], draft) : null), [matches, draft]);
   const l = result?.lines.find((x) => x.line.key === key);
+  // The nearest days this line is free, so "On other days" names them.
+  const { first } = windowDays(typeof draft.answers.startsAt === 'string' && draft.answers.startsAt !== 'unsure' ? draft.answers.startsAt : undefined,
+    typeof draft.answers.endsAt === 'string' && draft.answers.endsAt !== 'unsure' ? draft.answers.endsAt : undefined);
+  const near = l?.alternatives.find((a) => a.kind === 'nearby_date');
+  const shift = useNearestFree(near?.wants?.length && first && first > lagosToday() ? near.wants : null, first, result?.match.days ?? 1);
 
   function choose(id?: string) {
     const swaps = { ...draft.swaps };
@@ -61,7 +67,10 @@ export default function Swap() {
       {l.alternatives.length ? <Text variant="label" tone="slate">OTHER OPTIONS</Text> : (
         <Notice tone="tip">Nothing similar in our stock right now. We’ve noted your request so we know what to get next.</Notice>
       )}
-      {l.alternatives.map((alt, i) => (
+      {l.alternatives.map((alt, i) => alt.kind === 'nearby_date' && shift ? (
+        <Option key={i} label={KIND.nearby_date} title={`Free ${windowLabel(shift)}`} sub="Same gear, same number of days. Tap to move your dates."
+          onPress={() => { answer(windowAnswers(shift)); router.back(); }} />
+      ) : (
         <Option key={i} label={alt.fits === undefined ? KIND[alt.kind] : alt.fits ? 'Also suits this shoot' : 'Works, with a trade-off'}
           title={alt.offers.length ? lineTitle(l.line, alt.offers) : alt.trade}
           sub={alt.offers.length ? `${perDay(alt.offers)} · ${alt.trade}` : undefined}

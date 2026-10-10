@@ -112,6 +112,7 @@ function offerFor(ctx: Ctx, item: CatalogueItem, units: number): Offer {
     servesArea: servesArea(item, ctx.area),
     technicianRequired: item.technicianRequired,
     riskTier: item.riskTier,
+    ...(item.photo ? { photo: item.photo } : {}),
   };
 }
 
@@ -294,9 +295,49 @@ function alternativesFor(ctx: Ctx, line: Line, chosen: Offer[], strict: Catalogu
   // 4. Nearby date: we only know this date's stock, so flag it for the app to re-check. Only when we
   // stock it at all; other dates won't help with something we don't have.
   if (found < need && stocked) {
-    out.push({ kind: 'nearby_date', trade: 'Try other dates · it may be free a day earlier or later', offers: [], units: 0, complete: false, priceDeltaKobo: null });
+    // What would fill the whole line on a day it's free: the plan's own ranking, counting every unit we own.
+    const wants: { itemId: string; units: number }[] = [];
+    let left = need;
+    for (const i of strict) {
+      if (left <= 0) break;
+      const take = Math.min(i.totalUnits, left);
+      if (take > 0) { wants.push({ itemId: i.id, units: take }); left -= take; }
+    }
+    out.push({ kind: 'nearby_date', trade: 'Try other dates · it may be free a day earlier or later', offers: [], units: 0, complete: false, priceDeltaKobo: null, wants });
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Gear the renter named ("FX3", "24-70", "RODECaster")
+// ---------------------------------------------------------------------------------------------
+
+const tokens = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, '').split(/\s+/).filter(Boolean);
+
+/**
+ * Listings whose name contains the named model as whole words: "FX3" is the FX3, not the FX30;
+ * "24-70" is the 24-70mm; "RODECaster Pro" is the RODECaster Pro II. Spaces and dashes don't matter.
+ */
+export function pinnedItems(names: string[], catalogue: CatalogueItem[]): CatalogueItem[] {
+  const pins = names.map((n) => tokens(n).join('')).filter((p) => p.length >= 2);
+  if (!pins.length) return [];
+  return catalogue.filter((item) => {
+    const t = tokens(item.name);
+    for (let i = 0; i < t.length; i++) {
+      for (let n = 1; n <= 3 && i + n <= t.length; n++) {
+        const joined = t.slice(i, i + n).join('');
+        if (pins.some((p) => joined === p || joined === `${p}mm`)) return true;
+      }
+    }
+    return false;
+  });
+}
+
+/** A named listing can fill a line in its category; its kind must fit, except cameras and lenses (any body, any lens). */
+function pinFits(item: CatalogueItem, line: Line): boolean {
+  if (item.category !== line.category) return false;
+  if (line.category === 'camera' || line.category === 'lens' || !line.spec.kinds) return true;
+  return line.spec.kinds.includes(String(item.specs.kind));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -331,10 +372,16 @@ export function matchSetup(setup: Setup, catalogue: CatalogueItem[], opts: Match
     days,
   };
 
-  // Pass 1: allocate every line from the shared pool, in setup order.
+  // Pass 1: allocate every line from the shared pool, in setup order. Gear the renter named goes
+  // first on the first line it fits, even a step off the plan's spec (they asked for it).
+  const pinned = pinnedItems(opts.pinned ?? [], catalogue);
+  const pinUsed = new Set<string>();
   const firstPass = setup.lines.map((line) => {
     const strict = candidates(ctx, line.category, line.spec);
-    const { offers, units } = allocate(ctx, strict, line.qty, true);
+    const pins = pinned.filter((i) => !pinUsed.has(i.id) && pinFits(i, line));
+    const ranked = pins.length ? [...pins, ...strict.filter((i) => !pins.includes(i))] : strict;
+    const { offers, units } = allocate(ctx, ranked, line.qty, true);
+    for (const o of offers) if (pins.some((p) => p.id === o.itemId)) pinUsed.add(o.itemId);
     return { line, strict, offers, units };
   });
 
