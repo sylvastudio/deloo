@@ -7,14 +7,20 @@ import { naira } from "@/lib/format";
  * what WhatsApp and push will say later.
  */
 
-export type NotifyKind = "confirmed" | "day_before" | "return_tomorrow" | "deposit_sent";
+export type NotifyKind = "confirmed" | "day_before" | "return_tomorrow" | "deposit_sent" | "custom";
 
-/** One claimed row from claim_notifications(). */
+/** What a row carries in payload: a deposit amount, or (custom) the subject and body staff wrote. */
+export type NotifyPayload = { amount_kobo?: number; subject?: string; body?: string; sent_by?: string; sent_by_name?: string };
+
+/**
+ * One claimed row from claim_notifications(). A custom message may have no booking (0021): then
+ * booking_id and the booking fields are null.
+ */
 export type NotifyRow = {
-  id: string; kind: NotifyKind; channel: string; payload: { amount_kobo?: number } | null; attempts: number; send_after: string;
-  booking_id: string; ref: string | null; status: string; starts_at: string; ends_at: string; delivery: string; address: string;
-  delivery_slot: string; collection_slot: string; deposit_kobo: number; email: string | null; full_name: string;
-  support_whatsapp: string; pickup_address: string;
+  id: string; kind: NotifyKind; channel: string; payload: NotifyPayload | null; attempts: number; send_after: string;
+  booking_id: string | null; ref: string | null; status: string | null; starts_at: string | null; ends_at: string | null;
+  delivery: string | null; address: string | null; delivery_slot: string | null; collection_slot: string | null;
+  deposit_kobo: number | null; email: string | null; full_name: string; support_whatsapp: string | null; pickup_address: string | null;
 };
 
 export type Message = { subject: string; text: string; html: string };
@@ -45,15 +51,19 @@ function waDigits(phone: string): string {
 }
 
 export function compose(r: NotifyRow): Message {
+  if (r.kind === "custom") return composeCustom(r);
   const first = firstName(r.full_name);
   const ref = r.ref ?? "your booking";
   const pickup = r.delivery === "pickup";
-  const days = rentalDays(r.starts_at, r.ends_at);
-  const dates = fmtRental(r.starts_at, r.ends_at);
+  const startsAt = r.starts_at ?? r.send_after;
+  const endsAt = r.ends_at ?? r.send_after;
+  const days = rentalDays(startsAt, endsAt);
+  const dates = fmtRental(startsAt, endsAt);
   const day = fmtWeekday(days.first);
-  const slot = slotPhrase(r.delivery_slot);
+  const slot = slotPhrase(r.delivery_slot ?? "");
   const support = r.support_whatsapp ? `WhatsApp ${r.support_whatsapp}` : "WhatsApp, from your booking in the app";
-  const deposit = naira(r.payload?.amount_kobo ?? r.deposit_kobo);
+  const depositKobo = r.deposit_kobo ?? 0;
+  const deposit = naira(r.payload?.amount_kobo ?? depositKobo);
 
   let subject = "";
   let lines: string[] = [];
@@ -66,7 +76,7 @@ export function compose(r: NotifyRow): Message {
           ? `Pick it up on ${day}${slot ? `, ${slot}` : ""}${r.pickup_address ? ` at ${r.pickup_address}` : ""}. Bring a valid ID.`
           : `We deliver on ${day}${slot ? `, ${slot}` : ""}.`,
         // No deposit since 0019; a booking made before then still mentions its own.
-        ...(r.deposit_kobo > 0 ? [`Your ${naira(r.deposit_kobo)} deposit comes back within 48 hours after we check the gear.`] : []),
+        ...(depositKobo > 0 ? [`Your ${naira(depositKobo)} deposit comes back within 48 hours after we check the gear.`] : []),
         `Questions? Reply on ${support}.`,
       ];
       break;
@@ -103,17 +113,43 @@ export function compose(r: NotifyRow): Message {
       break;
   }
 
-  const link = bookingUrl(r.booking_id);
+  const link = bookingUrl(r.booking_id ?? "");
   const text = `${lines.join("\n\n")}\n\nSee your booking: ${link}\n\nDeloo, camera gear for hire in Lagos.`;
-  return { subject, text, html: html(subject, lines, link, r.support_whatsapp) };
+  return { subject, text, html: html(subject, lines, link, r.support_whatsapp ?? "") };
+}
+
+/**
+ * A one-off message staff wrote in the portal (payload.subject, payload.body, already filled in).
+ * Paragraphs split on blank lines; links in the text become links; the booking button is added when the
+ * message is about a booking.
+ */
+function composeCustom(r: NotifyRow): Message {
+  const subject = (r.payload?.subject ?? "").trim() || "A message from Deloo";
+  const body = (r.payload?.body ?? "").replace(/\r\n/g, "\n").trim();
+  const lines = body.split(/\n{2,}/).map((l) => l.trim()).filter(Boolean);
+  const link = r.booking_id ? bookingUrl(r.booking_id) : null;
+  const text = `${lines.join("\n\n")}${link ? `\n\nSee your booking: ${link}` : ""}\n\nDeloo, camera gear for hire in Lagos.`;
+  return { subject, text, html: html(subject, lines, link, r.support_whatsapp ?? "", true) };
 }
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+/** Escape, then turn http(s) links into anchors and single line breaks into <br>. For staff-written text. */
+function richText(s: string): string {
+  const url = /\bhttps?:\/\/[^\s<>"']*[^\s<>"'.,;:!?)\]]/g;
+  let out = "";
+  let at = 0;
+  for (const m of s.matchAll(url)) {
+    out += esc(s.slice(at, m.index)) + `<a href="${esc(m[0])}" style="color:#0F6B73;">${esc(m[0])}</a>`;
+    at = m.index + m[0].length;
+  }
+  return (out + esc(s.slice(at))).replace(/\n/g, "<br>");
+}
+
 /** Same frame as the Supabase auth emails (supabase/templates): white card on paper, lagoon button. */
-function html(subject: string, lines: string[], link: string, support: string): string {
+function html(subject: string, lines: string[], link: string | null, support: string, rich = false): string {
   const font = "font-family:Arial,Helvetica,sans-serif;";
-  const para = lines.map((l) => `<p style="margin:0 0 12px;font-size:15px;line-height:1.55;color:#12161C;">${esc(l)}</p>`).join("\n");
+  const para = lines.map((l) => `<p style="margin:0 0 12px;font-size:15px;line-height:1.55;color:#12161C;">${rich ? richText(l) : esc(l)}</p>`).join("\n");
   const wa = waDigits(support);
   return `<!doctype html>
 <html lang="en">
@@ -126,9 +162,9 @@ function html(subject: string, lines: string[], link: string, support: string): 
 <tr><td style="padding:8px 28px 0;${font}">
 <h1 style="margin:0 0 12px;font-size:20px;line-height:1.25;color:#12161C;font-weight:bold;">${esc(subject)}</h1>
 ${para}
-<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:8px;"><tr><td style="border-radius:6px;background:#0F6B73;">
+${link ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:8px;"><tr><td style="border-radius:6px;background:#0F6B73;">
 <a href="${esc(link)}" style="display:inline-block;padding:13px 22px;${font}font-size:15px;font-weight:bold;color:#FFFFFF;text-decoration:none;border-radius:6px;">See your booking</a>
-</td></tr></table>
+</td></tr></table>` : ""}
 ${wa ? `<p style="margin:16px 0 0;font-size:13px;line-height:1.5;color:#4A5560;">Questions? <a href="https://wa.me/${wa}" style="color:#0F6B73;">Chat with us on WhatsApp</a>.</p>` : ""}
 </td></tr>
 <tr><td style="padding:24px 28px 28px;${font}font-size:12px;line-height:1.5;color:#4A5560;border-top:1px solid #E6EAEA;">Deloo: camera gear for hire in Lagos, delivered and collected.<br>You got this email because you booked with Deloo.</td></tr>

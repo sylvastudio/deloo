@@ -31,6 +31,8 @@ export type Capability =
   | "settings.view"
   | "settings.edit"
   | "staff.manage"
+  | "messages.view"      // emails to renters (outbox) and their previews
+  | "messages.send"      // write a one-off email, retry or cancel one
   | "pii.view";          // unmasked phone numbers and addresses
 
 const MATRIX: Record<Capability, StaffRole[]> = {
@@ -53,6 +55,8 @@ const MATRIX: Record<Capability, StaffRole[]> = {
   "settings.view": ["owner", "admin", "finance", "readonly"],
   "settings.edit": ["owner", "admin"],
   "staff.manage": ["owner", "admin"],
+  "messages.view": ["owner", "admin", "ops", "finance", "readonly"],
+  "messages.send": ["owner", "admin", "ops"],
   "pii.view": ["owner", "admin", "ops", "rider", "finance"],
 };
 

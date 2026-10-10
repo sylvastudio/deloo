@@ -21,6 +21,7 @@ function navFor(role: StaffRole): NavItem[] {
     { href: "/admin/availability", label: "Availability", icon: "availability", show: can(role, "inventory.view"), sub: true },
     { href: "/admin/payments", label: "Payments", icon: "payments", show: can(role, "payments.view") },
     { href: "/admin/payments/refunds", label: "Refunds", icon: "payments", show: can(role, "payments.view"), sub: true },
+    { href: "/admin/messages", label: "Messages", icon: "messages", show: can(role, "messages.view") },
     { href: "/admin/customers", label: "Customers", icon: "customers", show: can(role, "customers.view") },
     { href: "/admin/demand", label: "Demand", icon: "demand", show: can(role, "demand.view") },
     { href: "/admin/settings", label: "Settings", icon: "settings", show: can(role, "settings.view") },
