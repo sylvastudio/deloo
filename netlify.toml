@@ -13,3 +13,12 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# Our own functions next to the Next.js ones. netlify/functions/notify-cron.mts is a scheduled function
+# (every 15 minutes, published deploy only) that calls /api/cron/notify to send booking messages.
+# Env vars it needs, set in the Netlify UI (scopes: Builds + Functions):
+#   RESEND_API_KEY  (secret) Resend API key with sending access to deloo.space
+#   CRON_SECRET     (secret) any long random string; the function sends it, the route checks it
+#   NOTIFY_FROM     (optional) defaults to "Deloo <hello@deloo.space>"
+[functions]
+  directory = "netlify/functions"

@@ -108,7 +108,9 @@ export default function Handover() {
     const left = job.media.filter((m) => !m.uploaded).length;
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}><TopBar title="Handover photos" />
-        <EmptyState icon="check" title="Saved, thank you" body={left ? `${waitingText(left)}. We’ll keep trying, even if you close the app.` : 'All uploaded.'} action="Back to booking" onAction={() => router.back()} />
+        <EmptyState icon="check" title="Saved, thank you"
+          body={`${kind === 'delivery' ? 'The rider can go now. Your photos are on your booking.' : 'We’ll check the gear and send your deposit within 48 hours.'}\n\n${left ? `${waitingText(left)}. We’ll keep trying, even if you close the app.` : 'All uploaded.'}`}
+          action="Back to booking" onAction={() => router.back()} />
       </SafeAreaView>
     );
   }
@@ -129,11 +131,14 @@ export default function Handover() {
       <TopBar title={kind === 'delivery' ? 'Photos on delivery' : 'Photos before return'}
         right={<Text variant="label" tone="slate" accessibilityLabel={`${required.done} of ${required.total} photos taken`}>{required.done}/{required.total}</Text>} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text tone="slate">
-          {kind === 'delivery'
-            ? 'Take these with the rider there. They show the condition you received it in, so nobody can blame you for an old scratch.'
-            : 'Take these before the rider leaves with it. They show the condition you returned it in.'}
-        </Text>
+        <View style={{ gap: space.xs }}>
+          <Text variant="bodyStrong">{kind === 'delivery' ? 'Takes about 3 minutes. Ask the rider to wait.' : 'Copy your footage off the cards first.'}</Text>
+          <Text tone="slate">
+            {kind === 'delivery'
+              ? 'Take these with the rider there. They show the condition you received it in, so nobody can blame you for an old scratch. If you skip this, our photos from before it left are what we go by.'
+              : 'Then take these before the rider leaves with it, about 3 minutes. They show the condition you returned it in.'}
+          </Text>
+        </View>
         {denied ? (
           <Notice tone="problem">
             <View style={{ gap: space.xs }}>
@@ -196,7 +201,7 @@ export default function Handover() {
           </Text>
         ) : null}
         <SlideToConfirm label={kind === 'delivery' ? 'I received these in this condition' : 'I’m returning these in this condition'}
-          disabled={!complete || !job} onConfirm={() => { if (job) { confirmJob(job.id); router.back(); } }} />
+          disabled={!complete || !job} onConfirm={() => { if (job) confirmJob(job.id); }} />
       </View>
     </SafeAreaView>
   );
