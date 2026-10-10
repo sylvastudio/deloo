@@ -1,9 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 
-import { plain, quoteCancellation, requestCancellation } from '@/lib/bookings';
-import { naira } from '@/lib/format';
+import { cachedSettings, loadSettings, plain, quoteCancellation, requestCancellation } from '@/lib/bookings';
+import { naira, whatsappUrl } from '@/lib/format';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Button } from '@/ui/button';
@@ -24,6 +24,9 @@ export default function Cancel() {
   const [busy, setBusy] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [done, setDone] = useState<number | null>(null);
+
+  const [help, setHelp] = useState(cachedSettings()?.support_whatsapp ?? '');
+  useEffect(() => { loadSettings().then((s) => setHelp(s.support_whatsapp)).catch(() => {}); }, []);
 
   const load = useCallback(async () => {
     setError('');
@@ -83,6 +86,19 @@ export default function Cancel() {
         <Text variant="caption" tone="slate">Full refund if you cancel within an hour of paying and more than a day before your first day. Refunds go back to the account you paid from.</Text>
         <Text variant="label">Why are you cancelling? (optional)</Text>
         <View style={styles.chips}>{REASONS.map((r) => <Chip key={r} label={r} selected={reason === r} onPress={() => setReason(reason === r ? '' : r)} />)}</View>
+        {reason === 'My shoot moved' ? (
+          <Notice tone="tip" icon="calendar">
+            <View style={{ gap: space.xs }}>
+              <Text variant="caption">Shoot moved? We can move your days instead, free if the gear is free.</Text>
+              {help ? (
+                <Text variant="label" tone="lagoon" accessibilityRole="link"
+                  onPress={() => Linking.openURL(whatsappUrl(help, 'Hi Deloo, my shoot moved. Can you move my booking to new days?')).catch(() => {})}>
+                  Chat with us
+                </Text>
+              ) : <Text variant="caption" tone="slate">Message us on WhatsApp before you cancel.</Text>}
+            </View>
+          </Notice>
+        ) : null}
         {error ? <Notice tone="problem">{error}</Notice> : null}
         <SlideToConfirm key={attempt} label={busy ? 'Cancelling…' : 'Slide to cancel'} disabled={busy} onConfirm={cancel} />
       </>}

@@ -20,6 +20,24 @@ import { categoryIcon, Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 import { TopBar } from '@/ui/top-bar';
 import { CheckpointTracker, type Checkpoint } from '@/ui/tracker';
+import { slotPhrase } from '@/ui/delivery-slot';
+
+/** Categories that don't run on batteries (everything else arrives charged). */
+const NO_BATTERY = ['lens', 'grip', 'backdrop', 'headphones', 'projection_screen'];
+const AUDIO = ['mic', 'mixer', 'headphones', 'speaker', 'subwoofer', 'monitor'];
+
+/** A few lines to get going with an item, by category. */
+function quickStart(category: string): string[] {
+  const tips: string[] = [];
+  if (!NO_BATTERY.includes(category)) tips.push('Arrives charged.');
+  if (category === 'camera') tips.push('Put in your memory card and format it in the camera before you shoot.', 'Don’t change lenses in dust or rain.');
+  if (category === 'lens') tips.push('Don’t change lenses in dust or rain. Keep the caps on when it’s off the camera.');
+  if (category === 'light' || category === 'grip') tips.push('Check the stands are tight before you raise them.');
+  if (AUDIO.includes(category)) tips.push('Test your levels before you start recording.');
+  if (category === 'gimbal') tips.push('Balance it with your camera on before you switch it on.');
+  if (category === 'camera' || category === 'mic') tips.push('Copy your footage off the cards before return.');
+  return tips;
+}
 
 const REFUND_STATUS: Record<string, string> = { queued: 'Queued', processing: 'On its way', success: 'Sent', failed: 'Delayed, we’re on it' };
 const REFUND_PURPOSE: Record<string, string> = {
@@ -32,14 +50,14 @@ const SHOT: Record<string, string> = { overview: 'Overview', serial: 'Serial', a
 function stageDetail(b: BookingDetail, stage: Stage, pickup: boolean): string {
   const { first, last } = bookingDays(b);
   switch (stage) {
-    case 'confirmed': return pickup ? `Paid and confirmed. Pick up on ${dayLabel(first)}.` : `Paid and confirmed. We deliver on ${dayLabel(first)}${b.delivery_slot ? `, ${b.delivery_slot}` : ''}.`;
+    case 'confirmed': return pickup ? `Paid and confirmed. Pick up on ${dayLabel(first)}${b.delivery_slot ? `, ${slotPhrase(b.delivery_slot)}` : ''}.` : `Paid and confirmed. We deliver on ${dayLabel(first)}${b.delivery_slot ? `, ${slotPhrase(b.delivery_slot)}` : ''}.`;
     case 'preparing': return 'We’re checking, charging and packing your gear.';
     case 'out_for_delivery': return pickup ? 'Ready for you at our base.' : b.rider_name ? `${b.rider_name} is on the way.` : 'Your gear is on the way.';
     case 'delivered': return `Enjoy your shoot. Return due ${dayLabel(last)}.`;
     case 'in_use': return `Enjoy your shoot. Return due ${dayLabel(last)}${b.collection_slot ? `, ${b.collection_slot}` : ''}.`;
     case 'return_due': return pickup ? 'Bring it back to our base tomorrow morning.' : `We collect it the morning after ${dayLabel(last)}.`;
     case 'collected': return 'Back with us. We’re checking it over.';
-    case 'inspected': return 'All checked. Your deposit is on its way back.';
+    case 'inspected': return 'All checked. We’re sending your deposit within 48 hours.';
     case 'closed': return 'All done. Thanks for renting with Deloo.';
     case 'disputed': return 'We found something during the check. We’ll call you to go through it with photos.';
     default: return '';
@@ -100,6 +118,8 @@ export default function Tracker() {
   const canCancel = ['hold', 'confirmed', 'preparing'].includes(b.status);
   const paid = b.payments.filter((p) => p.status === 'success');
   const ended = b.status === 'cancelled' || b.status === 'expired';
+  // Paid and not back with us yet: the gear rows get a quick start.
+  const withGear = ['confirmed', 'preparing', 'out_for_delivery', 'delivered'].includes(b.status);
   const label = (s: Stage) => (pickup && s === 'out_for_delivery' ? 'Ready for pickup' : pickup && s === 'delivered' ? 'Picked up' : STAGE_LABEL[s]);
 
   return (
@@ -143,6 +163,33 @@ export default function Tracker() {
           {canReturn ? <Button title="I’m returning it: take photos" icon={<Icon name="camera" color={c.onLagoon} />}
             onPress={() => router.push(`/booking/handover?booking=${b.id}&kind=collection`)} /> : null}
 
+          {stage === 'confirmed' || stage === 'preparing' ? (
+            <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
+              <Text variant="label" tone="slate">GET READY</Text>
+              {(pickup
+                ? [`Come to our base on ${dayLabel(first)}${b.delivery_slot ? `, ${slotPhrase(b.delivery_slot)}` : ''}, with a valid ID.`, 'Keep your phone on in case we need to reach you.', 'Set aside 3 minutes for handover photos.']
+                : ['Be at the address, or tell us who receives it.', 'Keep your phone on. The rider calls first.', 'Set aside 3 minutes for handover photos.']
+              ).map((t) => (
+                <View key={t} style={[styles.row, { alignItems: 'flex-start' }]}>
+                  <Icon name="check" size={18} color={c.lagoon} />
+                  <Text variant="caption" style={{ flex: 1 }}>{t}</Text>
+                </View>
+              ))}
+              {!pickup && help ? (
+                <Text variant="label" tone="lagoon" accessibilityRole="link"
+                  onPress={() => chat(`Hi Deloo, for ${b.ref} the person receiving the gear is: `)}>Someone else receiving it? Tell us</Text>
+              ) : null}
+            </View>
+          ) : null}
+
+          {(stage === 'in_use' || stage === 'return_due') && help ? (
+            <View style={{ gap: space.xs }}>
+              <Button kind="secondary" title="Need it longer?" icon={<Icon name="calendar" />}
+                onPress={() => chat(`Hi Deloo, I’d like to extend ${b.ref} by _ days`)} />
+              <Text variant="caption" tone="slate" style={{ textAlign: 'center' }}>Ask before 6pm on your last day ({dayLabel(last)}).</Text>
+            </View>
+          ) : null}
+
           {b.rider_name && (b.status === 'out_for_delivery' || stage === 'return_due') ? (
             <View style={[styles.card, styles.row, { backgroundColor: c.surface, borderColor: c.line }]}>
               <View style={[styles.avatar, { backgroundColor: c.lagoonTint }]}><Icon name="truck" color={c.lagoon} /></View>
@@ -175,7 +222,10 @@ export default function Tracker() {
                   {['delivered', 'collected', 'inspected', 'closed', 'disputed'].includes(b.status) && i.units && (i.units.tag || i.units.serial)
                     ? ` · ${[i.units.tag, i.units.serial && `S/N ${i.units.serial}`].filter(Boolean).join(' · ')}` : ''}
                 </Text>
-                {i.items?.in_the_box?.length ? <Text variant="caption" tone="faint" numberOfLines={2}>With {i.items.in_the_box.join(', ')}</Text> : null}
+                {i.items?.in_the_box?.length && !withGear ? <Text variant="caption" tone="faint" numberOfLines={2}>With {i.items.in_the_box.join(', ')}</Text> : null}
+                {withGear ? (
+                  <QuickStart inBox={i.items?.in_the_box ?? []} tips={quickStart(i.items?.category_key ?? '')} name={i.item_name} />
+                ) : null}
               </View>
             </View>
           ))}
@@ -210,13 +260,20 @@ export default function Tracker() {
             <Text key={p.id} variant="caption" tone="slate">Paid {naira(p.amount_kobo)}{p.channel ? ` by ${p.channel.replace('_', ' ')}` : ''}{p.paid_at ? ` on ${lagosWhen(p.paid_at)}` : ''}</Text>
           ))}
           {b.refunds.map((r) => (
-            <View key={r.id} style={styles.row}>
-              <Text variant="caption" style={{ flex: 1 }}>{REFUND_PURPOSE[r.purpose] ?? 'Refund'} {naira(r.amount_kobo)}</Text>
-              <Badge label={REFUND_STATUS[r.status] ?? r.status} status={r.status === 'success' ? 'available' : r.status === 'failed' ? 'unavailable' : 'limited'} />
+            <View key={r.id} style={{ gap: 2 }}>
+              <View style={styles.row}>
+                <Text variant="caption" style={{ flex: 1 }}>{REFUND_PURPOSE[r.purpose] ?? 'Refund'} {naira(r.amount_kobo)}</Text>
+                <Badge label={REFUND_STATUS[r.status] ?? r.status} status={r.status === 'success' ? 'available' : r.status === 'failed' ? 'unavailable' : 'limited'} />
+              </View>
+              {r.purpose !== 'goodwill' ? (
+                <Text variant="caption" tone="slate">
+                  To the card or account you paid from.{r.status === 'success' ? ' Card refunds can take a few working days to show.' : ''}
+                </Text>
+              ) : null}
             </View>
           ))}
           {!b.refunds.some((r) => r.purpose === 'deposit') && PAIDISH.includes(b.status) ? (
-            <Text variant="caption" tone="slate">Your deposit comes back within 48 hours after we check the gear.</Text>
+            <Text variant="caption" tone="slate">Your deposit comes back within 48 hours after we check the gear, to the card or account you paid from.</Text>
           ) : null}
         </View>
 
@@ -225,11 +282,16 @@ export default function Tracker() {
         <View style={{ gap: space.sm }}>
           {help ? <Button kind="secondary" title="Help on WhatsApp" icon={<Icon name="whatsapp" />} onPress={() => chat(`Hi Deloo, about my booking ${b.ref}`)} /> : null}
           {help && ['delivered', 'out_for_delivery'].includes(b.status) ? (
-            <Button kind="quiet" title="Report a problem" onPress={() => chat(`Hi Deloo, there’s a problem with my booking ${b.ref}: `)} />
+            <Button kind="quiet" title="Report a problem" onPress={() => chat(`Hi Deloo, problem with ${b.ref}: `)} />
           ) : null}
           {canCancel ? <Button kind="quiet" title="Cancel booking" onPress={() => router.push(`/booking/cancel?id=${b.id}`)} /> : null}
           {!canCancel && !ended && !['closed', 'inspected'].includes(b.status) ? (
-            <Text variant="caption" tone="slate" style={{ textAlign: 'center' }}>Your gear is on its way or with you, so changes are by WhatsApp.</Text>
+            <Text variant="caption" tone="slate" style={{ textAlign: 'center' }}>
+              Your gear is on its way or with you, so changes are by{' '}
+              {help ? (
+                <Text variant="caption" tone="lagoon" accessibilityRole="link" onPress={() => chat(`Hi Deloo, I’d like to change my booking ${b.ref}`)}>WhatsApp</Text>
+              ) : 'WhatsApp'}.
+            </Text>
           ) : null}
         </View>
       </ScrollView>
@@ -307,6 +369,25 @@ function Evidence({ handovers, jobs }: { handovers: Handover[]; jobs: HandoverJo
           </ScrollView>
         </View>
       ))}
+    </View>
+  );
+}
+
+/** "Quick start" under a gear row: what's in the box and a few tips, folded until tapped. */
+function QuickStart({ inBox, tips, name }: { inBox: string[]; tips: string[]; name: string }) {
+  const c = useColors();
+  const [open, setOpen] = useState(false);
+  if (!inBox.length && !tips.length) return null;
+  return (
+    <View style={{ gap: 2 }}>
+      <Pressable onPress={() => setOpen(!open)} hitSlop={8} accessibilityRole="button" accessibilityState={{ expanded: open }}
+        accessibilityLabel={`Quick start for ${name}`} style={{ alignSelf: 'flex-start' }}>
+        <Text variant="label" tone="lagoon">{open ? 'Hide quick start' : 'Quick start'}</Text>
+      </Pressable>
+      {open ? <>
+        {inBox.length ? <Text variant="caption" tone="slate">In the box: {inBox.join(', ')}.</Text> : null}
+        {tips.map((t) => <Text key={t} variant="caption" style={{ color: c.ink }}>• {t}</Text>)}
+      </> : null}
     </View>
   );
 }
