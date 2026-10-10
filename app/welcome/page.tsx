@@ -14,7 +14,6 @@ export default async function Welcome() {
       <div className="solo-top"><p className="wordmark">deloo<span className="dot">.</span></p></div>
       <div className="solo-main">
         <section className="solo-step">
-          <p className="kicker">You&apos;re in</p>
           <h1 className="h1">Welcome to Deloo</h1>
           <p className="hint" style={{ fontSize: 15 }}>Choose a password so you can sign in from any phone.</p>
           <SetPassword />

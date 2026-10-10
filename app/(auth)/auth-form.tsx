@@ -10,8 +10,7 @@ export function AuthForm({ next, linkError }: { next?: string; linkError?: boole
   const magic = mode === "magic", reset = mode === "reset";
   return (
     <form action={action} className="solo-step" noValidate>
-      <p className="kicker">Deloo team</p>
-      <h1 className="h1">{reset ? "Choose a new password" : "Sign in to Deloo"}</h1>
+      <h1 className="h1">{reset ? "Choose a new password" : "Staff sign-in"}</h1>
       {linkError && !state && <p className="notice" role="status">That email link has expired or was already used. Each link works once. Request a new one below.</p>}
       {reset && <p className="hint" style={{ fontSize: 15 }}>We&apos;ll email you a link. Open it on this device to set a new password.</p>}
       <input type="hidden" name="mode" value={mode} />

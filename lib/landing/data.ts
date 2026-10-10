@@ -16,6 +16,8 @@ export type LandingItem = {
   dayRateKobo: number;
   depositKobo: number;
   photoUrl: string | null;
+  /** 800x600 version for the hero. */
+  photoLargeUrl: string | null;
 };
 export type LandingCategory = { key: string; label: string; count: number };
 export type LandingZone = { name: string; areas: string[]; priceKobo: number };
@@ -41,12 +43,17 @@ type CategoryRow = { key: string; label: string; sort: number };
 type ZoneRow = { name: string; areas: string[] | null; price_kobo: number };
 type SettingsRow = { protection_rate: number | string | null; pickup_address: string | null; support_whatsapp: string | null };
 
-/** 400px-wide, cropped card photo via Supabase image transforms (public `items` bucket). */
-export function itemPhotoUrl(path: string | undefined | null): string | null {
+/**
+ * Item photo via Supabase image transforms (public `items` bucket). The catalogue shots are product cut-outs
+ * on white, so they're fitted (contain), never cropped. Full URLs (older rows) pass through untouched.
+ */
+export function itemPhotoUrl(path: string | undefined | null, width = 400, height = 300): string | null {
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!base || !path) return null;
+  if (!path) return null;
+  if (/^https?:\/\//.test(path)) return path;
+  if (!base) return null;
   const clean = path.split("/").map(encodeURIComponent).join("/");
-  return `${base}/storage/v1/render/image/public/items/${clean}?width=400&height=300&resize=cover&quality=60`;
+  return `${base}/storage/v1/render/image/public/items/${clean}?width=${width}&height=${height}&resize=contain&quality=70`;
 }
 
 /** The area part of the pickup address (last part before "Lagos"/"Nigeria"), never the street. */
@@ -108,6 +115,7 @@ export async function getLandingData(): Promise<LandingData> {
         id: i.id, name: i.name, categoryKey: i.category_key,
         dayRateKobo: Number(i.day_rate_kobo), depositKobo: Number(i.deposit_kobo),
         photoUrl: itemPhotoUrl(i.photos?.[0]),
+        photoLargeUrl: itemPhotoUrl(i.photos?.[0], 800, 600),
       })),
       categories,
       zones: ((zones.data ?? []) as ZoneRow[]).map((z) => ({ name: z.name, areas: z.areas ?? [], priceKobo: Number(z.price_kobo) })),

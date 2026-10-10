@@ -1,16 +1,28 @@
 "use client";
 import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
+import { fontVariables } from "./fonts";
+import "./globals.css";
 
-/** Last-resort error screen when the root layout itself fails. Reports to Sentry when it's set up. */
+/**
+ * Last-resort error screen when the root layout itself fails. Reports to Sentry when it's set up.
+ * It replaces the root layout, so it loads the brand fonts and global styles itself.
+ */
 export default function GlobalError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => { Sentry.captureException(error); }, [error]);
   return (
-    <html lang="en">
-      <body style={{ fontFamily: "system-ui, sans-serif", padding: 24, maxWidth: 520, margin: "10vh auto", lineHeight: 1.5 }}>
-        <h1 style={{ fontSize: 24, margin: 0 }}>Something went wrong</h1>
-        <p>Deloo hit an unexpected problem. It has been reported. Try again, or come back in a few minutes.</p>
-        <button type="button" onClick={() => retry()} style={{ padding: "10px 16px", fontSize: 15 }}>Try again</button>
+    <html lang="en-NG" className={fontVariables}>
+      <body>
+        <main className="solo">
+          <div className="solo-top"><p className="wordmark">deloo<span className="dot">.</span></p></div>
+          <div className="solo-main">
+            <section className="solo-step">
+              <h1 className="h1">Something went wrong</h1>
+              <p className="hint" style={{ fontSize: 15 }}>Deloo hit an unexpected problem and we&apos;ve been told about it. Try again, or come back in a few minutes.</p>
+              <div className="actions"><button type="button" className="btn" onClick={() => retry()}>Try again</button></div>
+            </section>
+          </div>
+        </main>
       </body>
     </html>
   );
