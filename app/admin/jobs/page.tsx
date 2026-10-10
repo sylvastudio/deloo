@@ -1,12 +1,11 @@
+import { ArrowDownLeft, ArrowUpRight, Bike, ChevronDown, Package, Store, Truck, User } from "lucide-react";
 import Link from "next/link";
-import { Chip, Empty, ErrorBox, PageHead, StatusChip } from "@/components/admin/ui";
+import { Callout, EmptyState, ErrorState, PageHead, SegmentedLinks, StatusChip, Tag } from "@/components/admin/ui";
 import { pageStaff } from "@/lib/admin/auth";
 import { riderOwns } from "@/lib/admin/data";
 import { addDays, dayStart, fmtWeekday, lagosDay } from "@/lib/admin/format";
-import { can, maskPhone, maskText } from "@/lib/admin/roles";
+import { can, maskText } from "@/lib/admin/roles";
 import type { BookingStatus } from "@/lib/admin/status";
-import { one } from "@/lib/admin/types";
-import { mapsLink, telLink } from "@/lib/admin/whatsapp";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Jobs" };
@@ -14,30 +13,40 @@ export const metadata = { title: "Jobs" };
 type Job = {
   id: string; ref: string | null; renter_id: string; status: BookingStatus; starts_at: string; ends_at: string; delivery: string;
   address: string; contact_phone: string; delivery_slot: string; collection_slot: string; rider_name: string; rider_phone: string;
-  booking_items: { item_name: string; kind: string; units: { tag: string; serial: string } | { tag: string; serial: string }[] | null }[];
+  booking_items: { kind: string }[];
 };
 
-const SELECT = "id, ref, renter_id, status, starts_at, ends_at, delivery, address, contact_phone, delivery_slot, collection_slot, rider_name, rider_phone, booking_items(item_name, kind, units(tag, serial))";
+const SELECT = "id, ref, renter_id, status, starts_at, ends_at, delivery, address, contact_phone, delivery_slot, collection_slot, rider_name, rider_phone, booking_items(kind)";
 
 /** Which days the list covers. Late deliveries and overdue collections are always shown on top. */
 const DAYS = {
-  two: { label: "Today and tomorrow", from: 0, to: 2 },
   today: { label: "Today", from: 0, to: 1 },
   tomorrow: { label: "Tomorrow", from: 1, to: 2 },
+  two: { label: "Today and tomorrow", from: 0, to: 2 },
   week: { label: "Next 7 days", from: 0, to: 7 },
 } as const;
 type DayKey = keyof typeof DAYS;
+
+/** Delivery windows in the order they happen; anything typed by staff goes after them. */
+const SLOT_ORDER = ["8–11am", "12–3pm", "4–7pm"];
+const slotRank = (s: string) => (s ? (SLOT_ORDER.indexOf(s) + 1 || SLOT_ORDER.length + 1) : SLOT_ORDER.length + 2);
+
+type Entry = { b: Job; kind: "out" | "in"; day: string; slot: string; late: boolean; done: boolean };
 
 type SP = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function JobsPage({ searchParams }: { searchParams: SP }) {
   const staff = await pageStaff();
-  if (!can(staff.role, "handover.capture") && staff.role !== "readonly") return <div className="adm-page"><p className="hint">Jobs are for ops and riders.</p></div>;
+  const rider = staff.role === "rider";
+  if (!can(staff.role, "handover.capture") && staff.role !== "readonly") {
+    return <div className="adm-page narrow"><EmptyState icon={Truck} title="Jobs are for ops and riders" /></div>;
+  }
   const sp = await searchParams;
   const dayParam = String((Array.isArray(sp.day) ? sp.day[0] : sp.day) ?? "");
-  const dayKey: DayKey = dayParam in DAYS ? (dayParam as DayKey) : "two";
+  const keys: DayKey[] = rider ? ["today", "tomorrow"] : ["today", "tomorrow", "two", "week"];
+  const fallback: DayKey = rider ? "today" : "two";
+  const dayKey: DayKey = (keys as string[]).includes(dayParam) ? (dayParam as DayKey) : fallback;
   const range = DAYS[dayKey];
-  const when = dayKey === "week" ? "in the next 7 days" : range.label.toLowerCase();
   const db = await createClient();
   const today = lagosDay();
   const t0 = dayStart(today);
@@ -54,69 +63,106 @@ export default async function JobsPage({ searchParams }: { searchParams: SP }) {
   ]);
   const error = outRes.error ?? inRes.error ?? lateRes.error ?? overdueRes.error;
   // Riders see only their own jobs; everyone else sees all.
-  const mine = (rows: Job[] | null) => (rows ?? []).filter((b) => riderOwns(staff, b));
+  const mine = (rows: unknown) => ((rows ?? []) as Job[]).filter((b) => riderOwns(staff, b));
 
-  const late = new Set([...mine(lateRes.data as Job[] | null), ...mine(overdueRes.data as Job[] | null)].map((b) => b.id));
-  const out = [...mine(lateRes.data as Job[] | null), ...mine(outRes.data as Job[] | null)];
-  const back = [...mine(overdueRes.data as Job[] | null), ...mine(inRes.data as Job[] | null)];
-
-  const ids = [...new Set([...out, ...back].map((b) => b.renter_id))];
-  const { data: profiles } = ids.length ? await db.from("profiles").select("id, full_name, phone").in("id", ids) : { data: [] };
-  const people = new Map((profiles ?? []).map((p) => [p.id as string, p as { full_name: string; phone: string }]));
-
-  const card = (b: Job, kind: "out" | "in") => {
+  const entries: Entry[] = [];
+  const seen = new Set<string>();
+  const push = (b: Job, kind: "out" | "in", late: boolean) => {
+    const k = `${kind}-${b.id}`;
+    if (seen.has(k)) return;
+    seen.add(k);
     const day = kind === "out" ? lagosDay(b.starts_at) : addDays(lagosDay(b.ends_at), -1);
-    const p = people.get(b.renter_id);
-    const phone = b.contact_phone || p?.phone || "";
-    const done = kind === "out" ? b.status === "delivered" : b.status === "collected";
+    entries.push({
+      b, kind, late, day: late ? today : day,
+      slot: kind === "out" ? b.delivery_slot : b.collection_slot,
+      done: kind === "out" ? b.status === "delivered" : b.status === "collected",
+    });
+  };
+  mine(lateRes.data).forEach((b) => push(b, "out", true));
+  mine(overdueRes.data).forEach((b) => push(b, "in", true));
+  mine(outRes.data).forEach((b) => push(b, "out", false));
+  mine(inRes.data).forEach((b) => push(b, "in", false));
+  entries.sort((a, b) => Number(b.late) - Number(a.late) || a.day.localeCompare(b.day) || slotRank(a.slot) - slotRank(b.slot) || (a.b.ref ?? "").localeCompare(b.b.ref ?? ""));
+
+  const ids = [...new Set(entries.map((e) => e.b.renter_id))];
+  const { data: profiles } = ids.length ? await db.from("profiles").select("id, full_name").in("id", ids) : { data: [] };
+  const people = new Map((profiles ?? []).map((p) => [p.id as string, p.full_name as string]));
+
+  const todo = entries.filter((e) => !e.done);
+  const done = entries.filter((e) => e.done);
+  const multiDay = range.to - range.from > 1;
+  const dayName = (d: string) => (d === today ? "Today" : d === addDays(today, 1) ? `Tomorrow, ${fmtWeekday(d)}` : fmtWeekday(d));
+
+  const card = (e: Entry) => {
+    const { b, kind } = e;
     const pickup = b.delivery === "pickup";
+    const gear = b.booking_items.filter((i) => i.kind === "rental").length;
+    const when = `${e.late ? (kind === "out" ? "Late" : "Overdue") : e.day === today ? "Today" : e.day === addDays(today, 1) ? "Tomorrow" : fmtWeekday(e.day)}${e.slot ? ` · ${e.slot}` : ""}`;
     return (
-      <li key={`${kind}-${b.id}`} className="card job" style={done ? { opacity: 0.65 } : undefined}>
-        <div className="flex items-center justify-between gap-2">
-          <Link href={`/admin/jobs/${b.id}`} className="mono" style={{ color: "var(--lagoon)", fontWeight: 500, fontSize: 16 }}>{b.ref ?? "—"}</Link>
+      <li key={`${kind}-${b.id}`} className="job-card" data-late={e.late ? "true" : undefined}>
+        <div className="jc-top">
+          <div className="jc-when">
+            <b><Link className="job-link" href={`/admin/jobs/${b.id}`}>{when}</Link></b>
+            <div className="jc-tags">
+              {kind === "out"
+                ? pickup
+                  ? <Tag kind="dir-base" icon={<Store aria-hidden="true" />}>Pickup at base</Tag>
+                  : <Tag kind="dir-out" icon={<ArrowUpRight aria-hidden="true" />}>Delivery</Tag>
+                : <Tag kind="dir-in" icon={<ArrowDownLeft aria-hidden="true" />}>Collection</Tag>}
+              {e.late && <Tag kind="late">{kind === "out" ? "Should have gone out" : "Past return day"}</Tag>}
+            </div>
+          </div>
           <StatusChip status={b.status} />
         </div>
-        <div className="meta">
-          {late.has(b.id) && <Chip tone="bad">{kind === "out" ? "Late" : "Overdue"}</Chip>}
-          <span><strong>{day === today ? "Today" : fmtWeekday(day)}</strong>{(kind === "out" ? b.delivery_slot : b.collection_slot) ? ` · ${kind === "out" ? b.delivery_slot : b.collection_slot}` : ""}</span>
-          <span>{kind === "out" ? (pickup ? "Pickup at base" : "Delivery") : "Collection"}</span>
-          {b.rider_name ? <span>Rider: {b.rider_name}</span> : <Chip tone="warn">No rider</Chip>}
+        <p className="jc-addr">{pickup ? "Deloo base" : b.address ? maskText(staff.role, b.address) : <span className="muted">No address yet</span>}</p>
+        <div className="jc-meta">
+          <span><User aria-hidden="true" />{people.get(b.renter_id) ?? "Renter"}</span>
+          <span><Package aria-hidden="true" />{gear} item{gear === 1 ? "" : "s"}</span>
+          {!rider && (b.rider_name ? <span><Bike aria-hidden="true" />{b.rider_name}</span> : <span className="st warn">No rider</span>)}
+          <span className="mono">{b.ref ?? "—"}</span>
         </div>
-        <div><strong>{p?.full_name ?? "Renter"}</strong> {phone && <a className="mono small" href={telLink(phone)} style={{ color: "var(--lagoon)" }}>{maskPhone(staff.role, phone)}</a>}</div>
-        {!pickup && b.address && (
-          <div className="small">{maskText(staff.role, b.address)} {can(staff.role, "pii.view") && <a href={mapsLink(b.address)} target="_blank" rel="noreferrer" style={{ color: "var(--lagoon)" }}>Maps</a>}</div>
-        )}
-        <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
-          {b.booking_items.filter((i) => i.kind === "rental").map((i, n) => {
-            const u = one(i.units);
-            return <li key={n}>{i.item_name}{u && <span className="muted mono"> · {[u.tag, u.serial].filter(Boolean).join(" · ")}</span>}</li>;
-          })}
-        </ul>
-        {!done && staff.role !== "readonly" && <div className="bigbtns"><Link className="btn" href={`/admin/jobs/${b.id}`}>Open job</Link></div>}
       </li>
     );
   };
 
+  // Group the to-do list by day when the range spans several days.
+  const byDay = new Map<string, Entry[]>();
+  for (const e of todo) byDay.set(e.day, [...(byDay.get(e.day) ?? []), e]);
+
   return (
     <div className="adm-page narrow">
-      <PageHead title={staff.role === "rider" ? "My jobs" : "Jobs"} kicker={dayKey === "two" ? `${fmtWeekday(today)} and tomorrow` : range.label} />
-      <nav className="actions" aria-label="Days">
-        {(Object.keys(DAYS) as DayKey[]).map((k) => (
-          <Link key={k} href={k === "two" ? "/admin/jobs" : `/admin/jobs?day=${k}`} className="chip" aria-current={dayKey === k ? "page" : undefined} aria-pressed={dayKey === k}
-            style={{ minHeight: 44 }}>{DAYS[k].label}</Link>
-        ))}
-      </nav>
-      {staff.role === "rider" && <p className="hint">Jobs where you’re set as the rider (by your name or phone on your staff profile).</p>}
-      {error ? <ErrorBox what="jobs" error={error.message} /> : (
-        <>
-          <h2 className="h2">Going out <span className="muted small">({out.length})</span></h2>
-          {out.length ? <ul className="grid gap-3" style={{ listStyle: "none", margin: 0, padding: 0 }}>{out.map((b) => card(b, "out"))}</ul>
-            : <Empty>No deliveries or pickups {when}.</Empty>}
-          <h2 className="h2">Coming back <span className="muted small">({back.length})</span></h2>
-          {back.length ? <ul className="grid gap-3" style={{ listStyle: "none", margin: 0, padding: 0 }}>{back.map((b) => card(b, "in"))}</ul>
-            : <Empty>No collections {when}.</Empty>}
-        </>
+      {!rider && <PageHead title="Jobs" meta={<span>{todo.length} to do · {done.length} done</span>} />}
+      <div className="jobs-bar">
+        {rider && <h1 className="sr-only">My jobs</h1>}
+        <SegmentedLinks size={rider ? "lg" : undefined} label="Days" items={keys.map((k) => ({
+          href: k === fallback ? "/admin/jobs" : `/admin/jobs?day=${k}`, label: DAYS[k].label, current: dayKey === k,
+        }))} />
+      </div>
+
+      {error ? <ErrorState what="jobs" error={error.message} /> : entries.length === 0 ? (
+        <EmptyState icon={Truck} title={`No jobs ${dayKey === "week" ? "in the next 7 days" : DAYS[dayKey].label.toLowerCase()}`}>
+          {rider ? "Jobs show here when ops sets you as the rider on a booking." : "Deliveries, pickups and collections appear here once bookings are confirmed."}
+        </EmptyState>
+      ) : (
+        <div className="grid gap-4">
+          {todo.length === 0 && <Callout tone="ok" title="All done">Every job {DAYS[dayKey].label.toLowerCase()} is finished.</Callout>}
+          {multiDay
+            ? [...byDay.entries()].map(([d, list]) => (
+              <section key={d} className="grid gap-2" aria-label={dayName(d)}>
+                <h2 className="job-day"><span>{dayName(d)}</span><span>{list.length}</span></h2>
+                <ul className="job-list">{list.map(card)}</ul>
+              </section>
+            ))
+            : todo.length > 0 && <ul className="job-list">{todo.map(card)}</ul>}
+          {done.length > 0 && (
+            <details className="done-jobs">
+              <summary>Done ({done.length})<ChevronDown aria-hidden="true" /></summary>
+              <ul className="job-list">{done.map(card)}</ul>
+            </details>
+          )}
+        </div>
       )}
+      {rider && <p className="hint">Your jobs are the ones with your name or phone number as the rider.</p>}
     </div>
   );
 }

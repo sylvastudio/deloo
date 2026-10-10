@@ -16,6 +16,10 @@
   --ring: 2px solid color-mix(in srgb, var(--marigold) 70%, transparent);
   --control-h: 44px;
   --gutter: 16px;
+  /* Shared scales (the staff portal's .adm tokens build on these). */
+  --indigo: #3B3F9C; --indigo-tint: #E8E9FA; --approve-tint: #E2F3E9; --marigold-tint: #FCEFD2;
+  --radius-sm: 4px; --radius-md: 6px; --radius-lg: 10px; --radius-xl: 14px; --radius-pill: 999px;
+  --dur-fast: 150ms; --dur-med: 220ms; --dur-slow: 300ms; --ease-out: cubic-bezier(.2, .7, .2, 1);
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -24,6 +28,7 @@
     --lagoon: #3AAAB2; --lagoon-strong: #5CC3CA; --lagoon-tint: #12292C; --on-lagoon: #081214;
     --marigold: #F5B82E; --marigold-strong: #FFC94D; --on-marigold: #12161C;
     --proof-red: #EE6A5C; --proof-red-tint: #2E1714; --approve: #4CC08A;
+    --indigo: #AEB2F7; --indigo-tint: #1E2040; --approve-tint: #10291D; --marigold-tint: #2D230E;
     color-scheme: dark;
   }
 }
@@ -32,6 +37,7 @@
   --lagoon: #3AAAB2; --lagoon-strong: #5CC3CA; --lagoon-tint: #12292C; --on-lagoon: #081214;
   --marigold: #F5B82E; --marigold-strong: #FFC94D; --on-marigold: #12161C;
   --proof-red: #EE6A5C; --proof-red-tint: #2E1714; --approve: #4CC08A;
+  --indigo: #AEB2F7; --indigo-tint: #1E2040; --approve-tint: #10291D; --marigold-tint: #2D230E;
   color-scheme: dark;
 }
 @media (min-width: 761px) and (pointer: fine) { :root { --control-h: 38px; --gutter: clamp(16px, 4vw, 48px); } }

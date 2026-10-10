@@ -26,7 +26,7 @@ export async function BookingMessages({ bookingId }: { bookingId: string }) {
 
   return (
     <Section title="Emails to renter" id="emails"
-      actions={<Link className="small" style={{ color: "var(--lagoon)" }} href={ref ? `/admin/messages?q=${encodeURIComponent(ref)}` : "/admin/messages"}>All messages</Link>}>
+      actions={<Link className="link small" href={ref ? `/admin/messages?q=${encodeURIComponent(ref)}` : "/admin/messages"}>All messages</Link>}>
       {error ? <ErrorBox what="emails" error={error} /> : rows.length === 0 ? (
         <p className="hint">No emails for this booking yet.</p>
       ) : (
@@ -35,9 +35,9 @@ export async function BookingMessages({ bookingId }: { bookingId: string }) {
       {canSend && target && (
         <details className="inline">
           <summary>Write an email</summary>
-          <div className="grid gap-2" style={{ marginTop: 8 }}>
+          <div className="grid gap-2">
             <MessageCompose compact bookingId={target.bookingId} userId={target.userId} label={target.label} vars={target.vars} />
-            <div className="flex items-center justify-between gap-2" style={{ flexWrap: "wrap" }}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="hint">Queued emails go out within 15 minutes.</span>
               <SendNow />
             </div>

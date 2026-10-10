@@ -20,10 +20,14 @@ export const LIVE_STATUSES: BookingStatus[] = ["confirmed", "preparing", "out_fo
 /** Paid and not cancelled: counts as revenue. */
 export const PAID_STATUSES: BookingStatus[] = ["confirmed", "preparing", "out_for_delivery", "delivered", "collected", "inspected", "closed", "disputed"];
 
-export type Tone = "neutral" | "info" | "warn" | "good" | "bad";
+/**
+ * Chip tones (app/admin/admin.css .st.*). `field` (indigo) means "with the renter"; `solid` is a finished
+ * record (closed) and `hollow` one that never happened (cancelled, expired). `ok` is an alias of `good`.
+ */
+export type Tone = "neutral" | "info" | "warn" | "good" | "ok" | "bad" | "field" | "solid" | "hollow";
 export const STATUS_TONE: Record<BookingStatus, Tone> = {
-  hold: "warn", expired: "neutral", confirmed: "info", preparing: "info", out_for_delivery: "info", delivered: "good",
-  collected: "info", inspected: "good", closed: "neutral", cancelled: "neutral", disputed: "bad", out: "neutral", returned: "neutral",
+  hold: "warn", expired: "hollow", confirmed: "info", preparing: "info", out_for_delivery: "field", delivered: "field",
+  collected: "good", inspected: "good", closed: "solid", cancelled: "hollow", disputed: "bad", out: "neutral", returned: "neutral",
 };
 
 type Move = { to: BookingStatus; from: BookingStatus[]; roles: StaffRole[]; label: string; note?: "required" | "optional"; danger?: boolean };
@@ -83,10 +87,39 @@ export const HANDOVER_LABEL: Record<HandoverKind, string> = {
 
 export const UNIT_STATUSES = ["active", "repair", "quarantine", "retired", "lost"] as const;
 export type UnitStatus = (typeof UNIT_STATUSES)[number];
+export const UNIT_STATUS_LABEL: Record<UnitStatus, string> = { active: "Active", repair: "In repair", quarantine: "Quarantine", retired: "Retired", lost: "Lost" };
+export const UNIT_STATUS_TONE: Record<UnitStatus, Tone> = { active: "good", repair: "warn", quarantine: "warn", retired: "hollow", lost: "bad" };
 
 export const PAYMENT_STATUSES = ["initialized", "success", "failed", "abandoned", "mismatch"] as const;
+export const PAYMENT_STATUS_LABEL: Record<string, string> = {
+  initialized: "Started", success: "Paid", failed: "Failed", abandoned: "Abandoned", mismatch: "Amount mismatch",
+};
+export const PAYMENT_STATUS_TONE: Record<string, Tone> = {
+  initialized: "warn", success: "good", failed: "bad", abandoned: "hollow", mismatch: "bad",
+};
+export const PAYMENT_PURPOSE_LABEL: Record<string, string> = {
+  booking: "Booking", extension: "Extension", late_fee: "Late fee", claim: "Damage claim", offline: "Paid offline",
+};
+export const PAYMENT_CHANNEL_LABEL: Record<string, string> = {
+  card: "Card", bank: "Bank", bank_transfer: "Bank transfer", ussd: "USSD", qr: "QR", mobile_money: "Mobile money", apple_pay: "Apple Pay",
+};
+/** A payment flag in words: "duplicate" → "Duplicate", "amount_1500000" → "Paid ₦15,000" (amount in kobo). */
+export function paymentFlagLabel(flag: string, naira: (kobo: number) => string): string {
+  if (flag.startsWith("amount_")) return `Paid ${naira(Number(flag.slice(7)) || 0)}`;
+  if (flag === "duplicate") return "Duplicate";
+  return humanize(flag);
+}
 export const REFUND_STATUSES = ["queued", "processing", "success", "failed"] as const;
+export const REFUND_STATUS_LABEL: Record<string, string> = { queued: "Queued", processing: "Processing", success: "Refunded", failed: "Failed" };
+export const REFUND_STATUS_TONE: Record<string, Tone> = { queued: "warn", processing: "info", success: "good", failed: "bad" };
 export const REFUND_METHODS = ["manual", "transfer", "paystack_refund"] as const;
+export const REFUND_METHOD_LABEL: Record<string, string> = { manual: "Manual", transfer: "Bank transfer", paystack_refund: "Paystack refund" };
+
+/** Last resort for a value with no label: "out_for_delivery" → "Out for delivery". Never shows a raw enum. */
+export function humanize(v: string | null | undefined): string {
+  const s = String(v ?? "").replace(/[_-]+/g, " ").trim();
+  return s ? s[0].toUpperCase() + s.slice(1) : "—";
+}
 export const REFUND_PURPOSE_LABEL: Record<string, string> = {
   deposit: "Deposit release", cancellation: "Cancellation", duplicate: "Duplicate payment", gear_gone: "Paid after hold (gear gone)",
   claim_balance: "Claim balance", goodwill: "Goodwill",

@@ -15,7 +15,7 @@ const SHOT: Record<string, string> = {
 export function EvidenceGallery({ evidence, unitLabels, bookingRefs }: {
   evidence: Evidence[]; unitLabels: Map<string, string>; bookingRefs?: Map<string, { ref: string; id: string }>;
 }) {
-  if (!evidence.length) return <Empty>No handover evidence yet.</Empty>;
+  if (!evidence.length) return <Empty>No handover photos yet.</Empty>;
   return (
     <div className="grid gap-3">
       {evidence.map((h) => {
@@ -23,19 +23,19 @@ export function EvidenceGallery({ evidence, unitLabels, bookingRefs }: {
         return (
           <article key={h.id} className="handover" aria-label={`${h.kind} handover`}>
             <div className="flex flex-wrap items-center gap-2">
-              <strong className="small">{HANDOVER_LABEL[h.kind] ?? h.kind}</strong>
+              <b>{HANDOVER_LABEL[h.kind] ?? h.kind}</b>
               <Chip tone={h.party === "renter" ? "info" : "neutral"}>{h.party === "renter" ? "Renter" : "Staff"}</Chip>
               {h.result === "issue" && <Chip tone="bad">Problem noted</Chip>}
               {h.result === "ok" && <Chip tone="good">OK</Chip>}
-              {h.confirmed_at && <Chip tone="good">Confirmed {fmtDateTime(h.confirmed_at)}</Chip>}
-              {b && <Link className="mono small" href={`/admin/bookings/${b.id}`}>{b.ref}</Link>}
+              {h.confirmed_at && <Chip tone="good">Renter confirmed {fmtDateTime(h.confirmed_at)}</Chip>}
+              {b && <Link className="link mono" href={`/admin/bookings/${b.id}`}>{b.ref}</Link>}
             </div>
-            <p className="muted small" style={{ margin: 0 }}>
+            <p className="muted small">
               {h.performer} · recorded {fmtDateTime(h.created_at)}
               {h.device_completed_at && h.device_completed_at !== h.created_at ? ` · on device ${fmtDateTime(h.device_completed_at)}` : ""}
               {" · "}{h.media.length} file{h.media.length === 1 ? "" : "s"}
             </p>
-            {h.problem_note && <p className={h.result === "issue" ? "err-box" : "notice"} style={{ margin: 0 }}>{h.problem_note}</p>}
+            {h.problem_note && <p className={h.result === "issue" ? "callout bad" : "callout"}>{h.problem_note}</p>}
             {h.media.length > 0 ? (
               <div className="gallery">
                 {h.media.map((m) => {
@@ -48,7 +48,7 @@ export function EvidenceGallery({ evidence, unitLabels, bookingRefs }: {
                   return (
                     <figure key={m.id}>
                       {!m.url ? (
-                        <div className="empty" style={{ aspectRatio: "4 / 3", padding: 8 }}>File missing</div>
+                        <div className="media-missing">File missing</div>
                       ) : m.media_type === "video" ? (
                         <video src={m.url} controls preload="metadata" playsInline />
                       ) : (
@@ -63,7 +63,7 @@ export function EvidenceGallery({ evidence, unitLabels, bookingRefs }: {
                   );
                 })}
               </div>
-            ) : <p className="muted small" style={{ margin: 0 }}>No files uploaded for this handover.</p>}
+            ) : <p className="muted small">No files uploaded for this handover.</p>}
           </article>
         );
       })}

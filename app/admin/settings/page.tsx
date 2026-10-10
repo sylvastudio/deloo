@@ -1,7 +1,7 @@
-import Link from "next/link";
+import { MapPin, Pencil, Plus, UserCog } from "lucide-react";
 import { saveSettings, saveZone } from "@/app/admin/_actions/people";
 import { ActionForm, Submit } from "@/components/admin/action-form";
-import { Empty, ErrorBox, PageHead, Section } from "@/components/admin/ui";
+import { ButtonLink, Callout, Chip, DescriptionList, Drawer, EmptyState, ErrorState, Field, PageHead, Section, Switch } from "@/components/admin/ui";
 import { pageStaff } from "@/lib/admin/auth";
 import { fmtDateTime, naira } from "@/lib/admin/format";
 import { can } from "@/lib/admin/roles";
@@ -12,24 +12,21 @@ export const metadata = { title: "Settings" };
 type Settings = { protection_rate: number; hold_minutes: number; turnaround_hours: number; pickup_address: string; support_whatsapp: string; updated_at: string };
 type Zone = { id: string; name: string; areas: string[]; price_kobo: number; active: boolean; sort: number };
 
-function ZoneForm({ z, edit }: { z?: Zone; edit: boolean }) {
+function ZoneForm({ z }: { z?: Zone }) {
   return (
-    <ActionForm action={saveZone} className="grid gap-2" resetOnSuccess={!z}>
+    <ActionForm action={saveZone} className="grid gap-4" resetOnSuccess={!z}>
       {z && <input type="hidden" name="zone_id" value={z.id} />}
-      <div className="cols-3">
-        <label className="field"><span className="field-label">Name</span><input className="control" name="name" defaultValue={z?.name ?? ""} required readOnly={!edit} /></label>
-        <label className="field"><span className="field-label">Price one way (₦)</span>
-          <input className="control" name="price" inputMode="decimal" defaultValue={z ? String(z.price_kobo / 100) : ""} required readOnly={!edit} /></label>
-        <label className="field"><span className="field-label">Sort</span><input className="control" name="sort" type="number" defaultValue={z?.sort ?? 0} readOnly={!edit} /></label>
+      <Field label="Name"><input className="control" name="name" defaultValue={z?.name ?? ""} required placeholder="Mainland" /></Field>
+      <div className="cols-2">
+        <Field label="Price one way" note="₦" hint="Delivery and collection are charged separately.">
+          <input className="control" name="price" inputMode="decimal" defaultValue={z ? String(z.price_kobo / 100) : ""} required />
+        </Field>
+        <Field label="Sort" hint="Lower comes first in the app."><input className="control" name="sort" type="number" defaultValue={z?.sort ?? 0} /></Field>
       </div>
-      <label className="field"><span className="field-label">Areas <span className="opt">comma separated</span></span>
-        <input className="control" name="areas" defaultValue={(z?.areas ?? []).join(", ")} readOnly={!edit} placeholder="Ikeja, Yaba, Surulere" /></label>
-      <div className="actions">
-        <label className="switch"><input type="checkbox" name="active" defaultChecked={z?.active ?? true} disabled={!edit} /> Active</label>
-        <span className="spacer" />
-        {z && <span className="hint">Delivery + collection = {naira(z.price_kobo * 2)}</span>}
-        {edit && <Submit className="btn btn-secondary btn-sm">{z ? "Save zone" : "Add zone"}</Submit>}
-      </div>
+      <Field label="Areas" note="comma separated"><input className="control" name="areas" defaultValue={(z?.areas ?? []).join(", ")} placeholder="Ikeja, Yaba, Surulere" /></Field>
+      <Switch name="active" defaultChecked={z?.active ?? true} label="Renters can choose this zone"
+        confirmOff={z ? `Turn off ${z.name}? Renters can’t pick it for new bookings. Existing bookings keep their price.` : undefined} />
+      <div className="actions"><Submit>{z ? "Save zone" : "Add zone"}</Submit></div>
     </ActionForm>
   );
 }
@@ -44,44 +41,72 @@ export default async function SettingsPage() {
   ]);
   const s = sRes.data as Settings | null;
   const zones = (zRes.data ?? []) as Zone[];
+  const flatPct = s ? Math.round(Number(s.protection_rate) * 1000) / 10 : 0;
 
   return (
     <div className="adm-page narrow">
-      <PageHead title="Settings" actions={can(staff.role, "staff.manage") ? <Link className="btn btn-secondary" href="/admin/settings/staff">Staff and roles</Link> : undefined} />
-      {!edit && <p className="notice">View only. Owners and admins can change settings.</p>}
+      <PageHead title="Settings" meta={s ? <span>Last saved {fmtDateTime(s.updated_at)}</span> : undefined}
+        actions={can(staff.role, "staff.manage") ? <ButtonLink variant="secondary" icon={UserCog} href="/admin/settings/staff">Staff and roles</ButtonLink> : undefined} />
+      {!edit && <Callout tone="info">View only. Owners and admins can change settings.</Callout>}
 
-      <Section title="Pricing and timing">
-        {sRes.error ? <ErrorBox what="settings" error={sRes.error.message} /> : !s ? <Empty>No settings row. Run migration 0011.</Empty> : (
-          <ActionForm action={saveSettings} className="grid gap-3" confirm="Save settings? They apply to new bookings straight away.">
-            <div className="cols-3">
-              <label className="field"><span className="field-label">Flat Protection (%) <span className="opt">not used since per-gear rates; set them per item in Inventory</span></span>
-                <input className="control" name="protection_pct" type="number" step="0.1" min={0} max={50} defaultValue={Math.round(Number(s.protection_rate) * 1000) / 10} readOnly={!edit} /></label>
-              <label className="field"><span className="field-label">Hold time (minutes)</span>
-                <input className="control" name="hold_minutes" type="number" min={5} max={240} defaultValue={s.hold_minutes} readOnly={!edit} /></label>
-              <label className="field"><span className="field-label">Turnaround (hours)</span>
-                <input className="control" name="turnaround_hours" type="number" min={0} max={72} defaultValue={s.turnaround_hours} readOnly={!edit} /></label>
+      <Section title="Pricing and timing" description="Applies to new bookings straight away.">
+        {sRes.error ? <ErrorState what="settings" error={sRes.error.message} /> : !s ? (
+          <EmptyState compact title="No settings saved yet. Ask the owner to set them up." />
+        ) : edit ? (
+          <ActionForm action={saveSettings} className="grid gap-4" confirm="Save settings? They apply to new bookings straight away.">
+            <div className="cols-2">
+              <Field label="Hold time" note="minutes" hint="How long a renter has to pay before the gear is released.">
+                <input className="control" name="hold_minutes" type="number" min={5} max={240} defaultValue={s.hold_minutes} />
+              </Field>
+              <Field label="Turnaround" note="hours" hint="Time after the last rental day a unit stays reserved for collection, checking and charging. Existing reservations don’t move.">
+                <input className="control" name="turnaround_hours" type="number" min={0} max={72} defaultValue={s.turnaround_hours} />
+              </Field>
             </div>
-            <label className="field"><span className="field-label">Pickup address</span>
-              <input className="control" name="pickup_address" defaultValue={s.pickup_address} readOnly={!edit} /></label>
-            <label className="field"><span className="field-label">Support WhatsApp</span>
-              <input className="control" name="support_whatsapp" defaultValue={s.support_whatsapp} inputMode="tel" readOnly={!edit} placeholder="0803 000 0000" /></label>
-            <p className="hint">Turnaround is the time after the last rental day that a unit stays reserved (collection, checking, charging). Changing it doesn’t move existing reservations. Last saved {fmtDateTime(s.updated_at)}.</p>
-            {edit && <div className="actions"><Submit>Save settings</Submit></div>}
+            <Field label="Pickup address"><input className="control" name="pickup_address" defaultValue={s.pickup_address} /></Field>
+            <Field label="Support WhatsApp"><input className="control" name="support_whatsapp" defaultValue={s.support_whatsapp} inputMode="tel" placeholder="0803 000 0000" /></Field>
+            <Field label="Flat Protection" note="%" hint="Not used any more: each item has its own Protection rate in Inventory.">
+              <input className="control" name="protection_pct" type="number" step="0.1" min={0} max={50} defaultValue={flatPct} />
+            </Field>
+            <div className="actions"><Submit>Save settings</Submit></div>
           </ActionForm>
+        ) : (
+          <DescriptionList items={[
+            ["Hold time", `${s.hold_minutes} minutes`],
+            ["Turnaround", `${s.turnaround_hours} hours`],
+            ["Pickup address", s.pickup_address],
+            ["Support WhatsApp", s.support_whatsapp ? <span className="mono">{s.support_whatsapp}</span> : null],
+            ["Flat Protection", `${flatPct}% (not used; set per item)`],
+          ]} />
         )}
       </Section>
 
-      <Section title="Delivery zones">
-        {zRes.error ? <ErrorBox what="delivery zones" error={zRes.error.message} /> : (
-          <div className="grid gap-3">
-            {zones.length === 0 && <Empty>No zones. Renters can only pick up until you add one.</Empty>}
-            {zones.map((z) => <div key={z.id} className="card"><ZoneForm z={z} edit={edit} /></div>)}
-            {edit && (
-              <details className="inline">
-                <summary>+ Add a zone</summary>
-                <div className="card" style={{ marginTop: 8 }}><ZoneForm edit={edit} /></div>
-              </details>
-            )}
+      <Section title="Delivery zones" description="Where we deliver and what it costs."
+        actions={edit ? <Drawer trigger={{ label: "Add zone", icon: Plus, variant: "secondary", size: "sm" }} title="Add a delivery zone"><ZoneForm /></Drawer> : undefined}>
+        {zRes.error ? <ErrorState what="delivery zones" error={zRes.error.message} /> : zones.length === 0 ? (
+          <EmptyState icon={MapPin} title="No delivery zones" action={edit ? <Drawer trigger={{ label: "Add the first zone", icon: Plus, variant: "primary", size: "md" }} title="Add a delivery zone"><ZoneForm /></Drawer> : undefined}>
+            Until there is one, renters can only pick up.
+          </EmptyState>
+        ) : (
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead><tr><th>Zone</th><th>Areas</th><th className="num">One way</th><th className="num">Both ways</th><th>Status</th>{edit && <th className="shrink"><span className="sr-only">Edit</span></th>}</tr></thead>
+              <tbody>
+                {zones.map((z) => (
+                  <tr key={z.id}>
+                    <td className="nowrap"><b>{z.name}</b></td>
+                    <td className="wrap">{z.areas.length ? z.areas.join(", ") : <span className="subtle">—</span>}</td>
+                    <td className="num money">{naira(z.price_kobo)}</td>
+                    <td className="num">{naira(z.price_kobo * 2)}</td>
+                    <td><Chip tone={z.active ? "good" : "hollow"}>{z.active ? "On" : "Off"}</Chip></td>
+                    {edit && (
+                      <td className="shrink">
+                        <Drawer trigger={{ label: `Edit ${z.name}`, icon: Pencil, variant: "ghost", iconOnly: true }} title={`Edit ${z.name}`}><ZoneForm z={z} /></Drawer>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </Section>

@@ -1,8 +1,10 @@
+import { ChartLine } from "lucide-react";
 import Link from "next/link";
-import { Chip, Empty, ErrorBox, PageHead, Section } from "@/components/admin/ui";
+import { Chip, EmptyState, ErrorState, Kpi, PageHead, Section, SegmentedLinks } from "@/components/admin/ui";
 import { pageStaff } from "@/lib/admin/auth";
 import { namesFor } from "@/lib/admin/data";
 import { fmtDateTime, fmtRental, nowMs, parseRange } from "@/lib/admin/format";
+import { humanize } from "@/lib/admin/status";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Unmet demand" };
@@ -23,6 +25,7 @@ export default async function DemandPage({ searchParams }: { searchParams: Promi
   ]);
   const rows = (data ?? []) as Row[];
   const label = new Map((cats ?? []).map((c) => [c.key as string, c.label as string]));
+  const cat = (k: string) => label.get(k) ?? humanize(k);
 
   const groups = new Map<string, { cat: string; reason: Row["reason"]; requests: number; units: number; people: Set<string>; last: string }>();
   for (const r of rows) {
@@ -36,56 +39,60 @@ export default async function DemandPage({ searchParams }: { searchParams: Promi
   const sorted = [...groups.values()].sort((a, b) => b.requests - a.requests);
   const recent = rows.slice(0, 50);
   const names = staff.role === "readonly" ? new Map<string, string>() : await namesFor(db, recent.map((r) => r.profile_id));
-  const spec = (s: Record<string, unknown>) => Object.entries(s ?? {}).map(([k, v]) => `${k}: ${String(v)}`).join(", ");
+  const spec = (s: Record<string, unknown>) => Object.entries(s ?? {}).map(([k, v]) => `${humanize(k)}: ${String(v)}`).join(", ");
+  const people = new Set(rows.map((r) => r.profile_id).filter(Boolean)).size;
+  const booked = rows.filter((r) => r.reason === "booked").length;
 
   return (
     <div className="adm-page">
-      <PageHead title="Unmet demand" kicker="What renters asked for that we couldn’t supply" actions={
-        <div className="tabs" role="tablist" aria-label="Period">
-          {[7, 30, 90].map((d) => <Link key={d} className="tab" role="tab" aria-selected={days === d} href={`/admin/demand?days=${d}`}>{d} days</Link>)}
-        </div>
-      } />
-      {error ? <ErrorBox what="unmet demand" error={error.message} /> : rows.length === 0 ? (
-        <Empty>No unmet requests in the last {days} days.</Empty>
+      <PageHead title="Unmet demand" meta={<span>What renters asked for that we couldn’t supply</span>}
+        actions={<SegmentedLinks label="Period" items={[7, 30, 90].map((d) => ({ href: `/admin/demand?days=${d}`, label: `${d} days`, current: days === d }))} />} />
+      {error ? <ErrorState what="unmet demand" error={error.message} /> : rows.length === 0 ? (
+        <EmptyState icon={ChartLine} title={`No unmet requests in the last ${days} days`}>When a renter asks for gear we can’t supply, it shows up here.</EmptyState>
       ) : (
         <>
-          <Section title="By category and reason">
+          <div className="tiles">
+            <Kpi label="Requests" value={rows.length} detail={`last ${days} days`} />
+            <Kpi label="Renters asking" value={people} />
+            <Kpi label="Booked on their dates" value={booked} detail="we stock it, every unit was out" />
+            <Kpi label="Top category" value={sorted[0] ? cat(sorted[0].cat) : "—"} detail={sorted[0] ? `${sorted[0].requests} requests` : undefined} />
+          </div>
+          <Section title="By category and reason" description="“Booked on their dates” means we stock it but every unit was out: a sign to buy another unit.">
             <div className="tbl-wrap">
               <table className="tbl">
                 <thead><tr><th>Category</th><th>Reason</th><th className="num">Requests</th><th className="num">Units asked</th><th className="num">People</th><th>Latest</th></tr></thead>
                 <tbody>
                   {sorted.map((g) => (
                     <tr key={`${g.cat}|${g.reason}`}>
-                      <td>{label.get(g.cat) ?? g.cat}</td>
-                      <td><Chip tone={g.reason === "booked" ? "warn" : "info"}>{REASON[g.reason] ?? g.reason}</Chip></td>
-                      <td className="num"><strong>{g.requests}</strong></td>
+                      <td><b>{cat(g.cat)}</b></td>
+                      <td><Chip tone={g.reason === "booked" ? "warn" : "neutral"}>{REASON[g.reason] ?? humanize(g.reason)}</Chip></td>
+                      <td className="num money">{g.requests}</td>
                       <td className="num">{g.units}</td>
                       <td className="num">{g.people.size}</td>
-                      <td className="small">{fmtDateTime(g.last)}</td>
+                      <td className="nowrap">{fmtDateTime(g.last)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <p className="hint">“Booked on their dates” means we stock it but every unit was out: a sign to buy another unit.</p>
           </Section>
-          <Section title="Recent requests">
+          <Section title="Recent requests" description="The latest 50.">
             <div className="tbl-wrap">
               <table className="tbl">
-                <thead><tr><th>When</th><th>Category</th><th>Spec</th><th className="num">Qty</th><th>Dates</th><th>Area</th><th>Reason</th><th>Who</th></tr></thead>
+                <thead><tr><th>When</th><th>Category</th><th>What they asked for</th><th className="num">Qty</th><th>Dates</th><th>Area</th><th>Reason</th><th>Who</th></tr></thead>
                 <tbody>
                   {recent.map((r) => {
                     const p = parseRange(r.period);
                     return (
                       <tr key={r.id}>
-                        <td className="small">{fmtDateTime(r.created_at)}</td>
-                        <td>{label.get(r.category_key) ?? r.category_key}</td>
-                        <td className="small mono">{spec(r.spec) || "—"}</td>
+                        <td className="nowrap">{fmtDateTime(r.created_at)}</td>
+                        <td>{cat(r.category_key)}</td>
+                        <td className="wrap">{spec(r.spec) || <span className="subtle">—</span>}</td>
                         <td className="num">{r.quantity}</td>
-                        <td className="small">{p ? fmtRental(p.from, p.to) : "—"}</td>
-                        <td className="small">{r.area || "—"}</td>
-                        <td className="small">{REASON[r.reason] ?? r.reason}</td>
-                        <td className="small">{r.profile_id ? <Link href={`/admin/customers/${r.profile_id}`} style={{ color: "var(--lagoon)" }}>{names.get(r.profile_id) ?? "Renter"}</Link> : "—"}</td>
+                        <td className="nowrap">{p ? fmtRental(p.from, p.to) : <span className="subtle">—</span>}</td>
+                        <td>{r.area || <span className="subtle">—</span>}</td>
+                        <td>{REASON[r.reason] ?? humanize(r.reason)}</td>
+                        <td>{r.profile_id ? <Link className="link" href={`/admin/customers/${r.profile_id}`}>{names.get(r.profile_id) ?? "Renter"}</Link> : <span className="subtle">—</span>}</td>
                       </tr>
                     );
                   })}

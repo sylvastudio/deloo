@@ -3,6 +3,8 @@ import { defaultProtectionPct, nairaInput } from "@/lib/admin/format";
 import type { ItemRow } from "@/lib/admin/types";
 import { ActionForm, Submit } from "./action-form";
 import { SpecsEditor } from "./specs-editor";
+import { Switch } from "./ui/field";
+import { Save } from "lucide-react";
 
 export type Category = { key: string; label: string; grp: string; spec_schema: { fields?: { key: string; label: string; type?: string; options?: string[] }[] } };
 
@@ -32,7 +34,7 @@ export function ItemForm({ item, categories, action, canEdit, canPrice, submitLa
       <label className="field"><span className="field-label">Description</span>
         <textarea className="control" name="description" rows={3} defaultValue={item.description ?? ""} readOnly={ro} /></label>
 
-      <fieldset className="grid gap-2" style={{ border: 0, padding: 0, margin: 0 }}>
+      <fieldset className="grid gap-2">
         <legend className="field-label">Pricing {!canPrice && <span className="opt">owner/admin only</span>}</legend>
         <div className="cols-3">
           <label className="field"><span className="field-label">Day rate (₦)</span>
@@ -56,9 +58,10 @@ export function ItemForm({ item, categories, action, canEdit, canPrice, submitLa
         <textarea className="control" name="in_the_box" rows={4} defaultValue={(item.in_the_box ?? []).join("\n")} readOnly={ro}
           placeholder={"Camera body\n2 × NP-FZ100 battery\nCharger\n128 GB card"} /></label>
       {item.id && (
-        <label className="switch"><input type="checkbox" name="active" defaultChecked={item.active ?? true} disabled={ro} /> Listed (renters can book it)</label>
+        <Switch name="active" defaultChecked={item.active ?? true} disabled={ro} label="Listed: renters can book it"
+          confirmOff={`Hide ${item.name ?? "this item"} from renters? It stops showing in the app. Existing bookings aren’t affected.`} />
       )}
-      {canEdit && <div className="actions"><Submit>{submitLabel}</Submit></div>}
+      {canEdit && <div className="actions"><Submit icon={Save}>{submitLabel}</Submit></div>}
     </ActionForm>
   );
 }

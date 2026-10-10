@@ -1,4 +1,5 @@
 "use client";
+import { Send } from "lucide-react";
 import { useState } from "react";
 import { queueMessage } from "@/app/admin/_actions/messages";
 import { ActionForm, Submit } from "@/components/admin/action-form";
@@ -36,7 +37,7 @@ export function MessageCompose({ bookingId, userId, label, vars, compact }: Prop
   return (
     <ActionForm action={queueMessage} className="grid gap-3">
       {bookingId ? <input type="hidden" name="booking_id" value={bookingId} /> : <input type="hidden" name="user_id" value={userId} />}
-      <p className="small muted" style={{ margin: 0 }}>To <strong style={{ color: "var(--ink)" }}>{label}</strong></p>
+      <p className="muted">To <b className="text-[var(--fg)]">{label}</b></p>
       <label className="field">
         <span className="field-label">Start from</span>
         <select className="control" value={key} onChange={(e) => pick(e.target.value as StaffTemplateKey)}>
@@ -50,13 +51,13 @@ export function MessageCompose({ bookingId, userId, label, vars, compact }: Prop
       <label className="field">
         <span className="field-label">Message <span className="opt">plain text; a blank line starts a new paragraph</span></span>
         <textarea className="control" name="body" required minLength={3} maxLength={5000} rows={compact ? 5 : 9} value={body}
-          onChange={(e) => setBody(e.target.value)} style={{ minHeight: compact ? 110 : 180 }} />
+          onChange={(e) => setBody(e.target.value)} />
       </label>
-      <p className="hint" style={{ margin: 0 }}>
+      <p className="hint">
         {bookingId ? "A See your booking button is added at the end. " : ""}
         You can use {"{first}"}{bookingId ? ", {ref}, {dates}, {items}, {total}" : ""}. It goes out within 15 minutes.
       </p>
-      <div className="actions"><Submit>Queue email</Submit></div>
+      <div className="actions"><Submit icon={Send}>Queue email</Submit></div>
     </ActionForm>
   );
 }

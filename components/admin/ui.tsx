@@ -1,60 +1,28 @@
-import Link from "next/link";
+/**
+ * The staff portal's component library (components/admin/ui/*), re-exported in one place. The older
+ * names (StatusChip, Chip, PageHead, Empty, ErrorBox, Section, Flag) keep their props, so pages written
+ * before the design system pick up the new look without edits.
+ */
 import type { ReactNode } from "react";
-import { STATUS_LABEL, STATUS_TONE, type BookingStatus, type Tone } from "@/lib/admin/status";
+import { EmptyState, ErrorState } from "./ui/layout";
 
-export function StatusChip({ status }: { status: BookingStatus }) {
-  return <span className={`st ${STATUS_TONE[status] ?? "neutral"}`}>{STATUS_LABEL[status] ?? status}</span>;
-}
+export { Button, ButtonLink, IconButton, IconLink, Spinner, btnClass, cx, type ButtonSize, type ButtonVariant } from "./ui/button";
+export { Field, Input, Select, Textarea, Switch } from "./ui/field";
+export { Badge, Chip, Flag, PaymentStatusChip, RefundStatusChip, StatusChip, Tag, UnitStatusChip } from "./ui/status";
+export {
+  ActiveFilters, Callout, Card, DescriptionList, EmptyState, ErrorState, Kpi, PageHead, Pagination, Section, SegmentedLinks, Skeleton,
+  StageStepper, Tabs, Timeline, type Crumb, type TabItem, type TimelineItem,
+} from "./ui/layout";
+export { ConfirmProvider, Drawer, useConfirm, useDrawer, type ConfirmOptions, type DrawerTrigger } from "./ui/dialog";
+export { ToastProvider, useToast } from "./ui/toast";
+export { AutoSubmit, FilterBar, type FilterDate, type FilterSelect } from "./ui/filter-bar";
 
-export function Chip({ tone = "neutral", children }: { tone?: Tone; children: ReactNode }) {
-  return <span className={`st ${tone}`}>{children}</span>;
-}
-
-export function PageHead({ title, kicker, crumbs, actions }: {
-  title: ReactNode; kicker?: string; crumbs?: { href: string; label: string }[]; actions?: ReactNode;
-}) {
-  return (
-    <header className="adm-head">
-      <div className="grid gap-1 min-w-0">
-        {crumbs && (
-          <nav className="crumbs" aria-label="Breadcrumb">
-            {crumbs.map((c) => <span key={c.href}><Link href={c.href}>{c.label}</Link> /</span>)}
-          </nav>
-        )}
-        {kicker && <p className="kicker">{kicker}</p>}
-        <h1 className="h1">{title}</h1>
-      </div>
-      {actions && <div className="actions">{actions}</div>}
-    </header>
-  );
-}
-
+/** Older name for an empty list: one line of text. Prefer EmptyState (icon, title, line, action). */
 export function Empty({ children }: { children: ReactNode }) {
-  return <div className="empty">{children}</div>;
+  return <EmptyState compact title={children} />;
 }
 
+/** Older name for ErrorState. */
 export function ErrorBox({ error, what = "this" }: { error: string; what?: string }) {
-  return (
-    <div className="err-box" role="alert">
-      Couldn’t load {what}. {error}
-      <br /><span className="small">Reload the page. If it keeps happening, the database may be missing a migration.</span>
-    </div>
-  );
-}
-
-export function Section({ title, actions, children, id }: { title: ReactNode; actions?: ReactNode; children: ReactNode; id?: string }) {
-  return (
-    <section className="card grid gap-3" id={id}>
-      <div className="section-title">
-        <h2 className="h2">{title}</h2>
-        {actions}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-/** Small tone dot + text for yes/no style flags. */
-export function Flag({ on, yes, no }: { on: boolean; yes: string; no?: string }) {
-  return on ? <Chip tone="bad">{yes}</Chip> : no ? <span className="muted small">{no}</span> : null;
+  return <ErrorState what={what} error={error} />;
 }

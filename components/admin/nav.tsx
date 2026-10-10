@@ -1,68 +1,241 @@
 "use client";
+import {
+  CalendarDays, CalendarRange, ChartLine, ChevronRight, CreditCard, Ellipsis, LayoutDashboard, LogOut, Mail, Monitor, Moon, Package, Route,
+  Search, Settings, Sun, Truck, Undo2, UserCog, Users, type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ConfirmProvider, Drawer } from "./ui/dialog";
+import { ToastProvider } from "./ui/toast";
 
 const ICONS = {
-  dashboard: <><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></>,
-  bookings: <><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4M16 3v4M4 10h16" /></>,
-  jobs: <><path d="M3 7h11v9H3z" /><path d="M14 10h4l3 3v3h-7" /><circle cx="7" cy="18" r="1.8" /><circle cx="17" cy="18" r="1.8" /></>,
-  inventory: <><path d="M4 8l8-4 8 4-8 4z" /><path d="M4 8v8l8 4 8-4V8" /><path d="M12 12v8" /></>,
-  availability: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 10h18M9 4v16M15 4v16" /></>,
-  payments: <><rect x="3" y="6" width="18" height="12" rx="2" /><path d="M3 10h18M7 15h4" /></>,
-  customers: <><circle cx="9" cy="9" r="3.2" /><path d="M3.5 19c.8-3 3-4.5 5.5-4.5s4.7 1.5 5.5 4.5" /><circle cx="17" cy="8" r="2.4" /><path d="M16 13.5c2.3 0 4 1.2 4.6 3.5" /></>,
-  messages: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3.5 6.5l8.5 6.5 8.5-6.5" /></>,
-  demand: <><path d="M4 19V9M10 19V5M16 19v-7M22 19H2" /></>,
-  settings: <><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" /></>,
-} as const;
+  dashboard: LayoutDashboard, jobs: Truck, dispatch: Route, bookings: CalendarDays, availability: CalendarRange, inventory: Package,
+  payments: CreditCard, refunds: Undo2, customers: Users, messages: Mail, staff: UserCog, demand: ChartLine, settings: Settings,
+} satisfies Record<string, LucideIcon>;
 
-export type NavItem = { href: string; label: string; icon: keyof typeof ICONS; sub?: boolean };
+export type NavIcon = keyof typeof ICONS;
+export type NavItem = { href: string; label: string; icon: NavIcon; count?: number | null; countTone?: "bad" | "warn" | "info"; countLabel?: string };
+export type NavGroup = { label: string; items: NavItem[] };
+export type Theme = "light" | "dark" | "system";
+export type ShellUser = { name: string; email: string; role: string; initials: string };
+
+const strip = (p: string) => p.replace(/^\/admin(?=\/|$)/, "") || "/";
+
+/** The nav item for this path: the most specific match wins (Payments vs Refunds, Settings vs Staff). */
+function currentHref(path: string, items: NavItem[]): string | null {
+  const here = strip(path);
+  if (here === "/") return items.find((i) => strip(i.href) === "/")?.href ?? null;
+  const best = items
+    .filter((i) => strip(i.href) !== "/" && (here === strip(i.href) || here.startsWith(strip(i.href) + "/")))
+    .sort((a, b) => strip(b.href).length - strip(a.href).length)[0];
+  return best?.href ?? null;
+}
+
+function NavLink({ item, current, onNavigate }: { item: NavItem; current: boolean; onNavigate?: () => void }) {
+  const Icon = ICONS[item.icon];
+  return (
+    <Link href={item.href} aria-current={current ? "page" : undefined} onClick={onNavigate}>
+      <Icon aria-hidden="true" />
+      <span className="label">{item.label}</span>
+      {item.count ? (
+        <span className="adm-count" data-tone={item.countTone}>
+          {item.count > 99 ? "99+" : item.count}<span className="sr-only"> {item.countLabel ?? ""}</span>
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
+function ThemeChoice({ theme, onPick }: { theme: Theme; onPick: (t: Theme) => void }) {
+  const opts: [Theme, string, LucideIcon][] = [["light", "Light", Sun], ["dark", "Dark", Moon], ["system", "System", Monitor]];
+  return (
+    <div className="seg full" role="group" aria-label="Theme">
+      {opts.map(([k, l, I]) => (
+        <button key={k} type="button" aria-pressed={theme === k} onClick={() => onPick(k)}>
+          <I width={14} height={14} aria-hidden="true" />{l}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /**
- * The portal frame: top bar, sidebar (a drop-down sheet on phones) and main area. Items are filtered by
- * role on the server; `top` and `children` are server-rendered.
+ * The portal frame. Desktop: grouped sidebar (an icon rail from 900 to 1200px) and a top bar with
+ * breadcrumbs and booking search. Phones: a top app bar and a bottom nav (Today, Bookings, Jobs, More);
+ * no hamburger. Riders: a single top bar ("My jobs") and their avatar menu, nothing else.
+ * Also hosts the toast and confirm-dialog providers.
  */
-export function AdminShell({ items, top, children }: { items: NavItem[]; top: ReactNode; children: ReactNode }) {
+export function AdminShell({ groups, settings, user, theme: initialTheme, rider, home, signOut, children }: {
+  groups: NavGroup[]; settings?: NavItem; user: ShellUser; theme: Theme; rider: boolean; home: string;
+  signOut: () => Promise<void>; children: ReactNode;
+}) {
   const path = usePathname();
-  // The phone menu is open for the path it was opened on, so navigating closes it.
-  const [openAt, setOpenAt] = useState<string | null>(null);
-  const open = openAt === path;
-  // On admin.deloo.space the browser path has no /admin prefix; compare without it.
-  const here = path.replace(/^\/admin(?=\/|$)/, "") || "/";
-  const isCurrent = (href: string) => {
-    const h = href.replace(/^\/admin(?=\/|$)/, "") || "/";
-    if (h === "/") return here === "/";
-    // The most specific item wins (Payments vs Payments › Refunds).
-    const best = items.map((i) => i.href.replace(/^\/admin(?=\/|$)/, "") || "/").filter((x) => x !== "/" && (here === x || here.startsWith(x + "/")))
-      .sort((a, b) => b.length - a.length)[0];
-    return best === h;
+  const [theme, setTheme] = useState<Theme>(initialTheme);
+  const [moreAt, setMoreAt] = useState<string | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const all = [...groups.flatMap((g) => g.items), ...(settings ? [settings] : [])];
+  const cur = currentHref(path, all);
+  const curItem = all.find((i) => i.href === cur);
+  const curGroup = groups.find((g) => g.items.some((i) => i.href === cur));
+  const deeper = !!curItem && strip(path) !== strip(curItem.href);
+
+  // "/" focuses the booking search (unless typing somewhere).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement;
+      if (t.closest("input, textarea, select, [contenteditable=true]")) return;
+      if (!searchRef.current || searchRef.current.offsetParent === null) return;
+      e.preventDefault();
+      searchRef.current.focus();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
+  const pickTheme = (t: Theme) => {
+    setTheme(t);
+    document.cookie = `adm-theme=${t}; path=/; max-age=31536000; samesite=lax`;
   };
+
+  // Phone bottom nav: up to three destinations the role has, then More.
+  const primary = ["/admin", "/admin/bookings", "/admin/jobs", "/admin/payments"]
+    .map((h) => all.find((i) => i.href === h)).filter((i): i is NavItem => !!i).slice(0, 3);
+  const moreOpen = moreAt === path;
+  const moreCurrent = !!cur && !primary.some((i) => i.href === cur);
+
+  const userMenu = (
+    <div id="adm-user-menu" popover="auto" className="adm-pop">
+      <div className="pop-head">
+        <span className="avatar lg" aria-hidden="true">{user.initials}</span>
+        <div className="who"><b>{user.name}</b><span>{user.role} · {user.email}</span></div>
+      </div>
+      <p className="pop-label">Theme</p>
+      <ThemeChoice theme={theme} onPick={pickTheme} />
+      <form action={signOut} className="pop-form">
+        <button type="submit" className="menu-item"><LogOut aria-hidden="true" />Sign out</button>
+      </form>
+    </div>
+  );
+
   return (
-    <div className="adm">
-      <header className="adm-top">
-      <button type="button" className="adm-menu-btn" aria-expanded={open} aria-controls="adm-side" onClick={() => setOpenAt(open ? null : path)}>
-        <span className="sr-only">Menu</span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-          {open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
-        </svg>
-      </button>
-      {top}
-      </header>
-      <aside id="adm-side" className="adm-side" data-open={open} aria-label="Admin sections">
-        <ul className="adm-nav">
-          {items.map((i) => (
-            <li key={i.href}>
-              <Link href={i.href} className={i.sub ? "sub" : undefined} aria-current={isCurrent(i.href) ? "page" : undefined}>
-                {!i.sub && (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" aria-hidden="true">{ICONS[i.icon]}</svg>
-                )}
-                {i.label}
+    <div className="adm" data-theme={theme === "system" ? undefined : theme} data-mode={rider ? "rider" : "staff"}>
+      <ToastProvider>
+        <ConfirmProvider>
+          <a className="adm-skip" href="#main">Skip to content</a>
+
+          {!rider && (
+            <aside className="adm-side" aria-label="Sections">
+              <Link href={home} className="adm-brand" aria-label="Deloo admin home">
+                <span className="wordmark">d<span className="rest">eloo</span><span className="dot">.</span></span>
+                <span className="env">Admin</span>
               </Link>
-            </li>
-          ))}
-        </ul>
-      </aside>
-      <main className="adm-main">{children}</main>
+              <nav aria-label="Main">
+                {groups.map((g) => (
+                  <div key={g.label} className="adm-group" role="group" aria-labelledby={`nav-${g.label}`}>
+                    <p className="adm-group-label" id={`nav-${g.label}`}>{g.label}</p>
+                    <ul className="adm-nav">
+                      {g.items.map((i) => <li key={i.href}><NavLink item={i} current={i.href === cur} /></li>)}
+                    </ul>
+                  </div>
+                ))}
+              </nav>
+              <div className="adm-side-foot">
+                {settings && <ul className="adm-nav"><li><NavLink item={settings} current={settings.href === cur} /></li></ul>}
+                <button type="button" className="adm-user" popoverTarget="adm-user-menu" aria-label={`Account: ${user.name}, ${user.role}`}>
+                  <span className="avatar" aria-hidden="true">{user.initials}</span>
+                  <span className="who"><b>{user.name}</b><span>{user.role}</span></span>
+                </button>
+              </div>
+            </aside>
+          )}
+
+          <header className="adm-top">
+            {rider ? (
+              <Link href={home} className="bar-title">My jobs</Link>
+            ) : (
+              <>
+                <nav className="top-crumbs" aria-label="You are here">
+                  {curGroup && <span>{curGroup.label}</span>}
+                  {curGroup && curItem && <ChevronRight aria-hidden="true" />}
+                  {curItem && (deeper ? <Link href={curItem.href}>{curItem.label}</Link> : <span aria-current="page">{curItem.label}</span>)}
+                </nav>
+                <Link href={home} className="phone-only adm-brand" aria-label="Deloo admin home">
+                  <span className="wordmark">deloo<span className="dot">.</span></span>
+                </Link>
+              </>
+            )}
+            <div className="top-actions">
+              {!rider && (
+                <form className="adm-search" action="/admin/bookings" method="get" role="search">
+                  <Search aria-hidden="true" />
+                  <input ref={searchRef} type="search" name="q" placeholder="Search bookings: ref, phone, name, serial" aria-label="Search bookings by ref, phone, name or serial" />
+                  <kbd aria-hidden="true">/</kbd>
+                </form>
+              )}
+              {!rider && (
+                <Link href="/admin/bookings?focus=1" className="phone-only btn btn-ghost neutral icon-btn" aria-label="Search bookings"><Search aria-hidden="true" /></Link>
+              )}
+              <button type="button" className="phone-only adm-user compact" popoverTarget="adm-user-menu" aria-label={`Account: ${user.name}, ${user.role}`}>
+                <span className="avatar" aria-hidden="true">{user.initials}</span>
+              </button>
+            </div>
+          </header>
+
+          {userMenu}
+
+          <main id="main" className="adm-main" tabIndex={-1}>{children}</main>
+
+          {!rider && (
+            <nav className="adm-bottom" aria-label="Main">
+              {primary.map((i) => {
+                const Icon = ICONS[i.icon];
+                return (
+                  <Link key={i.href} href={i.href} aria-current={i.href === cur ? "page" : undefined}>
+                    <Icon aria-hidden="true" />{i.href === "/admin" ? "Today" : i.label}
+                    {i.count ? <span className="adm-count" data-tone={i.countTone}>{i.count > 99 ? "99+" : i.count}</span> : null}
+                  </Link>
+                );
+              })}
+              <button type="button" aria-haspopup="dialog" aria-current={moreCurrent ? "page" : undefined} onClick={() => setMoreAt(path)}>
+                <Ellipsis aria-hidden="true" />More
+              </button>
+            </nav>
+          )}
+          {!rider && (
+            <Drawer title="More" open={moreOpen} onOpenChange={(o) => setMoreAt(o ? path : null)}>
+              {groups.map((g) => {
+                const rest = g.items.filter((i) => !primary.includes(i));
+                if (!rest.length) return null;
+                return (
+                  <div key={g.label}>
+                    <p className="sheet-group">{g.label}</p>
+                    <ul className="sheet-nav">
+                      {rest.map((i) => {
+                        const Icon = ICONS[i.icon];
+                        return (
+                          <li key={i.href}>
+                            <Link href={i.href} aria-current={i.href === cur ? "page" : undefined} onClick={() => setMoreAt(null)}>
+                              <Icon aria-hidden="true" /><span className="label">{i.label}</span>
+                              {i.count ? <span className="adm-count" data-tone={i.countTone}>{i.count}</span> : null}
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                );
+              })}
+              {settings && (
+                <ul className="sheet-nav">
+                  <li><Link href={settings.href} aria-current={settings.href === cur ? "page" : undefined} onClick={() => setMoreAt(null)}><Settings aria-hidden="true" /><span className="label">Settings</span></Link></li>
+                </ul>
+              )}
+            </Drawer>
+          )}
+        </ConfirmProvider>
+      </ToastProvider>
     </div>
   );
 }

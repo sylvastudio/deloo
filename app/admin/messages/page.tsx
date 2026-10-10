@@ -1,11 +1,13 @@
+import { Mail, Search, SearchX } from "lucide-react";
 import Link from "next/link";
 import { MessageCompose } from "@/components/admin/message-compose";
 import { MessageList, SendNow } from "@/components/admin/message-list";
-import { Empty, ErrorBox, PageHead, Section } from "@/components/admin/ui";
+import { ActiveFilters, EmptyState, ErrorState, FilterBar, PageHead, Section } from "@/components/admin/ui";
 import { pageStaff } from "@/lib/admin/auth";
 import { namesFor, safeSearch } from "@/lib/admin/data";
 import { bookingTarget, loadMessages, MESSAGE_KIND_LABEL, MESSAGE_KINDS, MESSAGE_STATUS_LABEL, renterTarget, type MessageTarget } from "@/lib/admin/messages";
 import { can } from "@/lib/admin/roles";
+import { hrefWith } from "@/lib/admin/url";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Messages" };
@@ -55,83 +57,71 @@ export default async function MessagesPage({ searchParams }: { searchParams: SP 
   const names = await namesFor(db, rows.flatMap((r) => [r.created_by, r.cancelled_by, r.retried_by]));
   const filtered = !!(status || kind || q || from || to);
   const keep = new URLSearchParams(Object.entries({ status, kind, q, from, to }).filter(([, v]) => v));
+  const current = Object.fromEntries(Object.entries({ status, kind, q, from, to, write }).filter(([, v]) => v)) as Record<string, string>;
+
+  const chips = [
+    ...(q ? [{ label: <>Search: “{q}”</>, href: hrefWith("/admin/messages", current, { q: null }) }] : []),
+    ...(status ? [{ label: <>Status: {MESSAGE_STATUS_LABEL[status as keyof typeof MESSAGE_STATUS_LABEL] ?? status}</>, href: hrefWith("/admin/messages", current, { status: null }) }] : []),
+    ...(kind ? [{ label: <>Kind: {MESSAGE_KIND_LABEL[kind as keyof typeof MESSAGE_KIND_LABEL] ?? kind}</>, href: hrefWith("/admin/messages", current, { kind: null }) }] : []),
+    ...(from ? [{ label: <>From {from}</>, href: hrefWith("/admin/messages", current, { from: null }) }] : []),
+    ...(to ? [{ label: <>To {to}</>, href: hrefWith("/admin/messages", current, { to: null }) }] : []),
+  ];
 
   return (
     <div className="adm-page">
-      <PageHead title="Messages" kicker="Emails to renters" actions={canSend ? <SendNow /> : undefined} />
-      <p className="hint" style={{ margin: 0 }}>
-        Booking emails (confirmed, day before, return reminder, deposit sent) are queued automatically. Queued emails go out within 15 minutes; Send now sends whatever is due straight away.
-      </p>
+      <PageHead title="Messages" meta={<span>Emails to renters. Booking emails are queued automatically and go out within 15 minutes.</span>}
+        actions={canSend ? <SendNow /> : undefined} />
 
       {canSend && (
-        <Section title="New message">
-          <form className="filters" method="get" role="search" aria-label="Who to write to">
-            {Array.from(keep.entries()).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
-            <label className="field grow">
-              <span className="field-label">To</span>
-              <input className="control" name="write" defaultValue={write} placeholder="Booking ref (DLO-…) or the renter's email" />
-            </label>
-            <div className="actions">
+        <Section title="New message" description="Write to a renter about a booking, or to their account.">
+          <form className="filterbar" method="get" role="search" aria-label="Who to write to">
+            <div className="filters">
+              {Array.from(keep.entries()).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
+              <label className="search">
+                <span className="sr-only">To</span>
+                <Search aria-hidden="true" />
+                <input className="control" name="write" defaultValue={write} placeholder="Booking ref (DLO-…) or the renter’s email" />
+              </label>
               <button className="btn btn-secondary" type="submit">Find</button>
-              {write && <Link className="btn btn-quiet" href={`/admin/messages${keep.size ? `?${keep}` : ""}`}>Clear</Link>}
+              {write && <Link className="btn btn-ghost" href={`/admin/messages${keep.size ? `?${keep}` : ""}`}>Clear</Link>}
             </div>
           </form>
-          {found.note && <p className="error" role="alert" style={{ margin: 0 }}>{found.note}</p>}
+          {found.note && <p className="error" role="alert">{found.note}</p>}
           {found.others.length > 0 && (
-            <div className="actions small" aria-label="Their bookings">
+            <div className="fchips" aria-label="Their bookings">
               <span className="muted">Write about a booking instead:</span>
               {found.others.map((b) => b.ref && (
-                <Link key={b.id} className="chip mono" href={`/admin/messages?${new URLSearchParams({ ...Object.fromEntries(keep), write: b.ref })}`}>{b.ref}</Link>
+                <Link key={b.id} className="fchip mono" href={`/admin/messages?${new URLSearchParams({ ...Object.fromEntries(keep), write: b.ref })}`}>{b.ref}</Link>
               ))}
             </div>
           )}
-          {found.target ? (
+          {found.target && (
             <MessageCompose key={`${found.target.bookingId ?? ""}-${found.target.userId}`} bookingId={found.target.bookingId}
               userId={found.target.userId} label={found.target.label} vars={found.target.vars} />
-          ) : !write && <p className="hint" style={{ margin: 0 }}>Find a booking or a renter to write to.</p>}
+          )}
         </Section>
       )}
 
-      <form className="filters" method="get" role="search">
-        {write && <input type="hidden" name="write" value={write} />}
-        <label className="field grow">
-          <span className="field-label">Search</span>
-          <input className="control" name="q" defaultValue={q} placeholder="Booking ref, renter name or email" />
-        </label>
-        <label className="field">
-          <span className="field-label">Status</span>
-          <select className="control" name="status" defaultValue={status}>
-            <option value="">Any</option>
-            {STATUS_FILTERS.map((s) => <option key={s} value={s}>{MESSAGE_STATUS_LABEL[s]}</option>)}
-          </select>
-        </label>
-        <label className="field">
-          <span className="field-label">Kind</span>
-          <select className="control" name="kind" defaultValue={kind}>
-            <option value="">Any</option>
-            {MESSAGE_KINDS.map((k) => <option key={k} value={k}>{MESSAGE_KIND_LABEL[k]}</option>)}
-          </select>
-        </label>
-        <label className="field">
-          <span className="field-label">From <span className="opt">Lagos</span></span>
-          <input className="control" type="date" name="from" defaultValue={from} />
-        </label>
-        <label className="field">
-          <span className="field-label">To</span>
-          <input className="control" type="date" name="to" defaultValue={to} />
-        </label>
-        <div className="actions">
-          <button className="btn" type="submit">Filter</button>
-          {filtered && <Link className="btn btn-quiet" href={`/admin/messages${write ? `?write=${encodeURIComponent(write)}` : ""}`}>Clear</Link>}
+      <Section title="Outbox">
+        <div className="grid gap-3">
+          <FilterBar action="/admin/messages" hidden={{ write }}
+            search={{ name: "q", value: q, label: "Search messages", placeholder: "Booking ref, renter name or email" }}
+            selects={[
+              { name: "status", label: "Status", value: status, anyLabel: "Any status", options: STATUS_FILTERS.map((s) => ({ value: s, label: MESSAGE_STATUS_LABEL[s] })) },
+              { name: "kind", label: "Kind", value: kind, anyLabel: "Any kind", options: MESSAGE_KINDS.map((k) => ({ value: k, label: MESSAGE_KIND_LABEL[k] })) },
+            ]}
+            dates={[{ name: "from", label: "From", value: from }, { name: "to", label: "To", value: to }]} />
+          <ActiveFilters items={chips} clearHref={`/admin/messages${write ? `?write=${encodeURIComponent(write)}` : ""}`} />
         </div>
-      </form>
-
-      {error ? <ErrorBox what="messages" error={error} /> : rows.length === 0 ? (
-        <Empty>{filtered ? "No messages match these filters." : "No messages yet. They appear here when a booking is confirmed."}</Empty>
-      ) : (
-        <MessageList rows={rows} canSend={canSend} names={names} />
-      )}
-      {rows.length === 300 && <p className="hint">Showing the latest 300. Narrow the filters to see more.</p>}
+        {error ? <ErrorState what="messages" error={error} /> : rows.length === 0 ? (
+          filtered
+            ? <EmptyState icon={SearchX} title="No messages match">Try a different search or remove a filter.</EmptyState>
+            : <EmptyState icon={Mail} title="No messages yet">They appear here when a booking is confirmed.</EmptyState>
+        ) : (
+          <MessageList rows={rows} canSend={canSend} names={names} />
+        )}
+        {rows.length === 300 && <p className="hint">Showing the latest 300. Narrow the filters to see more.</p>}
+      </Section>
     </div>
   );
 }

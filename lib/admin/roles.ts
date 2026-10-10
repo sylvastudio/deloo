@@ -13,6 +13,7 @@ export const ROLE_LABEL: Record<StaffRole, string> = {
 
 export type Capability =
   | "dashboard"          // see the dashboard
+  | "dispatch.view"      // the dispatch board (who takes which job, when)
   | "bookings.view"      // bookings list and detail
   | "bookings.edit"      // delivery fields, notes
   | "bookings.move"      // status moves (prepare … inspect)
@@ -37,6 +38,7 @@ export type Capability =
 
 const MATRIX: Record<Capability, StaffRole[]> = {
   "dashboard": ["owner", "admin", "ops", "finance", "readonly"],
+  "dispatch.view": ["owner", "admin", "ops", "readonly"],
   "bookings.view": ["owner", "admin", "ops", "finance", "readonly"],
   "bookings.edit": ["owner", "admin", "ops"],
   "bookings.move": ["owner", "admin", "ops", "rider"],

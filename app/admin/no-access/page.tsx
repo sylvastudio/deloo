@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { Lock } from "lucide-react";
+import { ButtonLink, EmptyState } from "@/components/admin/ui";
 import { getStaff, homeFor } from "@/lib/admin/auth";
 
 export const metadata = { title: "No access" };
@@ -8,8 +9,10 @@ export default async function NoAccessPage() {
   const staff = await getStaff();
   return (
     <div className="adm-page narrow">
-      <p className="hint">This page isn’t available to your role.</p>
-      {staff && <Link className="btn btn-secondary" href={homeFor(staff.role)}>Go to your home page</Link>}
+      <EmptyState icon={Lock} title="This page isn’t available to your role"
+        action={staff ? <ButtonLink variant="secondary" href={homeFor(staff.role)}>Go to your home page</ButtonLink> : undefined}>
+        Ask an owner if you need it.
+      </EmptyState>
     </div>
   );
 }

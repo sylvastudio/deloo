@@ -1,107 +1,165 @@
+import { CreditCard, Ellipsis, RefreshCw, SearchX, Undo2 } from "lucide-react";
 import Link from "next/link";
 import { recheckPayment } from "@/app/admin/_actions/money";
 import { ActionForm, Submit } from "@/components/admin/action-form";
-import { Chip, Empty, ErrorBox, PageHead } from "@/components/admin/ui";
+import {
+  ActiveFilters, ButtonLink, Chip, DescriptionList, Drawer, EmptyState, ErrorState, FilterBar, PageHead, Pagination, PaymentStatusChip, Tabs,
+} from "@/components/admin/ui";
 import { pageStaff } from "@/lib/admin/auth";
 import { safeSearch } from "@/lib/admin/data";
 import { fmtDateTime, naira } from "@/lib/admin/format";
 import { can } from "@/lib/admin/roles";
-import { PAYMENT_STATUSES } from "@/lib/admin/status";
+import { humanize, PAYMENT_CHANNEL_LABEL, PAYMENT_PURPOSE_LABEL, PAYMENT_STATUS_LABEL, PAYMENT_STATUSES, paymentFlagLabel, STATUS_LABEL, type BookingStatus } from "@/lib/admin/status";
 import { one, type PaymentRow } from "@/lib/admin/types";
+import { first, hrefWith, PAGE_SIZE, pageOf, rangeOf, type SearchParams } from "@/lib/admin/url";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Payments" };
 
-type Row = PaymentRow & { bookings: { id: string; ref: string; status: string; needs_refund: boolean } | { id: string; ref: string; status: string; needs_refund: boolean }[] | null };
-const tone = (s: string) => (s === "success" ? "good" : s === "mismatch" || s === "failed" ? "bad" : s === "initialized" ? "warn" : "neutral") as "good" | "bad" | "warn" | "neutral";
+type B = { id: string; ref: string; status: string; needs_refund: boolean };
+type Row = PaymentRow & { bookings: B | B[] | null };
 
-export default async function PaymentsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+const VIEWS = {
+  attention: "Needs attention",
+  success: "Paid",
+  initialized: "Started, not paid",
+  failed: "Failed",
+} as const;
+type View = keyof typeof VIEWS;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Q = any;
+function applyView(q: Q, view: string): Q {
+  if (view === "attention") return q.or("status.eq.mismatch,flags.cs.{duplicate}");
+  if (view === "failed") return q.in("status", ["failed", "abandoned"]);
+  if (view === "success" || view === "initialized") return q.eq("status", view);
+  return q;
+}
+
+export default async function PaymentsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const staff = await pageStaff("payments.view");
   const sp = await searchParams;
-  const q = safeSearch(sp.q ?? "");
-  const status = sp.status ?? "";
-  const flag = sp.flag ?? "";
+  const q = safeSearch(first(sp.q));
+  // ?flag=attention|mismatch|duplicate (dashboard links) map onto the views and the status filter.
+  const flag = first(sp.flag);
+  const view = flag === "attention" || flag === "duplicate" ? "attention" : Object.hasOwn(VIEWS, first(sp.view)) ? first(sp.view) : "";
+  const status = flag === "mismatch" ? "mismatch" : (PAYMENT_STATUSES as readonly string[]).includes(first(sp.status)) ? first(sp.status) : "";
+  const page = pageOf(sp);
+  const current = Object.fromEntries(Object.entries({ q, status, view, page: page > 1 ? String(page) : "" }).filter(([, v]) => v)) as Record<string, string>;
   const db = await createClient();
 
-  let query = db.from("payments")
-    .select("id, booking_id, purpose, reference, amount_kobo, fees_kobo, channel, status, flags, paystack_id, paid_at, created_at, bookings(id, ref, status, needs_refund)")
-    .order("created_at", { ascending: false }).limit(300);
-  if ((PAYMENT_STATUSES as readonly string[]).includes(status)) query = query.eq("status", status);
-  if (flag === "duplicate") query = query.contains("flags", ["duplicate"]);
-  if (flag === "mismatch") query = query.eq("status", "mismatch");
-  if (flag === "attention") query = query.or("status.eq.mismatch,flags.cs.{duplicate}");
+  let bookingIds: string[] = [];
   if (q) {
     const { data: bs } = await db.from("bookings").select("id").ilike("ref", `%${q}%`).limit(50);
-    const ids = (bs ?? []).map((b) => b.id as string);
-    query = query.or([`reference.ilike.%${q}%`, `paystack_id.eq.${q.replace(/\D/g, "") || "0"}`, ...(ids.length ? [`booking_id.in.(${ids.join(",")})`] : [])].join(","));
+    bookingIds = (bs ?? []).map((b) => b.id as string);
   }
-  const { data, error } = await query;
-  const rows = (data ?? []) as Row[];
+  const narrow = (x: Q): Q => {
+    let y = x;
+    if (status) y = y.eq("status", status);
+    if (q) y = y.or([`reference.ilike.%${q}%`, `paystack_id.eq.${q.replace(/\D/g, "") || "0"}`, ...(bookingIds.length ? [`booking_id.in.(${bookingIds.join(",")})`] : [])].join(","));
+    return y;
+  };
+  const [lo, hi] = rangeOf(page);
+  const countOf = (v: string) => applyView(narrow(db.from("payments").select("id", { count: "exact", head: true })), v);
+  const viewKeys = Object.keys(VIEWS) as View[];
+  const [res, ...counts] = await Promise.all([
+    applyView(narrow(db.from("payments").select(
+      "id, booking_id, purpose, reference, amount_kobo, fees_kobo, channel, status, flags, paystack_id, paid_at, created_at, bookings(id, ref, status, needs_refund)",
+      { count: "exact" },
+    )), view).order("created_at", { ascending: false }).range(lo, hi),
+    countOf(""),
+    ...viewKeys.map((k) => countOf(k)),
+  ]);
+  const { data, error, count } = res as { data: Row[] | null; error: { message: string } | null; count: number | null };
+  const rows = data ?? [];
+  const n = (r: unknown) => (r as { count: number | null }).count;
   const verify = can(staff.role, "payments.verify");
-  const filtered = !!(q || status || flag);
+
+  const chips = [
+    ...(q ? [{ label: <>Search: “{q}”</>, href: hrefWith("/admin/payments", current, { q: null }) }] : []),
+    ...(status ? [{ label: <>Status: {PAYMENT_STATUS_LABEL[status] ?? humanize(status)}</>, href: hrefWith("/admin/payments", current, { status: null }) }] : []),
+  ];
 
   return (
     <div className="adm-page">
-      <PageHead title="Payments" actions={<Link className="btn btn-secondary" href="/admin/payments/refunds">Refunds queue</Link>} />
-      <form className="filters" method="get" role="search">
-        <label className="field grow"><span className="field-label">Search</span>
-          <input className="control" name="q" defaultValue={q} placeholder="Payment reference, Paystack id or booking ref" /></label>
-        <label className="field"><span className="field-label">Status</span>
-          <select className="control" name="status" defaultValue={status}>
-            <option value="">Any</option>
-            {PAYMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select></label>
-        <label className="field"><span className="field-label">Flag</span>
-          <select className="control" name="flag" defaultValue={flag}>
-            <option value="">Any</option>
-            <option value="attention">Needs attention</option>
-            <option value="duplicate">Duplicate</option>
-            <option value="mismatch">Amount mismatch</option>
-          </select></label>
-        <div className="actions"><button className="btn" type="submit">Filter</button>{filtered && <Link className="btn btn-quiet" href="/admin/payments">Clear</Link>}</div>
-      </form>
+      <PageHead title="Payments" meta={count != null ? <span>{count} payment{count === 1 ? "" : "s"}</span> : undefined}
+        actions={<ButtonLink variant="secondary" icon={Undo2} href="/admin/payments/refunds">Refunds</ButtonLink>} />
 
-      {error ? <ErrorBox what="payments" error={error.message} /> : rows.length === 0 ? (
-        <Empty>{filtered ? "No payments match." : "No payments yet. They appear when a renter starts checkout."}</Empty>
+      <Tabs label="Saved views" items={[
+        { href: hrefWith("/admin/payments", current, { view: null }), label: "All", count: n(counts[0]), current: !view },
+        ...viewKeys.map((k, i) => ({ href: hrefWith("/admin/payments", current, { view: k }), label: VIEWS[k], count: n(counts[i + 1]), current: view === k })),
+      ]} />
+
+      <div className="grid gap-3">
+        <FilterBar action="/admin/payments" hidden={{ view }}
+          search={{ name: "q", value: q, label: "Search payments", placeholder: "Payment reference, Paystack id or booking ref" }}
+          selects={[{ name: "status", label: "Status", value: status, anyLabel: "Any status", options: PAYMENT_STATUSES.map((s) => ({ value: s, label: PAYMENT_STATUS_LABEL[s] })) }]} />
+        <ActiveFilters items={chips} clearHref={hrefWith("/admin/payments", { view }, {})} />
+      </div>
+
+      {error ? <ErrorState what="payments" error={error.message} /> : rows.length === 0 ? (
+        q || status || view
+          ? <EmptyState icon={SearchX} title="No payments match">Try a different reference or remove a filter.</EmptyState>
+          : <EmptyState icon={CreditCard} title="No payments yet">They appear when a renter starts checkout.</EmptyState>
       ) : (
-        <div className="tbl-wrap">
-          <table className="tbl">
-            <thead><tr><th>Created</th><th>Reference</th><th>Booking</th><th>Purpose</th><th className="num">Amount</th><th className="num">Fees</th><th>Channel</th><th>Status</th><th>Paid at</th>{verify && <th></th>}</tr></thead>
-            <tbody>
-              {rows.map((p) => {
-                const b = one(p.bookings);
-                // Money received for a booking we can't honour (expired / cancelled before payment landed).
-                const unmatched = p.status === "success" && b && (b.needs_refund || b.status === "expired");
-                return (
-                  <tr key={p.id}>
-                    <td className="small">{fmtDateTime(p.created_at)}</td>
-                    <td className="mono">{p.reference}{p.paystack_id && <div className="muted">#{p.paystack_id}</div>}</td>
-                    <td>{b ? <Link className="rowlink mono" href={`/admin/bookings/${b.id}`}>{b.ref}</Link> : "—"}</td>
-                    <td className="small">{p.purpose}</td>
-                    <td className="num">{naira(p.amount_kobo)}</td>
-                    <td className="num muted">{p.fees_kobo ? naira(p.fees_kobo) : "—"}</td>
-                    <td className="small">{p.channel || "—"}</td>
-                    <td>
-                      <div className="flex flex-wrap gap-1">
-                        <Chip tone={tone(p.status)}>{p.status}</Chip>
-                        {p.flags.map((f) => <Chip key={f} tone="bad">{f.startsWith("amount_") ? `paid ${naira(Number(f.slice(7)) || 0)}` : f}</Chip>)}
-                        {unmatched && <Chip tone="bad">unmatched</Chip>}
-                      </div>
-                    </td>
-                    <td className="small">{fmtDateTime(p.paid_at)}</td>
-                    {verify && (
+        <div>
+          <div className="tbl-wrap">
+            <table className="tbl rows-link">
+              <thead>
+                <tr><th>Created</th><th>Booking</th><th>Reference</th><th>Purpose</th><th className="num">Amount</th><th className="num">Fees</th><th>Channel</th><th>Status</th><th className="shrink"><span className="sr-only">Details</span></th></tr>
+              </thead>
+              <tbody>
+                {rows.map((p) => {
+                  const b = one(p.bookings);
+                  // Money received for a booking we can't honour (expired / cancelled before payment landed).
+                  const unmatched = p.status === "success" && b && (b.needs_refund || b.status === "expired");
+                  return (
+                    <tr key={p.id}>
+                      <td className="nowrap">{fmtDateTime(p.created_at)}{p.paid_at && <span className="sub">Paid {fmtDateTime(p.paid_at)}</span>}</td>
+                      <td className="nowrap">{b ? <Link className="rowlink mono" href={`/admin/bookings/${b.id}`}>{b.ref}</Link> : <span className="subtle">—</span>}</td>
+                      <td><span className="mono">{p.reference}</span>{p.paystack_id && <span className="sub mono">#{p.paystack_id}</span>}</td>
+                      <td>{PAYMENT_PURPOSE_LABEL[p.purpose] ?? humanize(p.purpose)}</td>
+                      <td className="num money">{naira(p.amount_kobo)}</td>
+                      <td className="num muted">{p.fees_kobo ? naira(p.fees_kobo) : "—"}</td>
+                      <td>{p.channel ? PAYMENT_CHANNEL_LABEL[p.channel] ?? humanize(p.channel) : <span className="subtle">—</span>}</td>
                       <td>
-                        <ActionForm action={recheckPayment} confirm={`Re-check ${p.reference} with Paystack? If it succeeded, the booking is confirmed.`}>
-                          <input type="hidden" name="reference" value={p.reference} />
-                          <Submit className="btn btn-quiet btn-sm">Re-check</Submit>
-                        </ActionForm>
+                        <div className="flex flex-wrap gap-1">
+                          <PaymentStatusChip status={p.status} />
+                          {p.flags.map((f) => <Chip key={f} tone="bad">{paymentFlagLabel(f, naira)}</Chip>)}
+                          {unmatched && <Chip tone="bad">Can’t honour</Chip>}
+                        </div>
                       </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      <td className="shrink above">
+                        <Drawer trigger={{ label: `Details for ${p.reference}`, icon: Ellipsis, variant: "ghost", iconOnly: true }} title="Payment" description={<span className="mono">{p.reference}</span>}>
+                          <DescriptionList items={[
+                            ["Status", <PaymentStatusChip key="s" status={p.status} />],
+                            ["Amount", <span key="a" className="tabular">{naira(p.amount_kobo)}</span>],
+                            ["Fees", p.fees_kobo ? naira(p.fees_kobo) : null],
+                            ["Purpose", PAYMENT_PURPOSE_LABEL[p.purpose] ?? humanize(p.purpose)],
+                            ["Channel", p.channel ? PAYMENT_CHANNEL_LABEL[p.channel] ?? humanize(p.channel) : null],
+                            ["Booking", b ? <Link key="b" className="link mono" href={`/admin/bookings/${b.id}`}>{b.ref}</Link> : null],
+                            ["Booking status", b ? STATUS_LABEL[b.status as BookingStatus] ?? humanize(b.status) : null],
+                            ["Paystack id", p.paystack_id ? <span key="p" className="mono">{p.paystack_id}</span> : null],
+                            ["Started", fmtDateTime(p.created_at)],
+                            ["Paid", p.paid_at ? fmtDateTime(p.paid_at) : null],
+                            ["Flags", p.flags.length ? p.flags.map((f) => paymentFlagLabel(f, naira)).join(", ") : null],
+                          ]} />
+                          {verify ? (
+                            <ActionForm action={recheckPayment} className="grid gap-2"
+                              confirm={`Re-check ${p.reference} with Paystack? If Paystack says it succeeded, the booking is confirmed (or a refund is queued if the gear is gone).`}>
+                              <input type="hidden" name="reference" value={p.reference} />
+                              <Submit variant="secondary" icon={RefreshCw}>Re-check with Paystack</Submit>
+                            </ActionForm>
+                          ) : <p className="hint">Finance, Admin and Owner can re-check payments with Paystack.</p>}
+                        </Drawer>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <Pagination page={page} pageSize={PAGE_SIZE} total={count} hrefFor={(pg) => hrefWith("/admin/payments", current, { page: pg > 1 ? String(pg) : null })} />
         </div>
       )}
     </div>

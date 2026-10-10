@@ -1,8 +1,10 @@
+import { RotateCcw, Send } from "lucide-react";
 import Link from "next/link";
 import { cancelMessage, retryMessage, sendNow } from "@/app/admin/_actions/messages";
 import { ActionForm, Submit } from "@/components/admin/action-form";
 import { Chip } from "@/components/admin/ui";
 import { fmtDateTime, nowMs } from "@/lib/admin/format";
+import { humanize } from "@/lib/admin/status";
 import { MESSAGE_KIND_LABEL, MESSAGE_STATUS_LABEL, MESSAGE_STATUS_TONE, preview, type MessageRow } from "@/lib/admin/messages";
 
 /** When a message went, or when it is due. */
@@ -27,7 +29,7 @@ export function MessageList({ rows, canSend, names, showBooking = true }: {
       <table className="tbl">
         <thead>
           <tr>
-            <th>When (Lagos)</th><th>To</th><th>Kind</th><th>Subject</th>{showBooking && <th>Booking</th>}<th>Status</th>{canSend && <th><span className="sr-only">Actions</span></th>}
+            <th>When</th><th>To</th><th>Kind</th><th>Subject</th>{showBooking && <th>Booking</th>}<th>Status</th>{canSend && <th><span className="sr-only">Actions</span></th>}
           </tr>
         </thead>
         <tbody>
@@ -37,51 +39,53 @@ export function MessageList({ rows, canSend, names, showBooking = true }: {
             const by = r.kind === "custom" ? (r.payload?.sent_by_name || (r.created_by && names.get(r.created_by)) || "Staff") : "";
             return (
               <tr key={r.id}>
-                <td className="small" style={{ whiteSpace: "nowrap" }}>
-                  <span className="muted">{w.label}</span><div>{fmtDateTime(w.at)}</div>
+                <td className="nowrap">
+                  {fmtDateTime(w.at)}<span className="sub">{w.label}</span>
                 </td>
-                <td className="small" style={{ maxWidth: 220 }}>
-                  <Link className="rowlink" href={`/admin/customers/${r.user_id}`}>{r.full_name || "Renter"}</Link>
-                  {r.email && <div className="muted mono" style={{ overflowWrap: "anywhere" }}>{r.email}</div>}
+                <td className="wrap">
+                  <Link className="link" href={`/admin/customers/${r.user_id}`}>{r.full_name || "Renter"}</Link>
+                  {r.email && <span className="sub break-all">{r.email}</span>}
                 </td>
-                <td className="small">
-                  {MESSAGE_KIND_LABEL[r.kind] ?? r.kind}
-                  {by && <div className="muted">by {by}</div>}
+                <td>
+                  {MESSAGE_KIND_LABEL[r.kind] ?? humanize(r.kind)}
+                  {by && <span className="sub">by {by}</span>}
                 </td>
-                <td className="small" style={{ minWidth: 200, maxWidth: 360 }}>
+                <td className="wrap">
                   <details className="inline">
-                    <summary style={{ color: "var(--ink)" }}>{p.subject || <span className="muted">(no subject)</span>}</summary>
-                    <pre className="small" style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", margin: "8px 0 0", padding: 10, background: "var(--paper)", border: "1px solid var(--line)", borderRadius: 6 }}>
+                    <summary className="subject">{p.subject || <span className="muted">(no subject)</span>}</summary>
+                    <pre className="preview-text">
                       {p.text || "Preview not available."}
                     </pre>
                   </details>
                 </td>
                 {showBooking && (
-                  <td className="small">
-                    {r.booking_id ? <Link className="rowlink mono" href={`/admin/bookings/${r.booking_id}`}>{r.ref ?? r.booking_id.slice(0, 8)}</Link> : <span className="muted">None</span>}
+                  <td className="nowrap">
+                    {r.booking_id ? <Link className="link mono" href={`/admin/bookings/${r.booking_id}`}>{r.ref ?? r.booking_id.slice(0, 8)}</Link> : <span className="muted">None</span>}
                   </td>
                 )}
-                <td className="small" style={{ maxWidth: 240 }}>
-                  <Chip tone={MESSAGE_STATUS_TONE[r.status] ?? "neutral"}>{MESSAGE_STATUS_LABEL[r.status] ?? r.status}</Chip>
-                  {r.attempts > 0 && <div className="muted">{r.attempts} {r.attempts === 1 ? "try" : "tries"}</div>}
-                  {r.error && <div className="muted" style={{ overflowWrap: "anywhere" }} title={r.error}>{r.error.length > 120 ? `${r.error.slice(0, 117)}…` : r.error}</div>}
-                  {r.cancelled_by && r.status === "cancelled" && <div className="muted">by {names.get(r.cancelled_by) ?? "staff"}</div>}
-                  {r.retried_by && r.retried_at && <div className="muted">Retried by {names.get(r.retried_by) ?? "staff"}, {fmtDateTime(r.retried_at)}</div>}
+                <td className="wrap">
+                  <Chip tone={MESSAGE_STATUS_TONE[r.status] ?? "neutral"}>{MESSAGE_STATUS_LABEL[r.status] ?? humanize(r.status)}</Chip>
+                  {r.attempts > 0 && <span className="sub">{r.attempts} {r.attempts === 1 ? "try" : "tries"}</span>}
+                  {r.error && <span className="sub break-all" title={r.error}>{r.error.length > 120 ? `${r.error.slice(0, 117)}…` : r.error}</span>}
+                  {r.cancelled_by && r.status === "cancelled" && <span className="sub">by {names.get(r.cancelled_by) ?? "staff"}</span>}
+                  {r.retried_by && r.retried_at && <span className="sub">Retried by {names.get(r.retried_by) ?? "staff"}, {fmtDateTime(r.retried_at)}</span>}
                 </td>
                 {canSend && (
-                  <td className="small" style={{ whiteSpace: "nowrap" }}>
+                  <td className="shrink">
+                    <div className="actions">
                     {(r.status === "failed" || r.status === "cancelled") && (
                       <ActionForm action={retryMessage} confirm={`Send "${p.subject}" to ${r.full_name || "this renter"} again?`}>
                         <input type="hidden" name="id" value={r.id} />
-                        <Submit className="btn btn-secondary btn-sm">Retry</Submit>
+                        <Submit variant="secondary" size="sm" icon={RotateCcw}>Retry</Submit>
                       </ActionForm>
                     )}
                     {r.status === "queued" && (
                       <ActionForm action={cancelMessage} confirm={`Cancel "${p.subject}"? It won’t be sent.`}>
                         <input type="hidden" name="id" value={r.id} />
-                        <Submit className="btn btn-quiet btn-sm">Cancel</Submit>
+                        <Submit variant="danger-ghost" size="sm">Cancel</Submit>
                       </ActionForm>
                     )}
+                    </div>
                   </td>
                 )}
               </tr>
@@ -97,7 +101,7 @@ export function MessageList({ rows, canSend, names, showBooking = true }: {
 export function SendNow({ label = "Send now" }: { label?: string }) {
   return (
     <ActionForm action={sendNow} className="grid gap-1">
-      <div className="actions"><Submit className="btn btn-secondary btn-sm" title="Send everything that's due now, instead of waiting for the next run">{label}</Submit></div>
+      <div className="actions"><Submit variant="secondary" size="sm" icon={Send} title="Send everything that's due now, instead of waiting for the next run">{label}</Submit></div>
     </ActionForm>
   );
 }

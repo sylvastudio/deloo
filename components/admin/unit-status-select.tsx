@@ -1,8 +1,6 @@
 "use client";
 import { useState } from "react";
-import { UNIT_STATUSES, type UnitStatus } from "@/lib/admin/status";
-
-const LABEL: Record<UnitStatus, string> = { active: "Active", repair: "In repair", quarantine: "Quarantine", retired: "Retired", lost: "Lost" };
+import { UNIT_STATUS_LABEL as LABEL, UNIT_STATUSES, type UnitStatus } from "@/lib/admin/status";
 
 /**
  * Unit status with a warning when a unit that still has upcoming bookings leaves `active` (PRD §5.6):
@@ -25,7 +23,7 @@ export function UnitStatusSelect({ current, futureBookings, canRetire, disabled 
           : "Retire this unit? It can’t be booked again."} />
       )}
       {current === "active" && v !== "active" && futureBookings > 0 && (
-        <p className="warn-box" role="alert">
+        <p className="callout warn" role="alert">
           {futureBookings} upcoming booking{futureBookings === 1 ? " uses" : "s use"} this unit. They stay booked on it: open each booking and swap to a free unit, or call the renter.
         </p>
       )}
