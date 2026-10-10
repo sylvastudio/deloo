@@ -1,121 +1,316 @@
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { answerChips } from '@/lib/answers-text';
-import { DELIVERY_KOBO, highestTier, lockedTechnician, partsFromResult, setPendingBooking } from '@/lib/booking-draft';
-import type { DemoVendorPart } from '@/lib/demo-bookings';
-import { naira } from '@/lib/format';
-import { usePlan } from '@/lib/plan';
-import { applyChoices, usePlanResult } from '@/lib/plan-result';
+import { draftKey, getCheckout, saveCheckout, useBookingDraft, type DraftLine } from '@/lib/booking-draft';
+import {
+  cachedSettings, createHold, GearTaken, getActiveHold, isOffline, itemCalendar, loadSettings, plain, quoteBooking, requestCancellation,
+  setActiveHold, type ActiveHold, type Delivery, type Quote, type QuoteLine, type Settings,
+} from '@/lib/bookings';
+import { daysText, lagosTime, naira, rangeLabel, whatsappUrl } from '@/lib/format';
 import { useSession } from '@/lib/session';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Button } from '@/ui/button';
 import { Badge, Chip } from '@/ui/chip';
-import { Notice, Skeleton } from '@/ui/feedback';
-import { Icon } from '@/ui/icon';
+import { addDays, dayCount, DateRangeCalendar, lagosToday } from '@/ui/date-range';
+import { EmptyState, Notice, Skeleton } from '@/ui/feedback';
+import { Field } from '@/ui/layout';
+import { Segmented } from '@/ui/segmented';
 import { Text } from '@/ui/text';
 import { TopBar } from '@/ui/top-bar';
 
-const TIER_NAME = ['', 'small gear', 'sound systems and cameras', 'LED walls and full production'];
+const HORIZON = 90;
 
-/** R15 Review booking (with the R16 verification gate inline). One booking per owner. */
+/**
+ * R-30 Review booking. Prices come from quote_booking (server) every time something changes; "Pay"
+ * holds the gear with create_hold and moves to R-31. The draft stays saved whatever happens here.
+ */
 export default function Review() {
   const c = useColors();
-  const { draft } = usePlan();
+  const { draft, update } = useBookingDraft();
   const { profile } = useSession();
-  const { matches } = usePlanResult(draft);
-  const result = useMemo(() => (matches ? applyChoices(matches[draft.level], draft) : null), [matches, draft]);
-  const [parts, setParts] = useState<DemoVendorPart[] | null>(null);
-  useEffect(() => { if (result && !parts) setParts(partsFromResult(result)); }, [result, parts]);
+  const saved = useMemo(getCheckout, []);
+  const [settings, setSettings] = useState<Settings | null>(cachedSettings);
+  const [delivery, setDelivery] = useState<Delivery>(saved?.delivery ?? 'delivery');
+  const [zoneId, setZoneId] = useState<string | undefined>(saved?.zoneId);
+  const [address, setAddress] = useState(saved?.address ?? '');
+  const [phone, setPhone] = useState(saved?.phone || profile?.phone || '');
+  const [quote, setQuote] = useState<Quote | null>(null);
+  const [quoteError, setQuoteError] = useState('');
+  const [offline, setOffline] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState('');
+  const [taken, setTaken] = useState(false);
+  const [pickDays, setPickDays] = useState(!draft?.first);
+  const [hold, setHold] = useState<ActiveHold | null>(getActiveHold);
+  const [touched, setTouched] = useState(false);
+  const seq = useRef(0);
 
-  const tier = result ? highestTier(result) : 1;
-  const verified = (profile?.trust_level ?? 0) >= tier;
-  const [demoVerified, setDemoVerified] = useState(false);
-  const deliveryKobo = (parts ?? []).filter((p) => p.delivery === 'delivery').length * DELIVERY_KOBO;
-  const total = result ? result.totalKobo + deliveryKobo : 0;
-  const missing = result?.lines.filter((l) => !l.removed && l.chosen.reduce((n, o) => n + o.units, 0) < l.line.qty).length ?? 0;
+  const key = draft ? draftKey(draft) : '';
+  const held = !!hold && hold.draftKey === key && Date.parse(hold.hold_expires_at) > Date.now();
 
-  function setPart(id: string, patch: Partial<DemoVendorPart>) {
-    setParts((ps) => ps?.map((p) => (p.vendorId === id ? { ...p, ...patch } : p)) ?? null);
+  useEffect(() => {
+    loadSettings().then((s) => { setSettings(s); setOffline(false); }).catch((e) => { if (isOffline(e)) setOffline(true); });
+  }, []);
+  // Settings arrive: default to the first zone so the price is complete.
+  useEffect(() => {
+    if (settings && delivery === 'delivery' && (!zoneId || !settings.zones.some((z) => z.id === zoneId))) setZoneId(settings.zones[0]?.id);
+  }, [settings, delivery, zoneId]);
+
+  // An old unpaid hold for a different basket would block the same gear: let it go (never one being paid).
+  useEffect(() => {
+    if (key && hold && hold.draftKey !== key && !hold.reference) {
+      requestCancellation(hold.booking_id, 'Changed before paying').catch(() => {});
+      setActiveHold(null);
+      setHold(null);
+    }
+  }, [hold, key]);
+
+  const runQuote = useCallback(async () => {
+    if (!draft?.lines.length || !draft.first || !draft.last) { setQuote(null); return; }
+    const mine = ++seq.current;
+    setQuoteError('');
+    try {
+      const q = await quoteBooking(draft.lines, draft.first, draft.last, delivery, zoneId);
+      if (mine !== seq.current) return;
+      setQuote(q); setOffline(false);
+    } catch (e) {
+      if (mine !== seq.current) return;
+      setOffline(isOffline(e));
+      setQuoteError(plain(e, 'Couldn’t price your booking.'));
+    }
+  }, [draft?.lines, draft?.first, draft?.last, delivery, zoneId]);
+  useEffect(() => { runQuote(); }, [runQuote]);
+
+  if (!draft || draft.lines.length === 0) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}><TopBar title="Review booking" />
+        <EmptyState icon="calendar" title="Nothing to book yet" body="Pick gear and your days first." action="Explore gear" onAction={() => router.replace('/explore')} />
+      </SafeAreaView>
+    );
   }
-  function toPay() {
-    if (!result || !parts) return;
-    setPendingBooking({
-      title: answerChips(draft.answers).slice(0, 2).map((x) => x.label).join(' · ') || 'Your event',
-      startsAt: typeof draft.answers.startsAt === 'string' ? draft.answers.startsAt : undefined,
-      endsAt: typeof draft.answers.endsAt === 'string' ? draft.answers.endsAt : undefined,
-      area: typeof draft.answers.area === 'string' ? draft.answers.area : undefined,
-      parts, deliveryKobo, protectionKobo: result.protectionKobo, totalKobo: total, holdUntil: Date.now() + 30 * 60_000,
-    });
-    router.push('/book/pay');
+
+  // While our own hold is live, the quote counts it as taken: ignore "not free" then.
+  const problems = (quote?.problems ?? []).filter((p) => !(held && p === 'not_free'));
+  const quoteLines = new Map((quote?.lines ?? []).map((l) => [l.item_id, l]));
+  const gone = quote ? draft.lines.filter((l) => !quoteLines.has(l.itemId)) : [];
+  const short = (quote?.lines ?? []).filter((l) => !l.ok && !held);
+  const phoneOk = phone.replace(/\D/g, '').length >= 10;
+  const addressOk = delivery === 'pickup' || address.trim().length >= 5;
+  const ready = !!quote && problems.length === 0 && phoneOk && addressOk && !offline;
+  const n = draft.first && draft.last ? dayCount(draft.first, draft.last) : 0;
+  const help = settings?.support_whatsapp;
+
+  function setLines(lines: DraftLine[]) { setTaken(false); update({ lines }); }
+  function setDays(first: string, last: string) { setTaken(false); update({ first, last }); }
+
+  /** Changing anything that went into the hold lets the hold go first. */
+  async function releaseHold() {
+    if (!hold) return;
+    await requestCancellation(hold.booking_id, 'Changed before paying').catch(() => {});
+    setActiveHold(null); setHold(null);
+    runQuote();
+  }
+
+  async function pay() {
+    setTouched(true);
+    if (held && hold) { router.push(`/book/pay?booking=${hold.booking_id}`); return; }
+    if (!ready || !draft?.first || !draft.last) return;
+    setPaying(true); setPayError(''); setTaken(false);
+    saveCheckout({ delivery, zoneId, address: address.trim(), phone: phone.trim() });
+    try {
+      const h = await createHold({
+        lines: draft.lines, first: draft.first, last: draft.last, delivery, zoneId, address: address.trim(), phone: phone.trim(),
+        eventId: draft.eventId, notIncluded: draft.notIncluded,
+      });
+      const active = { ...h, draftKey: key };
+      setActiveHold(active); setHold(active);
+      router.push(`/book/pay?booking=${h.booking_id}`);
+    } catch (e) {
+      if (e instanceof GearTaken) { setTaken(true); setPickDays(true); runQuote(); }
+      else setPayError(plain(e, 'Couldn’t hold your gear. Try again.'));
+    } finally {
+      setPaying(false);
+    }
   }
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: c.paper }}>
       <TopBar title="Review booking" />
-      <ScrollView contentContainerStyle={styles.content}>
-        <Badge label="Demo: no real money moves" status="limited" />
-        {!result || !parts ? <><Skeleton style={{ height: 120 }} /><Skeleton style={{ height: 120 }} /></> : <>
-          {missing ? <Notice tone="warning">{missing === 1 ? 'One item isn’t free' : `${missing} items aren’t free`}. You’ll book what is, and can find the rest later.</Notice> : null}
-          {parts.map((p) => {
-            const locked = lockedTechnician(result, p.vendorId);
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {offline ? <Notice tone="warning">You’re offline. Prices and availability are checked live, so connect to book.</Notice> : null}
+        {taken ? (
+          <Notice tone="problem">
+            <View style={{ gap: space.xs }}>
+              <Text variant="bodyStrong" tone="red">Someone just booked this. Pick other days</Text>
+              <Text variant="caption">Your list is saved. Change your days below, or take fewer.</Text>
+            </View>
+          </Notice>
+        ) : null}
+        {held && hold ? (
+          <Notice tone="tip" icon="clock">
+            <View style={{ gap: space.xs }}>
+              <Text variant="caption">{`We’re holding your gear until ${lagosTime(hold.hold_expires_at)}. Pay to keep it.`}</Text>
+              <Text variant="caption" tone="lagoon" onPress={releaseHold} accessibilityRole="button">Change details (lets the hold go)</Text>
+            </View>
+          </Notice>
+        ) : null}
+
+        {/* Days */}
+        <View style={[styles.card, { backgroundColor: c.surface, borderColor: problems.includes('starts_too_soon') || short.length ? c.red : c.line }]}>
+          <View style={styles.row}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text variant="label" tone="slate">YOUR DAYS</Text>
+              <Text variant="bodyStrong">{draft.first && draft.last ? `${rangeLabel(draft.first, draft.last)} · ${daysText(n)}` : 'Choose your days'}</Text>
+            </View>
+            {!held ? <Button kind="quiet" title={pickDays ? 'Done' : 'Change'} onPress={() => setPickDays(!pickDays)} /> : null}
+          </View>
+          {problems.includes('starts_too_soon') ? <Text variant="caption" tone="red">Bookings start from tomorrow. Pick new days.</Text> : null}
+          {pickDays && !held ? <DaysPicker lines={draft.lines} first={draft.first} last={draft.last} onChange={setDays} /> : null}
+        </View>
+
+        {/* Items */}
+        <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
+          <Text variant="label" tone="slate">YOUR GEAR</Text>
+          {draft.lines.map((l) => {
+            const q = quoteLines.get(l.itemId);
             return (
-              <View key={p.vendorId} style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
-                <View style={styles.vendorRow}>
-                  <Icon name="shield" size={18} color={c.green} />
-                  <Text variant="bodyStrong" style={{ flex: 1 }}>{p.vendorName}</Text>
-                  <Text variant="label">{naira(p.rentalKobo, true)}</Text>
-                </View>
-                {p.items.map((it) => <Text key={it.title} variant="caption" tone="slate">• {it.title}</Text>)}
-                <View style={styles.chips}>
-                  <Chip label="Delivery" selected={p.delivery === 'delivery'} onPress={() => setPart(p.vendorId, { delivery: 'delivery' })} />
-                  <Chip label="I’ll pick up" selected={p.delivery === 'pickup'} onPress={() => setPart(p.vendorId, { delivery: 'pickup' })} />
-                </View>
-                {p.delivery === 'delivery' ? <Text variant="caption" tone="slate">Delivery about {naira(DELIVERY_KOBO)}, confirmed by the owner.</Text> : null}
-                <View style={styles.switchRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text>Technician to set up and run it</Text>
-                    <Text variant="caption" tone="slate">{locked ? 'Required: this gear always comes with the owner’s technician.' : 'The owner’s staff. Price confirmed by the owner.'}</Text>
-                  </View>
-                  <Switch value={p.technician || locked} disabled={locked} onValueChange={(v) => setPart(p.vendorId, { technician: v })} trackColor={{ true: c.lagoon }} />
-                </View>
-              </View>
+              <LineRow key={l.itemId} line={l} q={q} gone={gone.includes(l)} held={held} days={n}
+                onRemove={draft.lines.length > 1 && !held ? () => setLines(draft.lines.filter((x) => x.itemId !== l.itemId)) : undefined}
+                onFewer={q && !q.ok && q.free > 0 && !held ? () => setLines(draft.lines.map((x) => (x.itemId === l.itemId ? { ...x, qty: q.free } : x))) : undefined}
+                onDays={() => setPickDays(true)} />
             );
           })}
-
-          <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
-            <Row label="Rental" value={naira(result.rentalKobo)} />
-            {deliveryKobo ? <Row label="Delivery" value={naira(deliveryKobo)} /> : null}
-            <Row label="Deloo Protection" value={naira(result.protectionKobo)} hint="Covers repairs beyond the deposit, up to a limit." />
-            <Row label="Refundable deposit" value={naira(result.depositKobo)} hint="Back within 24 hours of a clean return." />
-            <View style={[styles.divider, { backgroundColor: c.line }]} />
-            <Row label="Total today" value={naira(total)} strong />
-            <Text variant="caption" tone="slate">Free cancellation until 72 hours before your event.</Text>
-          </View>
-
-          {!verified && !demoVerified ? (
-            <View style={[styles.card, { backgroundColor: c.marigoldTint, borderColor: c.marigoldTint }]}>
-              <Text variant="bodyStrong">Verify your identity first</Text>
-              <Text variant="caption">To rent {TIER_NAME[tier]}, we check your NIN or BVN and take a quick selfie. It takes about 2 minutes and protects you and the owner.</Text>
-              <Button kind="secondary" title="Continue in demo (skip check)" onPress={() => setDemoVerified(true)} />
+          {draft.notIncluded?.length ? (
+            <View style={[styles.note, { backgroundColor: c.marigoldTint }]}>
+              <Text variant="caption">Not included: {draft.notIncluded.map((x) => `${x.label}${x.reason === 'not_stocked' ? ' (we don’t stock it yet)' : ' (booked on your dates)'}`).join(', ')}.</Text>
             </View>
           ) : null}
-        </>}
+        </View>
+
+        {/* Delivery or pickup */}
+        <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
+          <Text variant="label" tone="slate">DELIVERY OR PICKUP</Text>
+          <View pointerEvents={held ? 'none' : 'auto'} style={{ gap: space.md, opacity: held ? 0.6 : 1 }}>
+            <Segmented label="Delivery or pickup" value={delivery} onChange={setDelivery}
+              options={[{ value: 'delivery', label: 'Deliver to me' }, { value: 'pickup', label: 'I’ll pick up' }]} />
+            {delivery === 'delivery' ? <>
+              {!settings ? <Skeleton style={{ height: 40 }} /> : (
+                <View style={styles.chips}>
+                  {settings.zones.map((z) => <Chip key={z.id} label={z.name} selected={zoneId === z.id} onPress={() => setZoneId(z.id)} />)}
+                </View>
+              )}
+              {settings?.zones.find((z) => z.id === zoneId) ? (
+                <Text variant="caption" tone="slate">{settings.zones.find((z) => z.id === zoneId)!.areas.join(', ')}. We drop it off and collect it.</Text>
+              ) : null}
+              {problems.includes('choose_zone') ? <Text variant="caption" tone="red">Choose your area so we can price delivery.</Text> : null}
+              <Field label="Delivery address" value={address} onChangeText={setAddress} multiline autoComplete="street-address"
+                placeholder="House number, street, area. Add a landmark" style={{ minHeight: 76, paddingTop: space.md, textAlignVertical: 'top' }}
+                error={touched && !addressOk ? 'Add the address we should deliver to.' : undefined} />
+            </> : (
+              <Text variant="caption" tone="slate">
+                {settings?.pickup_address ? `Pick up from ${settings.pickup_address}. ` : 'We’ll send our pickup address on WhatsApp. '}
+                Bring a valid ID. Return it to the same place the morning after your last day.
+              </Text>
+            )}
+            <Field label="Phone for the rider" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel"
+              error={touched && !phoneOk ? 'Add a phone number we can call or WhatsApp.' : undefined} />
+          </View>
+        </View>
+
+        {/* Money */}
+        {quoteError && !quote ? (
+          <Notice tone="problem"><Text variant="caption" tone="red">{quoteError} <Text variant="caption" tone="lagoon" onPress={runQuote}>Try again</Text></Text></Notice>
+        ) : !draft.first ? null : !quote ? (
+          <Skeleton style={{ height: 180 }} />
+        ) : (
+          <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
+            <Money label={`Rental · ${daysText(quote.days)}`} value={naira(quote.rental_kobo)} />
+            <Money label={`Deloo Protection (${Math.round(quote.protection_rate * 100)}%)`} value={naira(quote.protection_kobo)}
+              hint="Covers accidental damage beyond normal wear, so a small knock doesn’t cost you the deposit." />
+            <Money label={delivery === 'delivery' ? 'Delivery and collection' : 'Pickup'} value={delivery === 'delivery' ? naira(quote.delivery_kobo) : 'Free'} />
+            <View style={[styles.divider, { backgroundColor: c.line }]} />
+            <Money label="Refundable deposit" value={naira(quote.deposit_kobo)} hint="Back to you within 48 hours after we check the gear." />
+            <View style={[styles.divider, { backgroundColor: c.line }]} />
+            <Money label="Total today" value={naira(quote.total_kobo)} strong />
+            <Text variant="caption" tone="slate">Free cancellation up to 72 hours before your first day. By paying you agree to Deloo’s rental terms.</Text>
+          </View>
+        )}
+        {payError ? <Notice tone="problem">{payError}</Notice> : null}
+        {help ? (
+          <Pressable onPress={() => Linking.openURL(whatsappUrl(help, 'Hi Deloo, I have a question about a booking')).catch(() => {})} accessibilityRole="link" hitSlop={8}>
+            <Text variant="label" tone="lagoon">Questions? Chat with us on WhatsApp</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
-      <View style={[styles.footer, { borderTopColor: c.line }]}>
-        <Button title="Continue to pay" disabled={!result || !parts || (!verified && !demoVerified) || total === 0} onPress={toPay} />
+      <View style={[styles.footer, { borderTopColor: c.line, backgroundColor: c.paper }]}>
+        <Button
+          title={held && hold ? `Continue to pay ${naira(hold.total_kobo)}` : quote ? `Pay ${naira(quote.total_kobo)}` : 'Pay'}
+          loading={paying} disabled={held ? false : !quote || problems.length > 0 || offline} onPress={pay} />
       </View>
     </SafeAreaView>
   );
 }
 
-function Row({ label, value, hint, strong }: { label: string; value: string; hint?: string; strong?: boolean }) {
+function LineRow({ line, q, gone, held, days, onRemove, onFewer, onDays }: {
+  line: DraftLine; q?: QuoteLine; gone: boolean; held: boolean; days: number; onRemove?: () => void; onFewer?: () => void; onDays: () => void;
+}) {
+  return (
+    <View style={{ gap: 4, paddingVertical: space.xs }}>
+      <View style={styles.row}>
+        <Text variant="bodyStrong" style={{ flex: 1 }}>{line.qty} × {q?.name ?? line.name}</Text>
+        {q ? <Text variant="bodyStrong">{naira(q.rental_kobo)}</Text> : null}
+      </View>
+      {q ? <Text variant="caption" tone="slate">{naira(q.day_rate_kobo)} a day{line.qty > 1 ? ' each' : ''}{days ? ` × ${daysText(days)}` : ''} · deposit {naira(q.deposit_kobo)}</Text> : null}
+      {gone ? <Badge label="No longer available" status="unavailable" />
+        : q && !q.ok && !held ? <Badge label={q.free === 0 ? 'Not free on these days' : `Only ${q.free} free on these days`} status="unavailable" /> : null}
+      {(gone || (q && !q.ok && !held)) ? (
+        <View style={styles.actions}>
+          {!gone ? <Button kind="quiet" title="Change days" onPress={onDays} /> : null}
+          {onFewer && q ? <Button kind="quiet" title={`Book ${q.free}`} onPress={onFewer} /> : null}
+          {onRemove ? <Button kind="quiet" title="Remove" onPress={onRemove} /> : null}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/** The calendar for the whole basket: a day is out if any item has fewer units free than needed. */
+function DaysPicker({ lines, first, last, onChange }: { lines: DraftLine[]; first?: string; last?: string; onChange: (a: string, b: string) => void }) {
+  const [blocked, setBlocked] = useState<{ unavailable: Set<string>; limited: Set<string> } | null>(null);
+  const [error, setError] = useState('');
+  const sig = lines.map((l) => `${l.itemId}x${l.qty}`).join(',');
+
+  const load = useCallback(async () => {
+    setError('');
+    const today = lagosToday();
+    try {
+      const cals = await Promise.all(lines.map((l) => itemCalendar(l.itemId, addDays(today, 1), addDays(today, HORIZON)).then((days) => ({ l, days }))));
+      const unavailable = new Set<string>(), limited = new Set<string>();
+      for (const { l, days } of cals) for (const d of days) {
+        if (d.free < l.qty) unavailable.add(d.day);
+        else if (d.free < d.total) limited.add(d.day);
+      }
+      setBlocked({ unavailable, limited });
+    } catch (e) { setError(isOffline(e) ? 'You’re offline. Days are checked live.' : 'Couldn’t load the calendar.'); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sig]);
+  useEffect(() => { load(); }, [load]);
+
+  if (error) return <Text variant="caption" tone="red">{error} <Text variant="caption" tone="lagoon" onPress={load}>Try again</Text></Text>;
+  if (!blocked) return <Skeleton style={{ height: 280 }} />;
+  return (
+    <DateRangeCalendar first={first} last={last} unavailable={blocked.unavailable} limited={blocked.limited}
+      months={4} maxDate={addDays(lagosToday(), HORIZON)} onChange={onChange} />
+  );
+}
+
+function Money({ label, value, hint, strong }: { label: string; value: string; hint?: string; strong?: boolean }) {
   return (
     <View style={{ gap: 2 }}>
-      <View style={styles.row}>
+      <View style={[styles.row, { alignItems: 'baseline' }]}>
         <Text variant={strong ? 'bodyStrong' : 'body'} style={{ flex: 1 }}>{label}</Text>
         <Text variant={strong ? 'heading' : 'bodyStrong'}>{value}</Text>
       </View>
@@ -127,10 +322,10 @@ function Row({ label, value, hint, strong }: { label: string; value: string; hin
 const styles = StyleSheet.create({
   content: { padding: space.xl, gap: space.md, paddingBottom: space.xxxl },
   card: { borderRadius: radius.lg, borderWidth: 1, padding: space.lg, gap: space.sm },
-  vendorRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  chips: { flexDirection: 'row', gap: space.sm, marginTop: space.xs },
-  switchRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 48 },
-  row: { flexDirection: 'row', alignItems: 'baseline', gap: space.md },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', marginLeft: -space.xl },
+  note: { borderRadius: radius.md, padding: space.md },
   divider: { height: StyleSheet.hairlineWidth, marginVertical: space.xs },
   footer: { paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: space.lg, borderTopWidth: StyleSheet.hairlineWidth },
 });

@@ -1,93 +1,296 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, AppState, Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { getPendingBooking, setPendingBooking } from '@/lib/booking-draft';
-import { addDemoBooking } from '@/lib/demo-bookings';
-import { naira } from '@/lib/format';
+import {
+  bookingDays, bookingStatus, cachedSettings, getActiveHold, getBooking, IN_FLIGHT, isOffline, loadSettings, PAID, PAY_RETURN, plain,
+  setActiveHold, startPayment, verifyPayment, type BookingDetail,
+} from '@/lib/bookings';
+import { daysText, naira, rangeLabel, whatsappUrl } from '@/lib/format';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
-import { Badge, Chip } from '@/ui/chip';
-import { EmptyState, Notice } from '@/ui/feedback';
+import { Button } from '@/ui/button';
+import { Badge } from '@/ui/chip';
+import { EmptyState, Notice, Skeleton } from '@/ui/feedback';
 import { Icon } from '@/ui/icon';
 import { SlideToConfirm } from '@/ui/slide-to-confirm';
 import { Text } from '@/ui/text';
 import { TopBar } from '@/ui/top-bar';
 
-const METHODS = [['transfer', 'Bank transfer'], ['card', 'Card'], ['ussd', 'USSD']] as const;
+type Phase = 'loading' | 'ready' | 'opening' | 'checking' | 'pending' | 'unfinished' | 'ended' | 'refund' | 'mismatch' | 'missing' | 'error';
 
-/** R17 Pay, with slide to pay at the bottom (R18 success follows). Demo: no Paystack call yet. */
+const POLL_MS = 5000;
+const POLL_FOR_MS = 10 * 60_000;
+
+/**
+ * R-31 Pay and R-32 Payment pending. The hold is already made (Review); this opens Paystack in an
+ * in-app browser, then asks the server (verify) what happened. Success is only shown once the
+ * booking row says 'confirmed' (the webhook or verify confirms it, never the app).
+ */
 export default function Pay() {
   const c = useColors();
-  const pending = getPendingBooking();
-  const [method, setMethod] = useState<(typeof METHODS)[number][0]>('card');
-  const [left, setLeft] = useState(() => (pending ? pending.holdUntil - Date.now() : 0));
-  useEffect(() => {
-    const t = setInterval(() => setLeft(pending ? pending.holdUntil - Date.now() : 0), 1000);
-    return () => clearInterval(t);
-  }, [pending]);
+  const params = useLocalSearchParams<{ booking?: string; reference?: string }>();
+  const bookingId = params.booking ?? getActiveHold()?.booking_id;
+  const [b, setB] = useState<BookingDetail | null>(null);
+  const [phase, setPhase] = useState<Phase>('loading');
+  const [message, setMessage] = useState('');
+  const [left, setLeft] = useState(0);
+  const [attempt, setAttempt] = useState(0);
+  const [stillWaiting, setStillWaiting] = useState(false);
+  const reference = useRef<string | undefined>(params.reference ?? getActiveHold()?.reference);
+  const pollUntil = useRef(0);
+  const help = cachedSettings()?.support_whatsapp;
+  useEffect(() => { loadSettings().catch(() => {}); }, []);
 
-  if (!pending) {
+  const done = useCallback(() => {
+    setActiveHold(null);
+    router.replace(`/book/success?booking=${bookingId}`);
+  }, [bookingId]);
+
+  /** Reads what the server says after checkout and picks the screen state. */
+  const check = useCallback(async (quiet = false) => {
+    const ref = reference.current;
+    if (!bookingId) return;
+    if (!ref) { setPhase('ready'); return; }
+    if (!quiet) setPhase('checking');
+    try {
+      const v = await verifyPayment(ref);
+      if (v.booking_status && PAID.includes(v.booking_status)) return done();
+      if (v.needs_refund) { setActiveHold(null); return setPhase('refund'); }
+      if (v.error === 'amount_mismatch') return setPhase('mismatch');
+      if (v.paystack_status && IN_FLIGHT.includes(v.paystack_status)) {
+        pollUntil.current = Date.now() + POLL_FOR_MS; setStillWaiting(false);
+        return setPhase('pending');
+      }
+      if (v.booking_status === 'expired' || v.booking_status === 'cancelled') return setPhase('ended');
+      setMessage(''); setPhase('unfinished');
+    } catch (e) {
+      setMessage(isOffline(e) ? 'You’re offline, so we couldn’t check your payment. Connect and tap Check again.' : plain(e, 'We couldn’t check your payment yet.'));
+      setPhase('unfinished');
+    }
+  }, [bookingId, done]);
+
+  // First load: the booking, and if a payment was already started (app closed mid-checkout), check it.
+  const load = useCallback(async () => {
+    if (!bookingId) { setPhase('missing'); return; }
+    try {
+      const row = await getBooking(bookingId);
+      if (!row) { setPhase('missing'); return; }
+      setB(row);
+      if (PAID.includes(row.status)) return done();
+      if (row.needs_refund) return setPhase('refund');
+      const started = row.payments.filter((p) => p.status === 'initialized' || p.status === 'success').sort((x, y) => y.created_at.localeCompare(x.created_at))[0];
+      if (!reference.current && started) reference.current = started.reference;
+      if (reference.current) return check();
+      setPhase(row.status === 'hold' && row.hold_expires_at && Date.parse(row.hold_expires_at) > Date.now() ? 'ready' : 'ended');
+    } catch (e) {
+      setMessage(plain(e, 'Couldn’t load your booking.'));
+      setPhase('error');
+    }
+  }, [bookingId, check, done]);
+  useEffect(() => { load(); }, [load]);
+
+  // Hold countdown.
+  useEffect(() => {
+    const until = b?.hold_expires_at ? Date.parse(b.hold_expires_at) : 0;
+    const tick = () => setLeft(until - Date.now());
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [b?.hold_expires_at]);
+  useEffect(() => {
+    if (b && left <= 0 && (phase === 'ready' || phase === 'unfinished')) setPhase('ended');
+  }, [left, phase, b]);
+
+  // Transfer in flight: watch the booking row every 5 s for a while (the webhook confirms it).
+  useEffect(() => {
+    if (phase !== 'pending' || !bookingId) return;
+    const t = setInterval(async () => {
+      if (Date.now() > pollUntil.current) { setStillWaiting(true); clearInterval(t); return; }
+      try {
+        const s = await bookingStatus(bookingId);
+        if (s && PAID.includes(s.status)) { clearInterval(t); done(); }
+        else if (s?.needs_refund) { clearInterval(t); setActiveHold(null); setPhase('refund'); }
+      } catch { /* offline: keep trying */ }
+    }, POLL_MS);
+    return () => clearInterval(t);
+  }, [phase, bookingId, done]);
+
+  // Back in the app (from a banking app, or after the browser was left open): check again quietly.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active' && (phase === 'unfinished' || phase === 'pending') && reference.current) check(true);
+    });
+    return () => sub.remove();
+  }, [phase, check]);
+
+  async function pay() {
+    if (!bookingId) return;
+    setPhase('opening'); setMessage('');
+    try {
+      const { authorization_url, reference: ref } = await startPayment(bookingId);
+      reference.current = ref;
+      const active = getActiveHold();
+      if (active?.booking_id === bookingId) setActiveHold({ ...active, reference: ref });
+      await WebBrowser.openAuthSessionAsync(authorization_url, PAY_RETURN);
+      // Whatever the browser says (paid, closed, switched away), the server decides.
+      await check();
+    } catch (e) {
+      const msg = plain(e, 'Couldn’t open the payment page. Try again.');
+      setMessage(msg);
+      setPhase(/hold has ended/i.test(msg) ? 'ended' : 'unfinished');
+    } finally {
+      setAttempt((n) => n + 1);
+    }
+  }
+
+  function startOver() {
+    setActiveHold(null);
+    router.replace('/book/review');
+  }
+
+  if (phase === 'missing' || phase === 'error') {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}>
         <TopBar title="Pay" />
-        <EmptyState icon="clock" title="Your hold has ended" body="Go back to your setup to check it’s still free." action="Back to my setup" onAction={() => router.replace('/plan/setup')} />
+        {phase === 'missing'
+          ? <EmptyState icon="clock" title="Nothing to pay for" body="Your hold may have ended. Check your gear is still free." action="Back to review" onAction={startOver} />
+          : <EmptyState icon="warning" title="Couldn’t load your booking" body={message} action="Try again" onAction={() => { setPhase('loading'); load(); }} />}
       </SafeAreaView>
     );
   }
-  const expired = left <= 0;
-  const mins = Math.max(0, Math.floor(left / 60000)), secs = Math.max(0, Math.floor((left % 60000) / 1000));
-  const rental = pending.parts.reduce((s, p) => s + p.rentalKobo, 0);
-  const deposit = pending.parts.reduce((s, p) => s + p.depositKobo, 0);
 
-  function pay() {
-    if (!pending) return;
-    const booking = addDemoBooking({
-      title: pending.title, startsAt: pending.startsAt, endsAt: pending.endsAt, area: pending.area, parts: pending.parts,
-      deliveryKobo: pending.deliveryKobo, protectionKobo: pending.protectionKobo, totalKobo: pending.totalKobo,
-    });
-    setPendingBooking(null);
-    router.replace(`/book/success?id=${booking.id}`);
-  }
+  const mins = Math.max(0, Math.floor(left / 60000)), secs = Math.max(0, Math.floor((left % 60000) / 1000));
+  const clock = `${mins}:${String(secs).padStart(2, '0')}`;
+  const days = b ? bookingDays(b) : null;
+  const holdBadge = !b || phase === 'refund' ? null
+    : left <= 0 ? <Badge label="Hold ended" status="unavailable" />
+    : <Badge label={`Held ${clock}`} status={mins < 5 ? 'limited' : 'neutral'} />;
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: c.paper }}>
-      <TopBar title="Pay" right={<Badge label={expired ? 'Hold ended' : `Held ${mins}:${String(secs).padStart(2, '0')}`} status={expired ? 'unavailable' : mins < 5 ? 'limited' : 'neutral'} />} />
+      <TopBar title="Pay" right={holdBadge} />
       <ScrollView contentContainerStyle={styles.content}>
-        <Badge label="Demo: no real money moves" status="limited" />
-        <View style={{ gap: 2 }}>
-          <Text variant="caption" tone="slate">To pay</Text>
-          <Text variant="hero">{naira(pending.totalKobo)}</Text>
-        </View>
-        <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
-          <Text variant="bodyStrong">Rental and fees</Text>
-          <Text variant="caption" tone="slate">{naira(rental)} rental · {naira(pending.protectionKobo)} protection{pending.deliveryKobo ? ` · ${naira(pending.deliveryKobo)} delivery` : ''}</Text>
-          <Text variant="caption" tone="slate">Goes to the owners only after they confirm. Until then, it’s safe with Deloo.</Text>
-        </View>
-        <View style={[styles.card, { backgroundColor: c.greenTint, borderColor: c.greenTint }]}>
-          <View style={styles.row}><Icon name="shield" size={18} color={c.greenInk} /><Text variant="bodyStrong" style={{ color: c.greenInk }}>Deposit {naira(deposit)}</Text></View>
-          <Text variant="caption">Comes back to you within 24 hours of a clean return.</Text>
-          <View style={[styles.track, { backgroundColor: c.surface }]}><View style={[styles.fill, { backgroundColor: c.green }]} /></View>
-          <Text variant="caption" tone="slate">Paid → held during your event → returned</Text>
-        </View>
-        <Text variant="label">Pay with</Text>
-        <View style={styles.row}>{METHODS.map(([k, l]) => <Chip key={k} label={l} selected={method === k} onPress={() => setMethod(k)} />)}</View>
-        {method === 'card' ? <Text variant="caption" tone="slate">Card is quickest. It also covers repair costs if gear is damaged, so you don’t need a bigger deposit.</Text> : null}
-        {expired ? <Notice tone="problem">Your 30-minute hold ended. Go back to check the gear is still free.</Notice> : null}
+        {!b ? <><Skeleton style={{ height: 60, width: '60%' }} /><Skeleton style={{ height: 120 }} /></> : <>
+          <View style={{ gap: 2 }}>
+            <Text variant="caption" tone="slate">{b.ref ? `Booking ${b.ref}` : 'To pay'}</Text>
+            <Text variant="hero">{naira(b.total_kobo)}</Text>
+            {days ? <Text tone="slate">{rangeLabel(days.first, days.last)} · {daysText(b.days)}</Text> : null}
+          </View>
+
+          <PhaseCard phase={phase} clock={clock} left={left} message={message} stillWaiting={stillWaiting} help={help} bookingRef={b.ref ?? ''} />
+
+          <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
+            {b.booking_items.map((i) => <Text key={i.id} variant="caption" tone="slate">• {i.item_name}</Text>)}
+            <Text variant="caption" tone="slate">
+              {naira(b.rental_kobo)} rental · {naira(b.protection_kobo)} Deloo Protection{b.delivery_kobo ? ` · ${naira(b.delivery_kobo)} delivery and collection` : ''}
+            </Text>
+          </View>
+          <View style={[styles.card, { backgroundColor: c.greenTint, borderColor: c.greenTint }]}>
+            <View style={styles.row}><Icon name="shield" size={18} color={c.greenInk} /><Text variant="bodyStrong" style={{ color: c.greenInk }}>Deposit {naira(b.deposit_kobo)}</Text></View>
+            <Text variant="caption">Refundable. Comes back within 48 hours after we check the gear.</Text>
+          </View>
+          {phase === 'ready' || phase === 'opening' ? (
+            <Text variant="caption" tone="slate">Pay by card, bank transfer or USSD on Paystack’s secure page. Card is quickest.</Text>
+          ) : null}
+        </>}
       </ScrollView>
       <View style={[styles.footer, { borderTopColor: c.line }]}>
-        <SlideToConfirm label={`Slide to pay ${naira(pending.totalKobo)}`} disabled={expired} onConfirm={pay} />
+        {phase === 'ready' && b ? (
+          <SlideToConfirm key={attempt} label={`Slide to pay ${naira(b.total_kobo)}`} disabled={left <= 0} onConfirm={pay} />
+        ) : phase === 'opening' || phase === 'checking' || phase === 'loading' ? (
+          <Button title={phase === 'checking' ? 'Checking your payment…' : 'Opening Paystack…'} loading disabled />
+        ) : phase === 'unfinished' ? (
+          <>
+            <Button title="Resume payment" onPress={pay} disabled={left <= 0} />
+            {reference.current ? <Button kind="quiet" title="I’ve paid. Check again" onPress={() => check()} /> : null}
+          </>
+        ) : phase === 'pending' ? (
+          <Button kind={stillWaiting ? 'primary' : 'secondary'} title="Check again" onPress={() => check()} />
+        ) : phase === 'ended' ? (
+          <Button title="Check the gear is still free" onPress={startOver} />
+        ) : phase === 'refund' || phase === 'mismatch' ? (
+          <>
+            {help ? <Button title="Chat on WhatsApp" onPress={() => Linking.openURL(whatsappUrl(help, `Hi Deloo, about my payment for ${b?.ref ?? 'my booking'}`)).catch(() => {})} /> : null}
+            <Button kind="quiet" title="See my bookings" onPress={() => { setActiveHold(null); router.replace('/bookings'); }} />
+          </>
+        ) : null}
       </View>
     </SafeAreaView>
   );
+}
+
+function PhaseCard({ phase, clock, left, message, stillWaiting, help, bookingRef }: {
+  phase: Phase; clock: string; left: number; message: string; stillWaiting: boolean; help?: string; bookingRef: string;
+}) {
+  const c = useColors();
+  if (phase === 'ready' || phase === 'opening') {
+    return <Notice tone={left < 5 * 60_000 ? 'warning' : 'tip'} icon="clock">{`We’re holding your gear for ${clock}. Pay before then to keep it.`}</Notice>;
+  }
+  if (phase === 'checking') {
+    return (
+      <View style={[styles.card, styles.row, { backgroundColor: c.surface, borderColor: c.line }]}>
+        <ActivityIndicator color={c.lagoon} /><Text>Checking your payment with Paystack…</Text>
+      </View>
+    );
+  }
+  if (phase === 'pending') {
+    return (
+      <View style={[styles.card, { backgroundColor: c.lagoonTint, borderColor: c.lagoonTint }]}>
+        <View style={styles.row}>{!stillWaiting ? <ActivityIndicator color={c.lagoon} /> : <Icon name="clock" color={c.lagoon} />}<Text variant="bodyStrong">Waiting for your transfer</Text></View>
+        <Text variant="caption">
+          {stillWaiting
+            ? `Still waiting. If you’ve paid, tap Check again or send your receipt on WhatsApp${bookingRef ? ` with ${bookingRef}` : ''}.`
+            : 'Transfers usually land in under 10 minutes. You can leave this screen; your booking will show as confirmed once it arrives.'}
+        </Text>
+        {left <= 0 ? <Text variant="caption">Your hold time is up, but if the money lands and the gear is still free we’ll confirm it.</Text> : null}
+        {stillWaiting && help ? (
+          <Text variant="label" tone="lagoon" onPress={() => Linking.openURL(whatsappUrl(help, `Hi Deloo, I’ve paid for ${bookingRef || 'my booking'} by transfer`)).catch(() => {})}>Send receipt on WhatsApp</Text>
+        ) : null}
+      </View>
+    );
+  }
+  if (phase === 'unfinished') {
+    return (
+      <Notice tone="warning">
+        <View style={{ gap: 2 }}>
+          <Text variant="bodyStrong">Payment not finished</Text>
+          <Text variant="caption">{message || `Nothing was taken. Your gear is still held for ${clock}. Resume to pay by card, transfer or USSD.`}</Text>
+        </View>
+      </Notice>
+    );
+  }
+  if (phase === 'ended') {
+    return (
+      <Notice tone="problem">
+        <View style={{ gap: 2 }}>
+          <Text variant="bodyStrong" tone="red">Your hold ended</Text>
+          <Text variant="caption">{message || 'Nothing was charged. Your list is saved; check the gear is still free and try again.'}</Text>
+        </View>
+      </Notice>
+    );
+  }
+  if (phase === 'refund') {
+    return (
+      <Notice tone="problem">
+        <View style={{ gap: 2 }}>
+          <Text variant="bodyStrong" tone="red">We received your payment but the gear was taken</Text>
+          <Text variant="caption">Your money is safe. We’ll call you shortly to offer other gear or refund you in full.</Text>
+        </View>
+      </Notice>
+    );
+  }
+  if (phase === 'mismatch') {
+    return <Notice tone="warning">The amount we received doesn’t match your total. We’ve kept your hold longer and will call you to sort it out.</Notice>;
+  }
+  return null;
 }
 
 const styles = StyleSheet.create({
   content: { padding: space.xl, gap: space.md, paddingBottom: space.xxxl },
   card: { borderRadius: radius.lg, borderWidth: 1, padding: space.lg, gap: space.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' },
-  track: { height: 6, borderRadius: 3, overflow: 'hidden' },
-  fill: { width: '33%', height: 6 },
-  footer: { paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: space.lg, borderTopWidth: StyleSheet.hairlineWidth },
+  footer: { paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: space.lg, gap: space.sm, borderTopWidth: StyleSheet.hairlineWidth },
 });

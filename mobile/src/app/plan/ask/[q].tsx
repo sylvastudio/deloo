@@ -5,34 +5,31 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LAGOS_AREAS } from '@/lib/format';
 import { usePlan } from '@/lib/plan';
-import type { Answers, Budget, EventType, PowerSource, StageAct, StreamMode, Venue } from '@/planner/types';
+import type { Answers, Budget, Location, ShootType, SoundMode, TimeOfDay } from '@/planner/types';
 import { space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Button } from '@/ui/button';
 import { Chip } from '@/ui/chip';
-import { CrowdPicker } from '@/ui/crowd-picker';
-import { Notice } from '@/ui/feedback';
+import { DateRangeCalendar, dayCount, rentalWindow, windowDays } from '@/ui/date-range';
 import { Text } from '@/ui/text';
 import { Tile } from '@/ui/tile';
 import { TopBar } from '@/ui/top-bar';
-import { WhenPicker } from '@/ui/when-picker';
 
 /** R3a–R3i, in order. Each is its own route so Android back steps back one question. */
-export const QUESTIONS = ['type', 'venue', 'crowd', 'stage', 'stream', 'power', 'when', 'area', 'budget'] as const;
+export const QUESTIONS = ['type', 'people', 'angles', 'where', 'sound', 'movement', 'when', 'area', 'budget'] as const;
 type Q = (typeof QUESTIONS)[number];
 
-const EVENT_TYPES: [EventType, string, string][] = [
-  ['service', 'Church service', '⛪'], ['crusade', 'Crusade or outdoor service', '🙌'], ['conference', 'Conference or seminar', '🎤'],
-  ['wedding', 'Wedding', '💍'], ['concert', 'Concert or show', '🎶'], ['launch', 'Product launch', '🚀'], ['party', 'Party', '🎉'], ['other', 'Something else', '✨'],
+const SHOOT_TYPES: [ShootType, string, string, string][] = [
+  ['podcast', 'Podcast', 'People talking at a desk', '🎙️'],
+  ['interview', 'Interview', 'Talking heads, testimonials', '🗣️'],
+  ['content', 'YouTube or social content', 'Vlogs, reels, ads', '📱'],
+  ['music_video', 'Music video', 'Shot to playback', '🎶'],
+  ['short_film', 'Short film or skit', 'Scenes, actors, story', '🎬'],
+  ['photo', 'Photo shoot', 'Portraits, products, studio', '📸'],
+  ['event', 'Event coverage', 'Weddings, conferences, services', '🎉'],
+  ['other', 'Something else', 'Tell us in your own words', '✨'],
 ];
-const STAGE: [StageAct, string, string][] = [
-  ['speakers', 'Speakers or preaching', 'One or two people talking'], ['band', 'Live band', 'Drums, keys, guitars'], ['choir', 'Choir', 'A group singing'],
-  ['dj', 'DJ or playback', 'Music from a laptop or phone'], ['panel', 'Panel', 'Several people at a table'],
-];
-const DEFAULT_STAGE: Partial<Record<EventType, StageAct[]>> = {
-  service: ['speakers', 'choir'], crusade: ['speakers', 'band'], conference: ['speakers', 'panel'], wedding: ['dj', 'speakers'],
-  concert: ['band'], party: ['dj'], launch: ['speakers'],
-};
+const COUNTS: [number, string][] = [[1, '1'], [2, '2'], [3, '3'], [4, '4 or more']];
 
 export default function Ask() {
   const c = useColors();
@@ -67,86 +64,80 @@ export default function Ask() {
 
   switch (q) {
     case 'type':
-      title = 'What kind of event is it?';
-      body = <>{EVENT_TYPES.map(([k, label, emoji]) => (
-        <Tile key={k} emoji={emoji} title={label} selected={a.eventType === k}
-          onPress={() => pick({ eventType: k })} />
-      ))}{notSure({ eventType: 'unsure' })}</>;
+      title = 'What are you shooting?';
+      body = <>{SHOOT_TYPES.map(([k, label, desc, emoji]) => (
+        <Tile key={k} emoji={emoji} title={label} description={desc} selected={a.shootType === k}
+          onPress={() => pick({ shootType: k, ...(k === 'podcast' && a.sound === undefined ? { sound: 'desk' as SoundMode } : {}) })} />
+      ))}{notSure({ shootType: 'unsure' })}</>;
       break;
-    case 'venue':
-      title = 'Where will it hold?';
-      helper = 'Sound and screens work very differently indoors and in the open.';
+    case 'people':
+      title = 'How many people on camera?';
+      helper = 'It sets how many mics, and how much light you need.';
+      body = <>{COUNTS.map(([n, label]) => (
+        <Tile key={n} icon="people" title={label === '1' ? 'Just one' : label} selected={a.people === n} onPress={() => pick({ people: n })} />
+      ))}{notSure({ people: 'unsure' })}</>;
+      break;
+    case 'angles':
+      title = 'How many camera angles?';
+      helper = 'Cameras rolling at the same time. Two lets you cut between a wide shot and a close-up.';
+      body = <>{COUNTS.map(([n, label]) => (
+        <Tile key={n} icon="camera" title={n === 1 ? '1 camera' : `${label} cameras`} selected={a.angles === n} onPress={() => pick({ angles: n })} />
+      ))}{notSure({ angles: 'unsure' })}</>;
+      break;
+    case 'where':
+      title = 'Where and when in the day?';
+      helper = 'Indoors and at night you need your own light; outdoors by day the sun does most of it.';
       body = <>
-        <Tile icon="led_wall" title="Indoors" description="A hall, church auditorium or room" selected={a.venue === 'indoor'} onPress={() => answer({ venue: 'indoor' as Venue })} />
-        <Tile icon="shield" title="Outdoors, covered" description="Under a canopy or tent" selected={a.venue === 'covered'} onPress={() => pick({ venue: 'covered', roomSize: undefined })} />
-        <Tile icon="sparkles" title="Outdoors, open" description="A field or open ground, maybe in daylight" selected={a.venue === 'open'} onPress={() => pick({ venue: 'open', roomSize: undefined })} />
-        {a.venue === 'indoor' ? <>
-          <Text variant="label" style={{ marginTop: space.sm }}>How big is the room?</Text>
-          <View style={styles.wrap}>
-            {([['small', 'Small room'], ['hall', 'Hall'], ['auditorium', 'Auditorium']] as const).map(([k, l]) => (
-              <Chip key={k} label={l} selected={a.roomSize === k} onPress={() => pick({ roomSize: k })} />
-            ))}
-            <Chip label="Not sure" selected={a.roomSize === 'unsure'} onPress={() => pick({ roomSize: 'unsure' })} />
-          </View>
-        </> : notSure({ venue: 'unsure' })}
+        <Text variant="label">Location</Text>
+        <View style={styles.wrap}>
+          {([['indoor', 'Indoors'], ['outdoor', 'Outdoors'], ['both', 'Both']] as [Location, string][]).map(([k, l]) => (
+            <Chip key={k} label={l} selected={a.location === k} onPress={() => answer({ location: k })} />
+          ))}
+          <Chip label="Not sure" selected={a.location === 'unsure'} onPress={() => answer({ location: 'unsure' })} />
+        </View>
+        <Text variant="label" style={{ marginTop: space.sm }}>Time of day</Text>
+        <View style={styles.wrap}>
+          {([['day', 'Daytime'], ['night', 'At night'], ['both', 'Both']] as [TimeOfDay, string][]).map(([k, l]) => (
+            <Chip key={k} label={l} selected={a.timeOfDay === k} onPress={() => answer({ timeOfDay: k })} />
+          ))}
+          <Chip label="Not sure" selected={a.timeOfDay === 'unsure'} onPress={() => answer({ timeOfDay: 'unsure' })} />
+        </View>
+      </>;
+      footer = <Button title="Continue" disabled={a.location === undefined} onPress={() => { if (a.timeOfDay === undefined) answer({ timeOfDay: 'unsure' }); next(); }} />;
+      break;
+    case 'sound':
+      title = 'How will you record voices?';
+      body = <>
+        <Tile icon="mic" title="Desk mics" description="People seated, podcast style" selected={a.sound === 'desk'} onPress={() => pick({ sound: 'desk' as SoundMode })} />
+        <Tile icon="mic" title="Clip-on wireless mics" description="Interviews, vlogs, people moving" selected={a.sound === 'clip'} onPress={() => pick({ sound: 'clip' })} />
+        <Tile icon="close" title="No mics needed" description="Music playback, photos, or sound sorted" selected={a.sound === 'none'} onPress={() => pick({ sound: 'none' })} />
+        {notSure({ sound: 'unsure' })}
       </>;
       break;
-    case 'crowd':
-      title = 'How many people are you expecting?';
-      helper = 'A rough number is fine. It sets how much sound and how big a screen you need.';
-      body = <CrowdPicker value={typeof a.crowd === 'number' ? a.crowd : 300} onChange={(n) => answer({ crowd: n })} />;
-      footer = <View style={styles.footerRow}>{notSure({ crowd: 'unsure' })}<Button title="Continue" style={{ flex: 1 }} onPress={() => { if (a.crowd === undefined) answer({ crowd: 300 }); next(); }} /></View>;
+    case 'movement':
+      title = 'Any moving shots?';
+      helper = 'Walking, following someone, smooth tracking shots.';
+      body = <>
+        <Tile icon="sparkles" title="Yes, smooth moving shots" description="We’ll add a gimbal" selected={a.movement === true} onPress={() => pick({ movement: true })} />
+        <Tile icon="camera" title="No, on tripods" description="Cameras stay put" selected={a.movement === false} onPress={() => pick({ movement: false })} />
+        {notSure({ movement: 'unsure' })}
+      </>;
       break;
-    case 'stage': {
-      const type = typeof a.eventType === 'string' && a.eventType !== 'unsure' ? a.eventType : undefined;
-      const current: StageAct[] = Array.isArray(a.stage) ? a.stage : (type && DEFAULT_STAGE[type]) || [];
-      title = 'What’s happening on stage?';
-      helper = 'Pick everything that applies. It decides how many mics and what kind of mixer.';
-      body = STAGE.map(([k, label, desc]) => (
-        <Tile key={k} multi title={label} description={desc} selected={current.includes(k)}
-          onPress={() => answer({ stage: current.includes(k) ? current.filter((x) => x !== k) : [...current, k] })} />
-      ));
-      footer = <View style={styles.footerRow}>{notSure({ stage: 'unsure' })}<Button title="Continue" style={{ flex: 1 }} onPress={() => { if (!Array.isArray(a.stage)) answer({ stage: current }); next(); }} /></View>;
+    case 'when': {
+      const { first, last } = windowDays(
+        typeof a.startsAt === 'string' && a.startsAt !== 'unsure' ? a.startsAt : undefined,
+        typeof a.endsAt === 'string' && a.endsAt !== 'unsure' ? a.endsAt : undefined,
+      );
+      title = 'Which days do you need it?';
+      helper = 'Priced per day. We check what’s free for every day you pick.';
+      body = <DateRangeCalendar first={first} last={last} onChange={(f, l) => answer(rentalWindow(f, l))} />;
+      footer = <View style={styles.footerRow}>{notSure({ startsAt: 'unsure', endsAt: 'unsure' })}
+        <Button title={first && last ? `Continue · ${dayCount(first, last)} ${dayCount(first, last) === 1 ? 'day' : 'days'}` : 'Continue'} style={{ flex: 1 }} disabled={!first} onPress={next} /></View>;
       break;
     }
-    case 'stream':
-      title = 'Will you stream or record it?';
-      body = <>
-        <Tile icon="close" title="No" description="Just the people in the room" selected={a.stream === 'none'} onPress={() => pick({ stream: 'none' as StreamMode })} />
-        <Tile icon="camera_cat" title="Record it" description="Video to edit and post later" selected={a.stream === 'record'} onPress={() => pick({ stream: 'record' })} />
-        <Tile icon="streaming_kit" title="Stream it live" description="YouTube, Facebook, Instagram or Zoom" selected={a.stream === 'live'} onPress={() => answer({ stream: 'live' })} />
-        {a.stream === 'live' ? (
-          <View style={styles.wrap}>
-            {(['youtube', 'facebook', 'instagram', 'zoom'] as const).map((p) => (
-              <Chip key={p} label={p[0].toUpperCase() + p.slice(1).replace('tube', 'Tube')} selected={a.platform === p} onPress={() => pick({ platform: p })} />
-            ))}
-            <Chip label="Not decided" selected={a.platform === 'unsure'} onPress={() => pick({ platform: 'unsure' })} />
-          </View>
-        ) : notSure({ stream: 'unsure' })}
-      </>;
-      break;
-    case 'power':
-      title = 'What power will you have?';
-      body = <>
-        <Tile icon="bolt" title="Grid (NEPA)" description="We’ll still suggest a backup, in case light goes" selected={a.power === 'grid'} onPress={() => pick({ power: 'grid' as PowerSource })} />
-        <Tile icon="generator" title="We have a generator" description="Your own, big enough for the gear" selected={a.power === 'generator'} onPress={() => pick({ power: 'generator' })} />
-        <Tile icon="warning" title="Nothing yet" description="We’ll add a generator sized to your setup" selected={a.power === 'none'} onPress={() => pick({ power: 'none' })} />
-        <Notice tone="tip" icon="shield">We always add surge protection. Power surges are the number one way sound gear gets damaged.</Notice>
-        {notSure({ power: 'unsure' })}
-      </>;
-      break;
-    case 'when':
-      title = 'When is it?';
-      helper = 'Include setup time. We check what’s free for the whole window.';
-      body = <WhenPicker startsAt={typeof a.startsAt === 'string' && a.startsAt !== 'unsure' ? a.startsAt : undefined}
-        endsAt={typeof a.endsAt === 'string' && a.endsAt !== 'unsure' ? a.endsAt : undefined}
-        onChange={(startsAt, endsAt) => answer({ startsAt, endsAt })} />;
-      footer = <View style={styles.footerRow}>{notSure({ startsAt: 'unsure', endsAt: 'unsure' })}
-        <Button title="Continue" style={{ flex: 1 }} disabled={!a.startsAt} onPress={next} /></View>;
-      break;
     case 'area':
       title = 'Where in Lagos?';
-      helper = 'So we pick owners close to you and delivery stays cheap.';
+      helper = 'For delivery and pickup.';
       body = <>
         <View style={styles.wrap}>
           {LAGOS_AREAS.map((ar) => <Chip key={ar} label={ar} selected={a.area === ar} onPress={() => pick({ area: ar })} />)}
@@ -160,8 +151,8 @@ export default function Ask() {
       body = <>
         <Tile icon="sparkles" title="Show me options" description="See Good, Better and Best, then decide" selected={a.budget === 'options'} onPress={() => pick({ budget: 'options' as Budget })} />
         <Tile icon="minus" title="Keep it lean" description="The minimum that works well" selected={a.budget === 'low'} onPress={() => pick({ budget: 'low' })} />
-        <Tile icon="check" title="Middle of the road" description="What most events like yours choose" selected={a.budget === 'mid'} onPress={() => pick({ budget: 'mid' })} />
-        <Tile icon="star" title="Make it excellent" description="Comfortable headroom and the best picture" selected={a.budget === 'high'} onPress={() => pick({ budget: 'high' })} />
+        <Tile icon="check" title="Middle of the road" description="What most shoots like yours choose" selected={a.budget === 'mid'} onPress={() => pick({ budget: 'mid' })} />
+        <Tile icon="star" title="Make it cinematic" description="Full-frame cameras and the best light" selected={a.budget === 'high'} onPress={() => pick({ budget: 'high' })} />
       </>;
       break;
   }

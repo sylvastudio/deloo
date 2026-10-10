@@ -10,15 +10,15 @@ export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
 
-export async function api<T>(path: string, body: unknown, timeoutMs = 30000): Promise<T> {
+async function call<T>(method: 'GET' | 'POST', path: string, body: unknown, timeoutMs: number): Promise<T> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   let res: Response;
   try {
     res = await fetch(`${BASE}${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify(body),
+      method,
+      headers: { ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(timeoutMs),
     });
   } catch {
@@ -27,4 +27,12 @@ export async function api<T>(path: string, body: unknown, timeoutMs = 30000): Pr
   const json = (await res.json().catch(() => ({}))) as T & { error?: string };
   if (!res.ok) throw new ApiError(res.status, json.error ?? 'Something went wrong. Try again.');
   return json;
+}
+
+export function api<T>(path: string, body: unknown, timeoutMs = 30000): Promise<T> {
+  return call<T>('POST', path, body, timeoutMs);
+}
+
+export function apiGet<T>(path: string, timeoutMs = 30000): Promise<T> {
+  return call<T>('GET', path, undefined, timeoutMs);
 }

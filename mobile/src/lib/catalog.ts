@@ -1,29 +1,25 @@
-/** Category keys match public.categories (migration 0007). */
-export const CATEGORY_META: Record<string, { label: string; plural: string; emoji: string; group: 'sound' | 'screen' | 'camera' | 'light' | 'power' }> = {
-  speaker: { label: 'Speaker', plural: 'Speakers', emoji: '🔊', group: 'sound' },
-  subwoofer: { label: 'Subwoofer', plural: 'Subwoofers', emoji: '🔈', group: 'sound' },
-  monitor: { label: 'Stage monitor', plural: 'Monitors', emoji: '🎚️', group: 'sound' },
-  mic: { label: 'Microphone', plural: 'Mics', emoji: '🎤', group: 'sound' },
-  mixer: { label: 'Mixer', plural: 'Mixers', emoji: '🎛️', group: 'sound' },
-  led_wall: { label: 'LED wall', plural: 'LED walls', emoji: '🖥️', group: 'screen' },
-  projector: { label: 'Projector', plural: 'Projectors', emoji: '📽️', group: 'screen' },
-  projection_screen: { label: 'Projection screen', plural: 'Screens', emoji: '⬜', group: 'screen' },
-  tv: { label: 'TV screen', plural: 'TVs', emoji: '📺', group: 'screen' },
+export type CatalogGroup = 'camera' | 'lens' | 'light' | 'audio' | 'grip';
+
+/** Category keys match public.categories (migrations 0007, 0009). */
+export const CATEGORY_META: Record<string, { label: string; plural: string; emoji: string; group: CatalogGroup }> = {
   camera: { label: 'Camera', plural: 'Cameras', emoji: '🎥', group: 'camera' },
-  switcher: { label: 'Video switcher', plural: 'Switchers', emoji: '🔀', group: 'camera' },
-  streaming_kit: { label: 'Streaming kit', plural: 'Streaming', emoji: '📡', group: 'camera' },
+  lens: { label: 'Lens', plural: 'Lenses', emoji: '🔭', group: 'lens' },
   light: { label: 'Light', plural: 'Lights', emoji: '💡', group: 'light' },
-  generator: { label: 'Generator', plural: 'Generators', emoji: '⚡', group: 'power' },
-  avr: { label: 'Stabiliser', plural: 'Stabilisers', emoji: '🔌', group: 'power' },
+  mic: { label: 'Microphone', plural: 'Mics', emoji: '🎤', group: 'audio' },
+  mixer: { label: 'Podcast mixer', plural: 'Mixers', emoji: '🎛️', group: 'audio' },
+  headphones: { label: 'Headphones', plural: 'Headphones', emoji: '🎧', group: 'audio' },
+  gimbal: { label: 'Gimbal', plural: 'Gimbals', emoji: '🌀', group: 'grip' },
+  grip: { label: 'Stand', plural: 'Stands', emoji: '📐', group: 'grip' },
+  backdrop: { label: 'Backdrop', plural: 'Backdrops', emoji: '🖼️', group: 'grip' },
 };
 
 export const GROUPS = [
   { key: 'all', label: 'All' },
-  { key: 'sound', label: 'Sound' },
-  { key: 'screen', label: 'Screens' },
-  { key: 'camera', label: 'Cameras & streaming' },
-  { key: 'light', label: 'Lights' },
-  { key: 'power', label: 'Power' },
+  { key: 'camera', label: 'Cameras' },
+  { key: 'lens', label: 'Lenses' },
+  { key: 'light', label: 'Lighting' },
+  { key: 'audio', label: 'Audio' },
+  { key: 'grip', label: 'Grip' },
 ] as const;
 
 /** Strip the "(DEMO)" marker from demo catalogue names for display. */

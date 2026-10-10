@@ -65,6 +65,10 @@ function Navigator() {
         <Stack.Screen name="book/pay" />
         <Stack.Screen name="book/success" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="booking/[id]" />
+        <Stack.Screen name="booking/handover" />
+        <Stack.Screen name="booking/cancel" options={{ presentation: 'formSheet', sheetAllowedDetents: [0.75, 1], sheetCornerRadius: 24, sheetGrabberVisible: true }} />
+        {/* deloo://pay?reference=… from Paystack's return page; forwards to the pay screen. */}
+        <Stack.Screen name="pay" options={{ animation: 'none' }} />
       </Stack.Protected>
       <Stack.Protected guard={ready}>
         <Stack.Screen name="coming-soon" />

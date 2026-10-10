@@ -1,10 +1,14 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { useEffect } from 'react';
 
+import { startHandoverSync } from '@/lib/handover';
 import { useColors } from '@/theme/use-colors';
 
 // SDK 57 import path (docs.expo.dev/router/advanced/native-tabs). Android: Material 3 navigation bar.
 export default function RenterTabs() {
   const c = useColors();
+  // Handover photos taken offline (or before the app closed) upload whenever the app is open.
+  useEffect(() => startHandoverSync(), []);
   return (
     <NativeTabs backgroundColor={c.surface} tintColor={c.lagoon} indicatorColor={c.lagoonTint} labelStyle={{ color: c.slate }}>
       <NativeTabs.Trigger name="index">

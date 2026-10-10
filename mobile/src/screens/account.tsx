@@ -8,9 +8,9 @@ import { Card, Screen } from '@/ui/layout';
 import { Text } from '@/ui/text';
 
 const TRUST = [
-  ['Small gear', 'Mics, small speakers, lights'],
-  ['Sound and cameras', 'Full sound systems, projectors, cameras'],
-  ['LED walls and production', 'High-value gear, always with a technician'],
+  ['Small gear', 'Mics, stands, small lights'],
+  ['Lenses, lights and audio', 'Prime lenses, key lights, podcast kits'],
+  ['Cameras and premium lenses', 'Cinema bodies and the 24–70 GM'],
 ] as const;
 
 /** "Me" in both modes: profile, verification tiers, mode switch, sign out. */

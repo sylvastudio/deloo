@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { answerChips, missingRequired } from '@/lib/answers-text';
-import { readEvent } from '@/lib/intake';
+import { readShoot } from '@/lib/intake';
 import { QUESTION_KEYS, usePlan } from '@/lib/plan';
 import { useSession } from '@/lib/session';
 import { radius, space, type } from '@/theme/tokens';
@@ -14,10 +14,10 @@ import { categoryIcon, Icon } from '@/ui/icon';
 import { Card, Screen } from '@/ui/layout';
 import { Text } from '@/ui/text';
 
-const EXAMPLES = ['Outdoor crusade, 2,000 people, livestream on YouTube', 'Wedding reception for 300 in a hall in Lekki', 'Youth conference, 500 people, band and projector'];
-const BROWSE = [['speaker', 'Sound'], ['led_wall', 'Screens'], ['camera', 'Cameras'], ['light', 'Lights'], ['generator', 'Power']] as const;
+const EXAMPLES = ['3-person podcast in Lekki on Saturday, two cameras', 'Music video at night outdoors, moving shots', 'Interview for a brand, indoors in Ikeja, 2 days'];
+const BROWSE = [['camera', 'camera', 'Cameras'], ['lens', 'lens', 'Lenses'], ['light', 'light', 'Lighting'], ['audio', 'mic', 'Audio'], ['grip', 'gimbal', 'Grip']] as const;
 
-/** R1 Plan home: describe the event (type or voice), answer questions, or continue a saved plan. */
+/** R1 Plan home: describe the shoot (type or voice), answer questions, or continue a saved plan. */
 export default function Plan() {
   const c = useColors();
   const { profile } = useSession();
@@ -33,20 +33,20 @@ export default function Plan() {
     if (!words) return;
     reset();
     update({ rawText: words });
-    const read = readEvent(words);
+    const read = readShoot(words);
     answer(read);
     router.push(missingRequired(read).length ? '/plan/details' : '/plan/sizing');
     setText('');
   }
 
   return (
-    <Screen kicker={first ? `Hi ${first}` : undefined} title="What’s the event?">
+    <Screen kicker={first ? `Hi ${first}` : undefined} title="What are you shooting?">
       <View style={[styles.start, { backgroundColor: c.lagoon }]}>
         <Text style={[type.heading, { color: c.onLagoon }]}>Tell us about it the way you’d tell a friend.</Text>
         <View style={[styles.inputRow, { backgroundColor: c.surface }]}>
           <TextInput
-            ref={input} value={text} onChangeText={setText} multiline placeholder="e.g. Outdoor crusade, about 2,000 people, Saturday in Ikeja"
-            placeholderTextColor={c.faint} style={[type.body, styles.input, { color: c.ink }]} accessibilityLabel="Describe your event"
+            ref={input} value={text} onChangeText={setText} multiline placeholder="e.g. A podcast with 3 people, Saturday in Lekki"
+            placeholderTextColor={c.faint} style={[type.body, styles.input, { color: c.ink }]} accessibilityLabel="Describe your shoot"
           />
           <Pressable
             accessibilityRole="button" accessibilityLabel="Describe it by voice"
@@ -57,7 +57,7 @@ export default function Plan() {
         </View>
         {voiceTip ? <Text variant="caption" style={{ color: c.onLagoon }}>Tap the 🎙 on your keyboard and talk. We’ll read it.</Text> : null}
         {text.trim() ? (
-          <Button kind="accent" title="Size my setup" onPress={size} />
+          <Button kind="accent" title="Suggest my kit" onPress={size} />
         ) : (
           <View style={styles.examples}>
             {EXAMPLES.map((e) => (
@@ -74,7 +74,7 @@ export default function Plan() {
       {answered > 0 ? (
         <Card>
           <Text variant="label" tone="slate">Continue your plan</Text>
-          <Text variant="bodyStrong">{chips.slice(0, 3).map((ch) => ch.label).join(' · ') || 'Your event'}</Text>
+          <Text variant="bodyStrong">{chips.slice(0, 3).map((ch) => ch.label).join(' · ') || 'Your shoot'}</Text>
           <Text variant="caption" tone="slate">{answered} of {QUESTION_KEYS.length} answered</Text>
           <Button title="Continue" onPress={() => router.push(missingRequired(draft.answers).length ? '/plan/details' : '/plan/setup')} />
         </Card>
@@ -83,8 +83,8 @@ export default function Plan() {
       <View style={{ gap: space.sm }}>
         <Text variant="label" tone="slate">Browse gear</Text>
         <View style={styles.browse}>
-          {BROWSE.map(([k, label]) => (
-            <Pressable key={k} onPress={() => router.navigate('/explore')} accessibilityRole="button"
+          {BROWSE.map(([group, k, label]) => (
+            <Pressable key={group} onPress={() => router.navigate(`/explore?group=${group}`)} accessibilityRole="button"
               style={[styles.browseItem, { backgroundColor: c.surface, borderColor: c.line }]}>
               <Icon name={categoryIcon(k)} color={c.lagoon} />
               <Text variant="caption">{label}</Text>
@@ -94,7 +94,7 @@ export default function Plan() {
       </View>
 
       <Pressable onPress={() => router.push('/coming-soon')} accessibilityRole="button">
-        <Notice tone="tip" icon="sparkles">Coming soon: billboard and screen ad space, camera crews by the hour, studios. Join the list →</Notice>
+        <Notice tone="tip" icon="sparkles">Coming soon: rent out your own gear, crews by the hour, studios. Join the list →</Notice>
       </Pressable>
     </Screen>
   );

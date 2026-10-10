@@ -24,11 +24,11 @@ export default function Sizing() {
   const where = chips.find((ch) => ch.key === 'area')?.label;
   const when = chips.find((ch) => ch.key === 'startsAt')?.label;
   const steps = useMemo(() => [
-    typeof a.crowd === 'number' ? `Sizing sound for ${a.crowd.toLocaleString('en-NG')} people${a.venue === 'open' ? ' in the open' : a.venue === 'indoor' ? ' indoors' : ''}` : 'Sizing your sound',
-    a.venue === 'open' || a.venue === 'covered' ? 'Choosing screens bright enough for daylight' : 'Choosing the right screen size',
-    'Working out power and surge protection',
-    when ? `Checking what’s free on ${when}${where ? ` near ${where}` : ''}` : 'Checking what’s available',
-  ], [a.crowd, a.venue, when, where]);
+    typeof a.angles === 'number' ? `Choosing ${a.angles === 1 ? 'a camera' : `${a.angles} cameras`} and lenses` : 'Choosing cameras and lenses',
+    a.location === 'outdoor' && a.timeOfDay === 'day' ? 'Planning fill light for the sun' : 'Planning your lighting',
+    a.sound === 'none' ? 'Skipping mics: no sound needed' : typeof a.people === 'number' ? `Mics for ${a.people === 1 ? '1 person' : `${a.people} people`}` : 'Choosing mics',
+    when ? `Checking what’s free on ${when}${where ? ` for ${where}` : ''}` : 'Checking what’s available',
+  ], [a.angles, a.location, a.timeOfDay, a.sound, a.people, when, where]);
   const [shown, setShown] = useState(1);
 
   useEffect(() => {

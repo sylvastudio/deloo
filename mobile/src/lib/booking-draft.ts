@@ -1,39 +1,91 @@
+import { useCallback, useSyncExternalStore } from 'react';
+
+import { windowDays } from '@/ui/date-range';
 import { displayName } from './catalog';
-import { lineTitle } from './line-text';
+import { needLabel } from './line-text';
+import type { Draft } from './plan';
 import type { Result } from './plan-result';
-import type { DemoVendorPart } from './demo-bookings';
 
-/** Flat delivery estimate per vendor for the demo; real fees come from each vendor's settings in the pilot. */
-export const DELIVERY_KOBO = 15_000_00;
+/**
+ * What the renter is about to book: one basket, one date range (PRD R-14: one booking per bag).
+ * Filled from an item page or from "Book this setup", read by Review. Saved on the phone, so closing
+ * the app (or "Someone just booked this") never loses it. Prices are never stored here: Review asks
+ * the server (quote_booking) every time.
+ */
+export type DraftLine = { itemId: string; name: string; qty: number };
+/** A plan line we couldn't supply, kept on the booking ("Not included: teleprompter"). */
+export type NotIncluded = { label: string; qty: number; reason: 'not_stocked' | 'booked' };
+export type BookingDraft = {
+  lines: DraftLine[];
+  /** Whole Lagos days, YYYY-MM-DD. Missing when the plan had no dates yet. */
+  first?: string;
+  last?: string;
+  eventId?: string;
+  notIncluded?: NotIncluded[];
+  /** Where it came from, so "Change" can go back there. */
+  from: { kind: 'item'; itemId: string } | { kind: 'plan' };
+};
 
-/** Groups the chosen gear by vendor: one booking per vendor per event (PRD §6). */
-export function partsFromResult(r: Result): DemoVendorPart[] {
-  const by = new Map<string, DemoVendorPart>();
-  for (const l of r.lines) {
-    for (const o of l.chosen) {
-      const p = by.get(o.vendorId) ?? { vendorId: o.vendorId, vendorName: displayName(o.vendorName), items: [], rentalKobo: 0, depositKobo: 0, delivery: 'delivery', technician: false };
-      p.items.push({ title: lineTitle(l.line, [o]), units: o.units });
-      p.rentalKobo += o.rentalKobo;
-      p.depositKobo += o.depositKobo;
-      // Tier 3 or technician-required gear: the switch is on and locked (inventory decision 4).
-      if (o.technicianRequired || o.riskTier === 3) p.technician = true;
-      by.set(o.vendorId, p);
-    }
-  }
-  return [...by.values()];
+/** Delivery details remembered between bookings (the renter's last address and area). */
+export type Checkout = { delivery: 'pickup' | 'delivery'; zoneId?: string; address: string; phone: string };
+
+const KEY = 'deloo.booking.draft';
+const CHECKOUT_KEY = 'deloo.booking.checkout';
+
+function read<T>(key: string): T | null {
+  try { const raw = localStorage.getItem(key); return raw ? (JSON.parse(raw) as T) : null; } catch { return null; }
+}
+function write(key: string, value: unknown) {
+  try { value === null ? localStorage.removeItem(key) : localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage full: memory only */ }
 }
 
-export const lockedTechnician = (r: Result, vendorId: string) =>
-  r.lines.some((l) => l.chosen.some((o) => o.vendorId === vendorId && (o.technicianRequired || o.riskTier === 3)));
+// A tiny store so every screen sees the same draft (Review and the item page can both change it).
+let current: BookingDraft | null = read<BookingDraft>(KEY);
+const listeners = new Set<() => void>();
+const subscribe = (fn: () => void) => { listeners.add(fn); return () => { listeners.delete(fn); }; };
 
-/** Highest risk tier in the setup, for the verification gate (PRD §4.5). */
-export const highestTier = (r: Result) => Math.max(1, ...r.lines.flatMap((l) => l.chosen.map((o) => o.riskTier)));
+export function getBookingDraft() { return current; }
+export function setBookingDraft(d: BookingDraft | null) {
+  current = d;
+  write(KEY, d);
+  listeners.forEach((fn) => fn());
+}
+export function useBookingDraft() {
+  const draft = useSyncExternalStore(subscribe, () => current);
+  const update = useCallback((patch: Partial<BookingDraft>) => { if (current) setBookingDraft({ ...current, ...patch }); }, []);
+  return { draft, update };
+}
 
-/** Review (R15) → Pay (R17) hand-off. In memory only: if the app restarts, the renter reviews again. */
-export type PendingBooking = {
-  title: string; startsAt?: string; endsAt?: string; area?: string;
-  parts: DemoVendorPart[]; deliveryKobo: number; protectionKobo: number; totalKobo: number; holdUntil: number;
-};
-let pending: PendingBooking | null = null;
-export const setPendingBooking = (p: PendingBooking | null) => { pending = p; };
-export const getPendingBooking = () => pending;
+export const getCheckout = () => read<Checkout>(CHECKOUT_KEY);
+export const saveCheckout = (c: Checkout) => write(CHECKOUT_KEY, c);
+
+/** Stable text for "is this the same basket?" (to reuse a hold made for it). */
+export function draftKey(d: Pick<BookingDraft, 'lines' | 'first' | 'last'>) {
+  const lines = [...d.lines].sort((a, b) => a.itemId.localeCompare(b.itemId)).map((l) => `${l.itemId}x${l.qty}`).join(',');
+  return `${lines}|${d.first ?? ''}|${d.last ?? ''}`;
+}
+
+/**
+ * The plan's chosen gear as one basket: the same item chosen on two lines is merged, the dates come
+ * from the plan window, and lines we couldn't fill (fully or partly) become "not included".
+ */
+export function draftFromPlan(result: Result, plan: Draft): BookingDraft {
+  const by = new Map<string, DraftLine>();
+  const notIncluded: NotIncluded[] = [];
+  for (const l of result.lines) {
+    if (l.removed) continue;
+    for (const o of l.chosen) {
+      const line = by.get(o.itemId) ?? { itemId: o.itemId, name: displayName(o.name), qty: 0 };
+      line.qty += o.units;
+      by.set(o.itemId, line);
+    }
+    const short = l.line.qty - l.chosen.reduce((n, o) => n + o.units, 0);
+    if (short > 0) notIncluded.push({ label: needLabel({ ...l.line, qty: short }), qty: short, reason: l.shortReason ?? 'booked' });
+  }
+  const a = plan.answers;
+  const { first, last } = windowDays(
+    typeof a.startsAt === 'string' && a.startsAt !== 'unsure' ? a.startsAt : undefined,
+    typeof a.endsAt === 'string' && a.endsAt !== 'unsure' ? a.endsAt : undefined,
+  );
+  return { lines: [...by.values()], first, last, eventId: plan.eventId, notIncluded, from: { kind: 'plan' } };
+}

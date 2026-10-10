@@ -44,10 +44,9 @@ const asString = (v: unknown) => (typeof v === 'string' && v !== 'unsure' ? v : 
 /** Fill required gaps with "unsure" so the rules apply their safe defaults (and say so). */
 export function completeAnswers(a: Partial<Answers>): Answers {
   return {
-    eventType: a.eventType ?? 'unsure', venue: a.venue ?? 'unsure', roomSize: a.roomSize, crowd: a.crowd ?? 'unsure',
-    stage: a.stage ?? 'unsure', stream: a.stream ?? 'unsure', platform: a.platform, power: a.power ?? 'unsure',
+    shootType: a.shootType ?? 'unsure', location: a.location ?? 'unsure', timeOfDay: a.timeOfDay ?? 'unsure',
+    people: a.people ?? 'unsure', angles: a.angles ?? 'unsure', sound: a.sound ?? 'unsure', movement: a.movement ?? 'unsure',
     startsAt: a.startsAt ?? 'unsure', endsAt: a.endsAt ?? 'unsure', area: a.area ?? 'unsure', budget: a.budget ?? 'options',
-    technicianWanted: a.technicianWanted,
   };
 }
 
@@ -111,13 +110,13 @@ export async function saveEvent(draft: Draft, matches: Record<Level, SetupMatch>
   if (!ev) return undefined;
   await supabase.from('recommendations').insert((Object.values(matches)).map((m) => ({
     event_id: ev.id, level: m.level, rules_version: rulesVersion,
-    lines: m.lines.map((l) => ({ key: l.line.key, category: l.line.category, qty: l.line.qty, status: l.status, offers: l.offers.map((o) => ({ item: o.itemId, units: o.units })) })),
+    lines: m.lines.map((l) => ({ key: l.line.key, category: l.line.category, qty: l.line.qty, status: l.status, short: l.shortReason ?? null, offers: l.offers.map((o) => ({ item: o.itemId, units: o.units })) })),
   })));
   const better = matches.better ?? Object.values(matches)[0];
   const period = asString(a.startsAt) && asString(a.endsAt) ? `[${a.startsAt},${a.endsAt})` : null;
   if (better.unmet.length) {
     await supabase.from('unmet_demand').insert(better.unmet.map((u) => ({
-      event_id: ev.id, category_key: u.category, spec: u.spec, quantity: u.qty, period, area: u.area,
+      event_id: ev.id, category_key: u.category, spec: { ...u.spec, reason: u.reason }, quantity: u.qty, period, area: u.area,
     })));
   }
   return ev.id;

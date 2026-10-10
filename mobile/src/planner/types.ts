@@ -1,118 +1,89 @@
 // Planner types. Pure TypeScript: no React Native, Expo or Supabase imports, so the planner runs
 // on the device offline and in Node tests. Category and spec keys mirror `categories.spec_schema`
-// in supabase/migrations/0007_rental_core.sql; changing a key there is a code change here too.
+// in supabase/migrations/0009_shoot_categories.sql; changing a key there is a code change here too.
 
 /** Every intake question can be answered "Not sure" (user-flows §2 rule 2). */
 export type Unsure = 'unsure';
 export type Maybe<T> = T | Unsure;
 
-export type EventType =
-  | 'service'
-  | 'crusade'
-  | 'conference'
-  | 'wedding'
-  | 'concert'
-  | 'launch'
-  | 'party'
+export type ShootType =
+  | 'podcast'
+  | 'interview'
+  | 'content'
+  | 'music_video'
+  | 'short_film'
+  | 'photo'
+  | 'event'
   | 'other';
-export type Venue = 'indoor' | 'covered' | 'open';
-export type RoomSize = 'small' | 'hall' | 'auditorium';
-export type StageAct = 'speakers' | 'band' | 'choir' | 'dj' | 'panel';
-export type StreamMode = 'none' | 'record' | 'live';
-export type Platform = 'youtube' | 'facebook' | 'instagram' | 'zoom' | 'other';
-export type PowerSource = 'grid' | 'generator' | 'none';
+export type Location = 'indoor' | 'outdoor' | 'both';
+export type TimeOfDay = 'day' | 'night' | 'both';
+/** How voices are recorded: desk mics (podcast style), clip-on wireless mics, or none (playback, stills). */
+export type SoundMode = 'desk' | 'clip' | 'none';
 export type Budget = 'options' | 'low' | 'mid' | 'high';
 export type Level = 'good' | 'better' | 'best';
 
-/** The intake answers (PRD §4.1). Stage is a set, stored as an array so drafts serialise to JSON. */
+/** The intake answers. */
 export interface Answers {
-  eventType: Maybe<EventType>;
-  venue: Maybe<Venue>;
-  /** Only asked when indoor. Missing or unsure is guessed from the crowd. */
-  roomSize?: Maybe<RoomSize>;
-  /** Head count. The R3c bands map to a representative number via `crowdFromBand`. */
-  crowd: Maybe<number>;
-  stage: Maybe<StageAct[]>;
-  stream: Maybe<StreamMode>;
-  platform?: Maybe<Platform>;
-  power: Maybe<PowerSource>;
-  /** ISO 8601 with offset, e.g. 2026-11-14T16:00:00+01:00. */
+  shootType: Maybe<ShootType>;
+  location: Maybe<Location>;
+  timeOfDay: Maybe<TimeOfDay>;
+  /** People on camera (and on mic). */
+  people: Maybe<number>;
+  /** Camera angles, i.e. cameras rolling at once. */
+  angles: Maybe<number>;
+  sound: Maybe<SoundMode>;
+  /** Moving shots: walking, tracking, handheld. */
+  movement: Maybe<boolean>;
+  /** ISO 8601 with offset, e.g. 2026-11-14T08:00:00+01:00. */
   startsAt: Maybe<string>;
   endsAt: Maybe<string>;
   /** Lagos area, e.g. "Ikeja". */
   area: Maybe<string>;
   budget: Maybe<Budget>;
-  /** Not a planning question (inventory decision 4); set when the renter's words ask for one. */
-  technicianWanted?: Maybe<boolean>;
 }
 
-export type CrowdBand = 'lt100' | '100-300' | '300-1000' | '1000-3000' | '3000+';
-
 export type CategoryKey =
-  | 'speaker'
-  | 'subwoofer'
-  | 'monitor'
+  | 'camera'
+  | 'lens'
+  | 'gimbal'
+  | 'light'
   | 'mic'
   | 'mixer'
-  | 'led_wall'
-  | 'projector'
-  | 'projection_screen'
-  | 'tv'
-  | 'camera'
-  | 'switcher'
-  | 'streaming_kit'
-  | 'light'
-  | 'generator'
-  | 'avr';
+  | 'headphones'
+  | 'grip'
+  | 'backdrop';
 
-export type Group = 'sound' | 'screen' | 'camera' | 'light' | 'power';
-
-export type MicKind = 'handheld' | 'lavalier' | 'headset' | 'instrument';
-export type CameraKind = 'camcorder' | 'ptz' | 'cinema' | 'dslr';
-export type LightKind = 'par' | 'wash' | 'moving_head' | 'follow_spot' | 'flood';
+export type Group = 'camera' | 'lens' | 'light' | 'audio' | 'grip';
 
 /**
  * What a line needs from an item. Every field is optional; an item matches when it meets all the
- * fields that are set. "min" fields are lower bounds, so a bigger or brighter item always qualifies.
+ * fields that are set. "min" fields are lower bounds, so a better item always qualifies.
  */
 export interface SpecNeed {
-  // speaker, subwoofer, monitor, light (spec key `watts`)
-  minWatts?: number;
-  // speaker, subwoofer (`size_in`)
-  minSizeIn?: number;
-  // speaker (`powered`)
-  powered?: boolean;
-  /** Line array box. Not yet a spec_schema key: read from specs.line_array or the item name. */
-  lineArray?: boolean;
-  // mic (`kind`, `wireless`), camera (`kind`), light (`kind`): any of these kinds
+  /** Any of these `kind` values (camera, lens, light, mic, grip, backdrop). */
   kinds?: string[];
+  /** camera, lens `grade`: 1 entry … 4 cinema. */
+  minGrade?: number;
+  /** camera, lens `full_frame`. */
+  fullFrame?: boolean;
+  /** light `rgb`, `battery`, `watts`. */
+  rgb?: boolean;
+  battery?: boolean;
+  minWatts?: number;
+  /** mic `wireless`, `persons`, `usb`. */
   wireless?: boolean;
-  // mixer (`channels`, `digital`)
+  minPersons?: number;
+  usb?: boolean;
+  /** mixer `channels`, `records`. */
   minChannels?: number;
-  digital?: boolean;
-  // led_wall, projection_screen (`width_ft`, `height_ft`), led_wall (`outdoor`)
-  minWidthFt?: number;
-  minHeightFt?: number;
-  outdoor?: boolean;
-  // projector (`lumens`)
-  minLumens?: number;
-  // tv (`size_in`)
-  minScreenIn?: number;
-  // camera (`resolution`): '4k' needs 4k; '1080p' accepts 1080p or 4k
-  resolution?: '1080p' | '4k';
-  // switcher (`inputs`, `streams`)
-  minInputs?: number;
-  streams?: boolean;
-  // streaming_kit (`bonded`)
-  bonded?: boolean;
-  // generator, avr (`kva`), generator (`silent`)
-  minKva?: number;
-  silent?: boolean;
+  records?: boolean;
+  /** gimbal `payload_kg`. */
+  minPayloadKg?: number;
 }
 
 /** One recommended line in a setup. */
 export interface Line {
-  /** Stable within a setup, e.g. 'sound.tops'. Used to swap and to log unmet demand. */
+  /** Stable within a setup, e.g. 'camera.main'. Used to swap and to log unmet demand. */
   key: string;
   category: CategoryKey;
   spec: SpecNeed;
@@ -121,11 +92,9 @@ export interface Line {
   reasonKey: string;
   /** Plain warm English with the actual numbers, shown under "Why?". */
   reason: string;
-  /** Without it the event doesn't work. Removing it shows a warning (R8). */
+  /** Without it the shoot doesn't work. Removing it shows a warning (R8). */
   essential: boolean;
   group: Group;
-  /** Estimated running draw per unit in watts, used for generator and AVR sizing. */
-  drawWatts: number;
 }
 
 export interface Setup {
@@ -134,11 +103,8 @@ export interface Setup {
   lines: Line[];
   /** "We assumed…" sentences for every answer that was "Not sure" or missing. */
   assumptions: string[];
-  /** Advice that isn't gear, e.g. "Your own generator should be at least 20 kVA". */
+  /** Advice that isn't gear, e.g. "Bring your own V-mount batteries". */
   notes: string[];
-  /** Estimated load with headroom, in kVA (sum of draws × 1.25 ÷ 0.8 power factor). */
-  loadKva: number;
-  technicianWanted: boolean;
 }
 
 /** One catalogue listing with its free units for the booking's dates (computed by the server). */
@@ -191,10 +157,10 @@ export type AlternativeKind = 'other_vendor' | 'equivalent' | 'different_approac
 
 export interface Alternative {
   kind: AlternativeKind;
-  /** One line for the swap sheet, e.g. "2 smaller speakers for each big one · a little less punch". */
+  /** One line for the swap sheet, e.g. "A prime instead · walk closer instead of zooming". */
   trade: string;
   offers: Offer[];
-  /** Units this alternative supplies (may differ from the line qty, e.g. 2 small for 1 big). */
+  /** Units this alternative supplies. */
   units: number;
   /** Covers the whole need on its own. */
   complete: boolean;
@@ -202,13 +168,21 @@ export interface Alternative {
   priceDeltaKobo: number | null;
 }
 
+/**
+ * Why a line is short: we don't stock anything that fits ('not_stocked'), or we do but it's booked
+ * on these dates ('booked').
+ */
+export type ShortReason = 'not_stocked' | 'booked';
+
 export interface LineMatch {
   line: Line;
   offers: Offer[];
   unitsFound: number;
   status: Availability;
+  /** Set when unitsFound < qty. */
+  shortReason?: ShortReason;
   alternatives: Alternative[];
-  /** Any chosen listing is tier 3 or marked technician-required: the booking switch is on and locked. */
+  /** A chosen listing is marked technician-required. */
   technicianRequired: boolean;
   rentalKobo: number;
   depositKobo: number;
@@ -221,6 +195,7 @@ export interface Unmet {
   spec: SpecNeed;
   qty: number;
   area: string;
+  reason: ShortReason;
   /** Whether the swap sheet has something to offer instead. */
   hasAlternatives: boolean;
 }
@@ -231,7 +206,7 @@ export interface Totals {
   protectionKobo: number;
   /** rental + deposit + protection */
   totalKobo: number;
-  /** e.g. "Includes a technician, required for the LED wall." null when none applies. */
+  /** e.g. "Includes a technician, required for the camera." null when none applies. */
   technicianNote: string | null;
 }
 

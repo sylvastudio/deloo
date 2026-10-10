@@ -39,11 +39,6 @@ function num(v: unknown): number {
   return Number.isFinite(n) ? n : NaN;
 }
 
-/** No spec_schema key for this yet (founder: add `line_array` to the speaker schema); fall back to the name. */
-export function isLineArray(item: CatalogueItem): boolean {
-  return item.specs.line_array === true || /line array/i.test(item.name);
-}
-
 function atLeast(have: unknown, need: number | undefined): boolean {
   return need === undefined || num(have) >= need;
 }
@@ -54,29 +49,21 @@ function flag(have: unknown, need: boolean | undefined): boolean {
   return need ? have === true : have !== true;
 }
 
-/** Does this listing meet every requirement the line sets? "min" fields accept anything bigger. */
+/** Does this listing meet every requirement the line sets? "min" fields accept anything better. */
 export function meetsSpec(item: CatalogueItem, s: SpecNeed): boolean {
   const p = item.specs;
-  if (!atLeast(p.watts, s.minWatts)) return false;
-  if (!atLeast(p.size_in, s.minSizeIn)) return false;
-  if (!atLeast(p.size_in, s.minScreenIn)) return false;
-  if (!flag(p.powered, s.powered)) return false;
-  if (s.lineArray !== undefined && isLineArray(item) !== s.lineArray) return false;
   if (s.kinds && !s.kinds.includes(String(p.kind))) return false;
+  if (!atLeast(p.grade, s.minGrade)) return false;
+  if (s.fullFrame && p.full_frame !== true) return false; // full-frame lenses also fit smaller bodies
+  if (s.rgb && p.rgb !== true) return false;
+  if (s.battery && p.battery !== true) return false;
+  if (!atLeast(p.watts, s.minWatts)) return false;
   if (!flag(p.wireless, s.wireless)) return false;
+  if (!atLeast(p.persons, s.minPersons)) return false;
+  if (!flag(p.usb, s.usb)) return false;
   if (!atLeast(p.channels, s.minChannels)) return false;
-  if (!flag(p.digital, s.digital)) return false;
-  if (!atLeast(p.width_ft, s.minWidthFt)) return false;
-  if (!atLeast(p.height_ft, s.minHeightFt)) return false;
-  if (s.outdoor && p.outdoor !== true) return false; // indoor lines accept outdoor walls too
-  if (!atLeast(p.lumens, s.minLumens)) return false;
-  if (s.resolution === '4k' && p.resolution !== '4k') return false;
-  if (s.resolution === '1080p' && p.resolution !== '1080p' && p.resolution !== '4k') return false;
-  if (!atLeast(p.inputs, s.minInputs)) return false;
-  if (s.streams && p.streams !== true) return false;
-  if (s.bonded && p.bonded !== true) return false;
-  if (!atLeast(p.kva, s.minKva)) return false;
-  if (s.silent && p.silent !== true) return false;
+  if (s.records && p.records !== true) return false;
+  if (!atLeast(p.payload_kg, s.minPayloadKg)) return false;
   return true;
 }
 
@@ -123,7 +110,7 @@ function offerFor(ctx: Ctx, item: CatalogueItem, units: number): Offer {
     rentalKobo: item.dayRateKobo * units * ctx.days,
     depositKobo: item.depositKobo * units,
     servesArea: servesArea(item, ctx.area),
-    technicianRequired: item.technicianRequired || item.riskTier === 3,
+    technicianRequired: item.technicianRequired,
     riskTier: item.riskTier,
   };
 }
@@ -164,94 +151,43 @@ function equivalents(line: Line): Variant[] {
   const s = line.spec;
   const v: Variant[] = [];
   switch (line.category) {
-    case 'speaker':
-      // Two smaller speakers do the job of one big one.
-      if (!s.lineArray && s.minWatts)
-        v.push({ category: 'speaker', spec: { powered: true, lineArray: false, minWatts: s.minWatts / 2 }, factor: 2, trade: '2 smaller speakers for each big one · same coverage, more to set up' });
-      break;
-    case 'subwoofer':
-      if (s.minWatts) v.push({ category: 'subwoofer', spec: { minWatts: s.minWatts / 2 }, factor: 2, trade: '2 smaller subwoofers for each big one · same bass, more to carry' });
-      break;
-    case 'monitor':
-      v.push({ category: 'speaker', spec: { powered: true, lineArray: false }, factor: 1, trade: 'A normal speaker used as a monitor · works, takes more floor space' });
-      break;
-    case 'mic':
-      if (s.wireless) v.push({ category: 'mic', spec: { wireless: false }, factor: 1, trade: 'Wired mic · on a cable, so the speaker stays near the stand' });
-      else v.push({ category: 'mic', spec: { wireless: true }, factor: 1, trade: 'Wireless mic instead · more freedom, costs a little more' });
-      break;
-    case 'mixer':
-      if (s.digital) v.push({ category: 'mixer', spec: { minChannels: s.minChannels }, factor: 1, trade: "Analogue mixer · works, but settings can't be saved" });
-      break;
-    case 'led_wall':
-      // A bigger wall already matches (sizes are minimums); the equivalent is one a bit smaller.
-      if (s.minWidthFt && s.minHeightFt)
-        v.push({ category: 'led_wall', spec: { ...s, minWidthFt: Math.floor(s.minWidthFt * 0.75), minHeightFt: Math.floor(s.minHeightFt * 0.75) }, factor: 1, trade: 'A smaller LED wall · harder to read from the back' });
-      break;
-    case 'projector':
-      if (s.minLumens) v.push({ category: 'projector', spec: { minLumens: Math.round(s.minLumens * 0.7) }, factor: 1, trade: 'A dimmer projector · turn off the lights near the screen' });
-      break;
-    case 'projection_screen':
-      if (s.minHeightFt) v.push({ category: 'projection_screen', spec: { minHeightFt: s.minHeightFt - 1.5 }, factor: 1, trade: 'A smaller screen · harder to read from the back rows' });
-      break;
-    case 'tv':
-      if (s.minScreenIn) v.push({ category: 'tv', spec: { minScreenIn: s.minScreenIn - 20 }, factor: 1, trade: 'A smaller TV · fine up close' });
-      break;
     case 'camera':
-      if (s.resolution === '4k') v.push({ category: 'camera', spec: { ...s, resolution: '1080p' }, factor: 1, trade: 'HD instead of 4K · fine for streaming' });
-      if (s.kinds?.length === 1 && s.kinds[0] === 'ptz') v.push({ category: 'camera', spec: { kinds: ['camcorder', 'dslr', 'cinema'] }, factor: 1, trade: 'A camera with an operator instead of remote control' });
+      if (s.minGrade && s.minGrade > 1)
+        v.push({ category: 'camera', spec: { ...s, minGrade: s.minGrade - 1 }, factor: 1, trade: 'A step-down camera · a little less low light and colour' });
       break;
-    case 'switcher':
-      if (s.streams) v.push({ category: 'switcher', spec: { minInputs: s.minInputs }, factor: 1, trade: 'A switcher that streams through a laptop · one more thing to set up' });
-      break;
-    case 'streaming_kit':
-      if (s.bonded) v.push({ category: 'streaming_kit', spec: {}, factor: 1, trade: 'A 4G router · may drop if the signal is weak' });
+    case 'lens':
+      if (s.kinds?.includes('zoom')) v.push({ category: 'lens', spec: { kinds: ['prime'], fullFrame: s.fullFrame }, factor: 1, trade: 'A prime instead · walk closer instead of zooming' });
+      else {
+        if (s.minGrade) v.push({ category: 'lens', spec: { kinds: ['prime'], fullFrame: s.fullFrame }, factor: 1, trade: 'A simpler prime · a little less background blur' });
+        v.push({ category: 'lens', spec: { kinds: ['zoom'], fullFrame: s.fullFrame }, factor: 1, trade: 'The 24–70 zoom instead · one lens for every framing' });
+      }
       break;
     case 'light':
-      if (s.kinds?.includes('moving_head')) v.push({ category: 'light', spec: { kinds: ['par', 'wash'] }, factor: 1, trade: 'Static colour lights · less movement, cheaper' });
-      else v.push({ category: 'light', spec: { kinds: ['moving_head'] }, factor: 1, trade: 'Moving heads used as stage wash · costs more' });
+      if (s.rgb) v.push({ category: 'light', spec: { rgb: true }, factor: 1, trade: 'Another colour light' });
+      else if (s.battery) v.push({ category: 'light', spec: { battery: true }, factor: 1, trade: 'Another battery light · a different size or softness' });
+      else v.push({ category: 'light', spec: {}, factor: 1, trade: 'Another light · may be smaller, so place it closer' });
       break;
-    case 'generator':
-      // Split the load: sound on one generator, screens and lights on the other.
-      if (s.minKva && s.minKva > 7.5) v.push({ category: 'generator', spec: { minKva: s.minKva / 2 }, factor: 2, trade: '2 smaller generators · sound on one, screens and lights on the other' });
+    case 'mic':
+      if (s.kinds?.includes('podcast') && s.usb) v.push({ category: 'mic', spec: { kinds: ['podcast'] }, factor: 1, trade: 'The XLR PodMic · needs the podcast mixer or an audio interface' });
+      else if (s.kinds?.includes('podcast')) v.push({ category: 'mic', spec: { kinds: ['lavalier'], wireless: true }, factor: 0.5, trade: 'Clip-on wireless mics instead · less "studio" look, just as clear' });
+      else if (s.kinds?.includes('lavalier')) v.push({ category: 'mic', spec: { kinds: ['podcast'] }, factor: 2, trade: 'Desk mics instead · great when people stay seated' });
       break;
-    case 'avr':
-      if (s.minKva && s.minKva > 5) v.push({ category: 'avr', spec: { minKva: s.minKva / 2 }, factor: 2, trade: '2 smaller stabilisers · one per circuit' });
+    case 'gimbal':
+      if (s.minPayloadKg && s.minPayloadKg > 2) v.push({ category: 'gimbal', spec: { minPayloadKg: 2 }, factor: 1, trade: 'A lighter gimbal · fine with a small lens, not a heavy zoom' });
+      break;
+    case 'grip':
+      if (s.kinds?.includes('c_stand')) v.push({ category: 'grip', spec: {}, factor: 1, trade: 'Another stand' });
       break;
   }
   return v;
 }
 
-/** 3. A different approach. Projector + screen only replaces an LED wall indoors (daylight kills it outside). */
-function approaches(line: Line): { parts: Variant[]; trade: string }[] {
-  const s = line.spec;
-  if (line.category === 'led_wall' && !s.outdoor) {
-    return [{
-      trade: 'Projector and screen instead · cheaper, but dim the lights near the screen',
-      parts: [
-        { category: 'projector', spec: { minLumens: 10000 }, factor: 1, trade: '' },
-        { category: 'projection_screen', spec: { minHeightFt: s.minHeightFt ?? 7 }, factor: 1, trade: '' },
-      ],
-    }];
-  }
-  if (line.category === 'projector') {
-    return [{ trade: 'An LED wall instead · bright with the lights on, costs more', parts: [{ category: 'led_wall', spec: { minWidthFt: 10, minHeightFt: 6 }, factor: 1 / line.qty, trade: '' }] }];
-  }
-  if (line.category === 'tv' && line.key === 'screen.main') {
-    return [{
-      trade: 'Projector and screen instead · bigger picture, needs the lights down',
-      parts: [
-        { category: 'projector', spec: { minLumens: 3500 }, factor: 1, trade: '' },
-        { category: 'projection_screen', spec: { minHeightFt: 6 }, factor: 1, trade: '' },
-      ],
-    }];
-  }
-  if (line.category === 'speaker' && s.lineArray) {
-    return [{ trade: 'Box speakers instead of a line array · fine near the front, weaker at the back', parts: [{ category: 'speaker', spec: { powered: true, lineArray: false, minWatts: 1000 }, factor: 1.5, trade: '' }] }];
-  }
+/** 3. A different approach (several categories together). None for the shoot catalogue yet. */
+function approaches(_line: Line): { parts: Variant[]; trade: string }[] {
   return [];
 }
 
-function alternativesFor(ctx: Ctx, line: Line, chosen: Offer[], strict: CatalogueItem[], found: number): Alternative[] {
+function alternativesFor(ctx: Ctx, line: Line, chosen: Offer[], strict: CatalogueItem[], found: number, stocked: boolean): Alternative[] {
   const current = sumRental(chosen);
   const alts: Alternative[] = [];
   const need = line.qty;
@@ -299,9 +235,10 @@ function alternativesFor(ctx: Ctx, line: Line, chosen: Offer[], strict: Catalogu
   alts.sort((x, y) => Number(y.complete) - Number(x.complete));
   const out = alts.slice(0, MAX_ALTERNATIVES);
 
-  // 4. Nearby date: we only know this date's stock, so flag it for the app to re-check.
-  if (found < need) {
-    out.push({ kind: 'nearby_date', trade: 'Try a day either side · more owners may be free then', offers: [], units: 0, complete: false, priceDeltaKobo: null });
+  // 4. Nearby date: we only know this date's stock, so flag it for the app to re-check. Only when we
+  // stock it at all; other dates won't help with something we don't have.
+  if (found < need && stocked) {
+    out.push({ kind: 'nearby_date', trade: 'Try other dates · it may be free a day earlier or later', offers: [], units: 0, complete: false, priceDeltaKobo: null });
   }
   return out;
 }
@@ -311,21 +248,15 @@ function alternativesFor(ctx: Ctx, line: Line, chosen: Offer[], strict: Catalogu
 // ---------------------------------------------------------------------------------------------
 
 const CATEGORY_WORD: Record<CategoryKey, string> = {
-  speaker: 'speakers',
-  subwoofer: 'subwoofers',
-  monitor: 'monitors',
+  camera: 'camera',
+  lens: 'lens',
+  gimbal: 'gimbal',
+  light: 'lights',
   mic: 'mics',
   mixer: 'mixer',
-  led_wall: 'LED wall',
-  projector: 'projector',
-  projection_screen: 'screen',
-  tv: 'TV',
-  camera: 'camera',
-  switcher: 'switcher',
-  streaming_kit: 'streaming kit',
-  light: 'lights',
-  generator: 'generator',
-  avr: 'stabiliser',
+  headphones: 'headphones',
+  grip: 'stands',
+  backdrop: 'backdrop',
 };
 
 function words(parts: string[]): string {
@@ -356,12 +287,15 @@ export function matchSetup(setup: Setup, catalogue: CatalogueItem[], opts: Match
     const spare = strict.reduce((s, i) => s + (ctx.remaining.get(i.id) ?? 0), 0);
     // Limited: short of the quantity, or so tight that one more booking would break it.
     const status: Availability = units === 0 ? 'unavailable' : units < line.qty || spare <= 1 ? 'limited' : 'available';
+    // Stocked: some listing fits at all, whatever the dates. Otherwise it's "we don't have this yet".
+    const stocked = strict.some((i) => i.totalUnits > 0);
     return {
       line,
       offers,
       unitsFound: units,
       status,
-      alternatives: alternativesFor(ctx, line, offers, strict, units),
+      shortReason: units < line.qty ? (stocked ? 'booked' : 'not_stocked') : undefined,
+      alternatives: alternativesFor(ctx, line, offers, strict, units, stocked),
       technicianRequired: offers.some((o) => o.technicianRequired),
       rentalKobo: sumRental(offers),
       depositKobo: sumDeposit(offers),
@@ -376,6 +310,7 @@ export function matchSetup(setup: Setup, catalogue: CatalogueItem[], opts: Match
       spec: m.line.spec,
       qty: m.line.qty - m.unitsFound,
       area: area ?? '',
+      reason: m.shortReason ?? 'booked',
       hasAlternatives: m.alternatives.some((a) => a.kind !== 'nearby_date'),
     }));
 
@@ -383,18 +318,13 @@ export function matchSetup(setup: Setup, catalogue: CatalogueItem[], opts: Match
   const depositKobo = lines.reduce((s, m) => s + m.depositKobo, 0);
   const protectionKobo = Math.round(rentalKobo * rate);
 
-  // Technician: on and locked for tier-3 / technician-required gear (inventory decision 4).
+  // Technician: on and locked for listings marked technician-required.
   const forced: string[] = [];
   for (const m of lines) {
     const w = CATEGORY_WORD[m.line.category];
     if (m.technicianRequired && !forced.includes(w)) forced.push(w);
   }
-  let technicianNote: string | null = null;
-  if (forced.length) technicianNote = `Includes a technician, required for the ${words(forced)}.`;
-  if (setup.technicianWanted)
-    technicianNote = forced.length
-      ? `${technicianNote} You asked for a technician for the rest too; turn it on for each owner when you book.`
-      : 'You asked for a technician; turn it on for each owner when you book.';
+  const technicianNote = forced.length ? `Includes a technician, required for the ${words(forced)}.` : null;
 
   const status: Availability = lines.some((m) => m.line.essential && m.status === 'unavailable')
     ? 'unavailable'

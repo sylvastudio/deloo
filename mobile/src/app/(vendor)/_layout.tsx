@@ -17,7 +17,7 @@ export default function VendorTabs() {
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="gear">
         <NativeTabs.Trigger.Label>Gear</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="speaker.wave.2" md="speaker" />
+        <NativeTabs.Trigger.Icon sf="camera" md="photo_camera" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="earnings">
         <NativeTabs.Trigger.Label>Earnings</NativeTabs.Trigger.Label>

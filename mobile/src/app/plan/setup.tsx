@@ -4,8 +4,9 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { answerChips } from '@/lib/answers-text';
+import { draftFromPlan, setBookingDraft } from '@/lib/booking-draft';
 import { naira } from '@/lib/format';
-import { lineTitle, needLabel, vendorsOf } from '@/lib/line-text';
+import { lineTitle, needLabel } from '@/lib/line-text';
 import { usePlan } from '@/lib/plan';
 import { applyChoices, PROTECTION_RATE, saveEvent, usePlanResult, type ChosenLine } from '@/lib/plan-result';
 import { RULES_VERSION } from '@/planner';
@@ -20,7 +21,7 @@ import { Segmented } from '@/ui/segmented';
 import { Text } from '@/ui/text';
 import { TopBar } from '@/ui/top-bar';
 
-const GROUPS: [Group, string][] = [['sound', 'Sound'], ['screen', 'Screens'], ['camera', 'Cameras & streaming'], ['light', 'Lights'], ['power', 'Power']];
+const GROUPS: [Group, string][] = [['camera', 'Cameras'], ['lens', 'Lenses'], ['light', 'Lighting'], ['audio', 'Audio'], ['grip', 'Grip & support']];
 const DAY = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Africa/Lagos' });
 
 /** R6 Your setup (with R7 Why? inline and R9 Nothing available as an honest card). */
@@ -46,6 +47,9 @@ export default function Setup() {
     hint: matches ? naira(applyChoices(matches[l], { swaps: l === level ? draft.swaps : {}, removed: l === level ? draft.removed : [] }).totalKobo, true) : undefined,
   }));
   const missing = result?.lines.filter((l) => !l.removed && l.chosen.reduce((n, o) => n + o.units, 0) < l.line.qty) ?? [];
+  // Say plainly which gaps are "we don't have this yet" and which are "booked on your dates".
+  const notStocked = missing.filter((l) => !l.swappedTo && l.shortReason === 'not_stocked');
+  const booked = missing.filter((l) => !notStocked.includes(l));
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.paper }}>
@@ -84,13 +88,21 @@ export default function Setup() {
             </Notice>
           ) : null}
 
-          {missing.length ? (
-            <View style={[styles.honest, { backgroundColor: c.redTint }]}>
-              <Text variant="bodyStrong">{missing.length === 1 ? 'One thing isn’t free' : `${missing.length} things aren’t free`}{when ? ` on ${when}` : ''}</Text>
+          {notStocked.length ? (
+            <View style={[styles.honest, { backgroundColor: c.marigoldTint }]}>
+              <Text variant="bodyStrong">We don’t have {notStocked.length === 1 ? 'this' : 'these'} yet</Text>
               <Text variant="caption">
-                {missing.map((l) => needLabel(l.line)).join(', ')}. We’ve noted it so we can find more. Swap it below, try {level === 'best' ? 'Better' : 'another level'}, or pick another date.
+                {notStocked.map((l) => needLabel(l.line)).join(', ')}. We’ve noted your request so we know what to get next. Swap it below or remove it.
               </Text>
-              <Pressable onPress={() => router.push('/plan/ask/when?edit=1')} hitSlop={8}><Text variant="label" tone="lagoon">Try another date →</Text></Pressable>
+            </View>
+          ) : null}
+          {booked.length ? (
+            <View style={[styles.honest, { backgroundColor: c.redTint }]}>
+              <Text variant="bodyStrong">{booked.length === 1 ? 'One thing is booked' : `${booked.length} things are booked`}{when ? ` on ${when}` : ' on your dates'}</Text>
+              <Text variant="caption">
+                {booked.map((l) => needLabel(l.line)).join(', ')}. Swap it below, try {level === 'best' ? 'Better' : 'another level'}, or pick other days.
+              </Text>
+              <Pressable onPress={() => router.push('/plan/ask/when?edit=1')} hitSlop={8}><Text variant="label" tone="lagoon">Try other days →</Text></Pressable>
             </View>
           ) : null}
 
@@ -113,12 +125,12 @@ export default function Setup() {
 
           {result.match.totals.technicianNote ? <Notice tone="tip" icon="wrench">{result.match.totals.technicianNote}</Notice> : null}
           {setup.notes.map((n) => <Notice key={n} tone="tip">{n}</Notice>)}
-          <Text variant="caption" tone="faint">Sized with Deloo’s planning rules ({RULES_VERSION}). Prices are the owners’ day rates.</Text>
+          <Text variant="caption" tone="faint">Sized with Deloo’s planning rules ({RULES_VERSION}). Prices are per day.</Text>
         </>}
       </ScrollView>
       <View style={[styles.footer, { borderTopColor: c.line, backgroundColor: c.paper }]}>
         <Button kind="secondary" title="Share" style={{ flex: 1 }} onPress={() => router.push('/plan/share')} />
-        <Button title="Book this setup" style={{ flex: 2 }} disabled={!result || result.totalKobo === 0} onPress={() => router.push('/book/review')} />
+        <Button title="Book this setup" style={{ flex: 2 }} disabled={!result || result.totalKobo === 0} onPress={() => { if (result) { setBookingDraft(draftFromPlan(result, draft)); router.push('/book/review'); } }} />
       </View>
     </SafeAreaView>
   );
@@ -135,9 +147,11 @@ function LineCard({ l, open, onToggle }: { l: ChosenLine; open: boolean; onToggl
         <View style={[styles.lineIcon, { backgroundColor: c.lagoonTint }]}><Icon name={categoryIcon(l.line.category)} color={c.lagoon} /></View>
         <View style={{ flex: 1, gap: 2 }}>
           <Text variant="bodyStrong">{l.removed ? `Removed: ${needLabel(l.line)}` : lineTitle(l.line, l.chosen)}</Text>
-          {l.chosen.length ? <Text variant="caption" tone="slate" numberOfLines={1}>{vendorsOf(l.chosen)}</Text> : null}
+          {l.chosen.length ? <Text variant="caption" tone="slate" numberOfLines={1}>{l.chosen.map((o) => `${naira(o.dayRateKobo, true)}/day`).join(' + ')}</Text> : null}
           <View style={styles.badges}>
-            {status === 'available' ? <Badge label="Available" status="available" /> : status === 'limited' ? <Badge label={units < l.line.qty ? `Only ${units} of ${l.line.qty} free` : 'Few left'} status="limited" /> : status === 'unavailable' ? <Badge label="Not available" status="unavailable" /> : null}
+            {status === 'available' ? <Badge label="Available" status="available" />
+              : status === 'limited' ? <Badge label={units < l.line.qty ? `Only ${units} of ${l.line.qty} free` : 'Last one'} status="limited" />
+              : status === 'unavailable' ? <Badge label={l.shortReason === 'not_stocked' && !l.swappedTo ? 'We don’t have this yet' : 'Booked on your dates'} status="unavailable" /> : null}
             {l.technicianRequired && !l.removed ? <Badge label="With technician" /> : null}
             {l.swappedTo ? <Badge label="Swapped" /> : null}
           </View>

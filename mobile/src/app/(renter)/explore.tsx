@@ -1,10 +1,12 @@
-import { router } from 'expo-router';
+import { Image } from 'expo-image';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CATEGORY_META, displayName, GROUPS } from '@/lib/catalog';
 import { naira } from '@/lib/format';
+import { itemPhotoUrl } from '@/lib/photos';
 import { supabase } from '@/lib/supabase';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
@@ -14,22 +16,27 @@ import { Text } from '@/ui/text';
 
 type Item = {
   id: string; name: string; brand: string; model: string; category_key: string; day_rate_kobo: number;
-  technician_required: boolean; vendors: { name: string; vendor_type: string } | null; units: { count: number }[];
+  technician_required: boolean; photos: string[]; units: { count: number }[];
 };
+
+type GroupKey = (typeof GROUPS)[number]['key'];
 
 /** Browse the public catalogue (RLS: active gear from approved vendors). */
 export default function Explore() {
   const c = useColors();
+  const params = useLocalSearchParams<{ group?: string }>();
   const [items, setItems] = useState<Item[] | null>(null);
-  const [group, setGroup] = useState<(typeof GROUPS)[number]['key']>('all');
+  const [group, setGroup] = useState<GroupKey>('all');
+  // Opened from a Plan home shortcut: start on that group.
+  useEffect(() => { if (params.group && GROUPS.some((g) => g.key === params.group)) setGroup(params.group as GroupKey); }, [params.group]);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
     const { data, error: err } = await supabase
       .from('items')
-      .select('id, name, brand, model, category_key, day_rate_kobo, technician_required, vendors(name, vendor_type), units(count)')
-      .eq('active', true).order('category_key').order('day_rate_kobo');
+      .select('id, name, brand, model, category_key, day_rate_kobo, technician_required, photos, units(count)')
+      .eq('active', true).order('category_key').order('day_rate_kobo', { ascending: false });
     if (err) setError('Couldn’t load gear. Pull down to try again.');
     else { setError(''); setItems(data as unknown as Item[]); }
   }, []);
@@ -44,7 +51,7 @@ export default function Explore() {
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.paper }}>
       <View style={styles.header}>
         <Text variant="title" accessibilityRole="header">Explore gear</Text>
-        <Text tone="slate">{items ? `${items.length} listings from trusted owners in Lagos` : 'Loading…'}</Text>
+        <Text tone="slate">{items ? `${items.length} items, delivered across Lagos` : 'Loading…'}</Text>
       </View>
       <View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
@@ -73,14 +80,18 @@ function GearCard({ item }: { item: Item }) {
   return (
     <Pressable onPress={() => router.push(`/item/${item.id}`)} android_ripple={{ color: c.lagoonTint }}
       style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]} accessibilityRole="button" accessibilityLabel={`${displayName(item.name)}, ${naira(item.day_rate_kobo)} a day`}>
-      <View style={[styles.art, { backgroundColor: c.lagoonTint }]}>
-        <Icon name={categoryIcon(item.category_key)} size={40} color={c.lagoon} />
-      </View>
+      {item.photos[0] ? (
+        <Image source={{ uri: itemPhotoUrl(item.photos[0]) }} style={[styles.art, { backgroundColor: '#fff' }]} contentFit="contain" transition={150} />
+      ) : (
+        <View style={[styles.art, { backgroundColor: c.lagoonTint }]}>
+          <Icon name={categoryIcon(item.category_key)} size={40} color={c.lagoon} />
+        </View>
+      )}
       <View style={{ gap: 2, padding: space.md }}>
         <Text variant="label" numberOfLines={2}>{displayName(item.name)}</Text>
         <Text variant="caption" tone="slate" numberOfLines={1}>{[item.brand, item.model].filter(Boolean).join(' ')}</Text>
         <Text variant="bodyStrong" style={{ marginTop: space.xs }}>{naira(item.day_rate_kobo)}<Text variant="caption" tone="slate"> /day</Text></Text>
-        <Text variant="caption" tone="faint" numberOfLines={1}>{item.vendors?.name.replace(/\s*\(DEMO\)$/, '')} · {units} {units === 1 ? 'unit' : 'units'}</Text>
+        {units > 1 ? <Text variant="caption" tone="faint">{units} available</Text> : null}
         {item.technician_required ? <View style={{ marginTop: space.xs }}><Badge label="Technician included" /></View> : null}
       </View>
     </Pressable>
@@ -92,5 +103,5 @@ const styles = StyleSheet.create({
   chips: { paddingHorizontal: space.xl, paddingVertical: space.lg, gap: space.sm },
   grid: { paddingHorizontal: space.xl, paddingBottom: space.xxxl, gap: space.md },
   card: { flex: 1, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden', maxWidth: '50%' },
-  art: { height: 96, alignItems: 'center', justifyContent: 'center' },
+  art: { height: 120, width: '100%', alignItems: 'center', justifyContent: 'center' },
 });

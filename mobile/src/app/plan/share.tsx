@@ -13,7 +13,7 @@ import { Skeleton } from '@/ui/feedback';
 import { Text } from '@/ui/text';
 
 /**
- * R10 Share to WhatsApp: a plain-text quote for whoever approves the spend (pastor, client, committee).
+ * R10 Share to WhatsApp: a plain-text quote for whoever approves the spend (client, producer, team).
  * Text only, no image, to save the recipient's data. A web link is added once deloo.space/s/… exists.
  */
 export default function ShareSetup() {
@@ -27,7 +27,7 @@ export default function ShareSetup() {
     const items = r.lines.filter((l) => l.chosen.length).map((l) => `• ${lineTitle(l.line, l.chosen)}`).join('\n');
     const level = draft.level[0].toUpperCase() + draft.level.slice(1);
     return [
-      `Event setup from Deloo (${level})`,
+      `Shoot kit from Deloo (${level})`,
       about,
       '',
       items,

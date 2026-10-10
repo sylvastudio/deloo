@@ -16,7 +16,7 @@ export type Draft = {
   updatedAt: string;
 };
 
-const KEY = 'deloo.plan.draft';
+const KEY = 'deloo.plan.shoot';
 const EMPTY: Draft = { answers: {}, rawText: '', level: 'better', swaps: {}, removed: [], updatedAt: '' };
 
 function read(): Draft {
@@ -33,7 +33,7 @@ type PlanState = {
   answer: (patch: Partial<Answers>) => void;
   update: (patch: Partial<Omit<Draft, 'answers'>>) => void;
   reset: () => void;
-  /** How many of the nine questions have an answer (including "Not sure"). */
+  /** How many of the questions have an answer (including "Not sure"). */
   answered: number;
 };
 
@@ -45,7 +45,7 @@ export function usePlan() {
   return p;
 }
 
-export const QUESTION_KEYS = ['eventType', 'venue', 'crowd', 'stage', 'stream', 'power', 'startsAt', 'area', 'budget'] as const;
+export const QUESTION_KEYS = ['shootType', 'people', 'angles', 'location', 'sound', 'movement', 'startsAt', 'area', 'budget'] as const;
 
 export function PlanProvider({ children }: PropsWithChildren) {
   const [draft, setDraft] = useState<Draft>(read);

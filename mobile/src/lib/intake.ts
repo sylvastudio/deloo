@@ -1,71 +1,54 @@
-import type { Answers, EventType, StageAct } from '@/planner/types';
+import type { Answers, ShootType } from '@/planner/types';
 import { LAGOS_AREAS } from './format';
 
 /**
  * Reads a typed or spoken description into planner answers, on the phone (works offline, costs nothing).
  * Only fills what the words clearly say; everything else stays empty so R4 asks for it.
- * "outdoor crusade, about 2,000 people, livestream on YouTube, we have a generator, Ikeja, Saturday"
+ * "3-person podcast in Lekki on Saturday, two cameras" · "music video at night outdoors, need a gimbal"
  */
-export function readEvent(text: string, now = new Date()): Partial<Answers> {
+export function readShoot(text: string, now = new Date()): Partial<Answers> {
   const t = ` ${text.toLowerCase().replace(/[’']/g, "'")} `;
   const has = (...words: string[]) => words.some((w) => new RegExp(`\\b${w}`).test(t));
   const a: Partial<Answers> = {};
 
-  const types: [EventType, string[]][] = [
-    ['crusade', ['crusade', 'open air service', 'outreach', 'revival']],
-    ['wedding', ['wedding', 'reception', 'engagement', 'introduction']],
-    ['conference', ['conference', 'seminar', 'summit', 'workshop', 'convention', 'symposium', 'retreat']],
-    ['concert', ['concert', 'show', 'gig', 'praise night', 'worship night', 'festival']],
-    ['launch', ['launch', 'product', 'activation', 'exhibition']],
-    ['party', ['party', 'birthday', 'owambe', 'celebration', 'naming', 'dinner']],
-    ['service', ['service', 'church', 'thanksgiving', 'vigil', 'harvest', 'sunday']],
+  const types: [ShootType, string[]][] = [
+    ['podcast', ['podcast', 'pod cast', 'talk show']],
+    ['music_video', ['music video', 'mv\\b', 'video shoot for (my|the|a) song', 'visuals']],
+    ['short_film', ['short film', 'film', 'movie', 'skit', 'drama', 'series', 'documentary']],
+    ['interview', ['interview', 'talking head', 'testimonial', 'q&a']],
+    ['photo', ['photo shoot', 'photoshoot', 'photos', 'portrait', 'headshot', 'pictures', 'product shoot']],
+    ['event', ['event', 'wedding', 'conference', 'concert', 'service', 'birthday', 'party', 'coverage']],
+    ['content', ['youtube', 'vlog', 'tiktok', 'instagram', 'reels', 'content', 'social media', 'ad\\b', 'commercial']],
   ];
   const type = types.find(([, words]) => has(...words));
-  if (type) a.eventType = type[0];
+  if (type) a.shootType = type[0];
 
-  if (has('open field', 'open ground', 'open air', 'field', 'stadium', 'park', 'beach', 'open-air')) a.venue = 'open';
-  else if (has('canopy', 'canopies', 'tent', 'marquee', 'covered')) a.venue = 'covered';
-  else if (has('outdoor', 'outside')) a.venue = 'open';
-  else if (has('hall', 'auditorium', 'indoor', 'inside', 'room', 'church', 'hotel', 'ballroom')) a.venue = 'indoor';
-  if (a.venue === 'indoor') {
-    if (has('auditorium', 'ballroom')) a.roomSize = 'auditorium';
-    else if (has('hall')) a.roomSize = 'hall';
-    else if (has('small room', 'meeting room', 'room')) a.roomSize = 'small';
-  }
+  if (has('indoors? and outdoors?', 'inside and outside', 'both indoor')) a.location = 'both';
+  else if (has('outdoor', 'outside', 'beach', 'street', 'park', 'field', 'rooftop')) a.location = 'outdoor';
+  else if (has('indoor', 'inside', 'studio', 'room', 'office', 'house', 'apartment', 'hall')) a.location = 'indoor';
 
-  // "2,000 people", "about 2k guests", "500 pax", "1.5k"
-  const crowd = t.match(/(\d[\d,.]*)\s*(k\b)?\s*(people|persons|guests|pax|attendees|members|heads|souls|congregation|crowd)?/g)
-    ?.map((m) => {
-      const mm = m.match(/(\d[\d,.]*)\s*(k\b)?\s*(people|persons|guests|pax|attendees|members|heads|souls|congregation|crowd)?/)!;
-      const n = parseFloat(mm[1].replace(/,/g, '')) * (mm[2] ? 1000 : 1);
-      return { n, strong: !!mm[3] || !!mm[2] };
-    })
-    .filter((x) => x.n >= 10 && x.n <= 100000 && (x.strong || x.n >= 50));
-  const best = crowd?.find((x) => x.strong) ?? crowd?.[0];
-  if (best) a.crowd = Math.round(best.n);
+  if (has('day and night', 'into the night', 'all day')) a.timeOfDay = 'both';
+  else if (has('night', 'evening', 'dark')) a.timeOfDay = 'night';
+  else if (has('morning', 'afternoon', 'daytime', 'daylight')) a.timeOfDay = 'day';
 
-  const stage: StageAct[] = [];
-  if (has('band', 'drummer', 'drums', 'instrumentalist')) stage.push('band');
-  if (has('choir', 'praise team', 'worship team', 'singers')) stage.push('choir');
-  if (has('dj', 'playback', 'deejay')) stage.push('dj');
-  if (has('panel', 'panelist')) stage.push('panel');
-  if (has('speaker', 'preach', 'sermon', 'minister', 'mc', 'host', 'keynote', 'talk')) stage.push('speakers');
-  if (stage.length) a.stage = stage;
+  // "3 people", "two guests", "3-person podcast", "me and my cohost" (2)
+  const WORDS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6 };
+  const n = (w: string) => WORDS[w] ?? Number(w);
+  const people = t.match(/\b(\d|one|two|three|four|five|six)[\s-]*(people|persons?|guests?|hosts?|speakers?|man|woman)\b/);
+  if (people) a.people = n(people[1]);
+  else if (has('me and my (co-?host|guest|friend|partner)', 'two of us')) a.people = 2;
+  else if (has('solo', 'just me', 'by myself')) a.people = 1;
+  const cams = t.match(/\b(\d|one|two|three|four)[\s-]*(cameras?|cams?|angles?)\b/);
+  if (cams) a.angles = n(cams[1]);
+  else if (has('multi-?cam')) a.angles = 3;
 
-  if (has('livestream', 'live stream', 'stream', 'go live', 'broadcast')) {
-    a.stream = 'live';
-    if (has('youtube')) a.platform = 'youtube';
-    else if (has('facebook', 'fb')) a.platform = 'facebook';
-    else if (has('instagram', 'ig live')) a.platform = 'instagram';
-    else if (has('zoom')) a.platform = 'zoom';
-  } else if (has('record', 'video coverage', 'film', 'coverage')) a.stream = 'record';
-  else if (has('no stream', 'no livestream', 'no recording')) a.stream = 'none';
+  if (has('no sound', 'no audio', 'playback', 'lip ?sync')) a.sound = 'none';
+  else if (has('desk mic', 'podcast mic', 'podmic')) a.sound = 'desk';
+  else if (has('lapel', 'lavalier', 'clip-?on', 'wireless mic')) a.sound = 'clip';
+  else if (a.shootType === 'podcast') a.sound = 'desk';
 
-  if (has('no light', 'no power', 'no generator', 'need a generator', 'need generator')) a.power = 'none';
-  else if (has('we have a generator', 'our generator', 'have gen', 'our gen', 'own generator')) a.power = 'generator';
-  else if (has('nepa', 'grid', 'phcn', 'light is steady', 'ekedc', 'ikedc')) a.power = 'grid';
-
-  if (has('sound guy', 'sound engineer', 'technician', 'someone to run', 'operator')) a.technicianWanted = true;
+  if (has('gimbal', 'moving shots?', 'tracking', 'walk and talk', 'smooth')) a.movement = true;
+  else if (has('tripod', 'static', 'seated', 'sitting')) a.movement = false;
 
   const area = LAGOS_AREAS.find((ar) => t.includes(ar.toLowerCase())) ?? (has('vi\\b', 'v\\.i') ? 'Victoria Island' : undefined);
   if (area) a.area = area;
@@ -74,7 +57,7 @@ export function readEvent(text: string, now = new Date()): Partial<Answers> {
   if (when) { a.startsAt = when.startsAt; a.endsAt = when.endsAt; }
 
   if (has('cheap', 'tight budget', 'low budget', 'small budget', 'lean')) a.budget = 'low';
-  else if (has('premium', 'best', 'excellent', 'top notch', 'top-notch', 'big budget')) a.budget = 'high';
+  else if (has('premium', 'best', 'cinematic', 'top notch', 'top-notch', 'big budget')) a.budget = 'high';
 
   return a;
 }
@@ -82,7 +65,7 @@ export function readEvent(text: string, now = new Date()): Partial<Answers> {
 const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
-/** "Saturday", "next Sunday", "14 Nov", "Nov 14", "tomorrow" → a day in Lagos, setup from 8am, 12 hours. */
+/** "Saturday", "next Sunday", "14 Nov", "Nov 14", "tomorrow" → one rental day in Lagos, from 8am. */
 function readDate(t: string, now: Date): { startsAt: string; endsAt: string } | undefined {
   const lagos = new Date(now.getTime() + 3.6e6);
   const today = new Date(Date.UTC(lagos.getUTCFullYear(), lagos.getUTCMonth(), lagos.getUTCDate()));

@@ -49,6 +49,11 @@ const ICONS = {
   light: { ios: 'lightbulb.fill', android: 'lightbulb' },
   generator: { ios: 'bolt.circle.fill', android: 'electric_bolt' },
   avr: { ios: 'powerplug.fill', android: 'power' },
+  lens: { ios: 'camera.aperture', android: 'camera' },
+  gimbal: { ios: 'gyroscope', android: 'sports_esports' },
+  headphones: { ios: 'headphones', android: 'headphones' },
+  grip: { ios: 'line.3.crossed.swirl.circle', android: 'height' },
+  backdrop: { ios: 'photo.artframe', android: 'wallpaper' },
 } as const;
 
 export type IconName = keyof typeof ICONS;

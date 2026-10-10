@@ -3,10 +3,10 @@ import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { naira } from '@/lib/format';
-import { lineTitle, needLabel, vendorsOf } from '@/lib/line-text';
+import { lineTitle, needLabel } from '@/lib/line-text';
 import { usePlan } from '@/lib/plan';
 import { applyChoices, usePlanResult } from '@/lib/plan-result';
-import type { AlternativeKind } from '@/planner/types';
+import type { AlternativeKind, Offer } from '@/planner/types';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Button } from '@/ui/button';
@@ -15,8 +15,10 @@ import { Notice, Skeleton } from '@/ui/feedback';
 import { Text } from '@/ui/text';
 
 const KIND: Record<AlternativeKind, string> = {
-  other_vendor: 'Same thing, another owner', equivalent: 'Similar item', different_approach: 'A different way to do it', nearby_date: 'On a nearby date',
+  other_vendor: 'Same thing, another listing', equivalent: 'Similar item', different_approach: 'A different way to do it', nearby_date: 'On other days',
 };
+
+const perDay = (offers: Offer[]) => offers.map((o) => `${naira(o.dayRateKobo, true)}/day`).join(' + ');
 
 /** R8 Swap sheet: alternatives in PRD §4.3 order, each with a one-line trade-off and the price change. */
 export default function Swap() {
@@ -50,25 +52,25 @@ export default function Swap() {
         <Button title="Add it back" onPress={() => choose(undefined)} />
       ) : (
         <Option
-          title={lineTitle(l.line, l.offers)} sub={l.offers.length ? vendorsOf(l.offers) : 'Not free on your date'}
+          title={lineTitle(l.line, l.offers)} sub={l.offers.length ? perDay(l.offers) : l.shortReason === 'not_stocked' ? 'We don’t have this yet' : 'Booked on your dates'}
           label={current ? 'Current choice' : 'Original choice'} selected={!!current} onPress={() => choose(undefined)}
           status={l.status}
         />
       )}
 
       {l.alternatives.length ? <Text variant="label" tone="slate">OTHER OPTIONS</Text> : (
-        <Notice tone="tip">No other options for this right now. We’ve noted it, so we can find more.</Notice>
+        <Notice tone="tip">Nothing similar in our stock right now. We’ve noted your request so we know what to get next.</Notice>
       )}
       {l.alternatives.map((alt, i) => (
         <Option key={i} label={KIND[alt.kind]} title={alt.offers.length ? lineTitle(l.line, alt.offers) : alt.trade}
-          sub={alt.offers.length ? `${vendorsOf(alt.offers)} · ${alt.trade}` : undefined}
+          sub={alt.offers.length ? `${perDay(alt.offers)} · ${alt.trade}` : undefined}
           price={alt.priceDeltaKobo} incomplete={!alt.complete}
           selected={draft.swaps[key] === String(i)} disabled={alt.kind === 'nearby_date'}
           onPress={() => (alt.kind === 'nearby_date' ? (router.back(), router.push('/plan/ask/when?edit=1')) : choose(i))} />
       ))}
 
       {!l.removed ? <>
-        {l.line.essential ? <Notice tone="warning">Without this, {l.line.group === 'power' ? 'your setup has no safe power' : 'the event may not work as planned'}.</Notice> : null}
+        {l.line.essential ? <Notice tone="warning">Without this, {l.line.category === 'lens' ? 'the camera has no lens' : 'the shoot may not work as planned'}.</Notice> : null}
         <Button kind="quiet" title="Remove from setup" onPress={remove} />
       </> : null}
     </ScrollView>

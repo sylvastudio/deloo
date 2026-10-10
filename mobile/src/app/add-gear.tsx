@@ -190,7 +190,7 @@ export default function AddGear() {
               <Chip key={k} label={m.label} selected={category === k} onPress={() => setCategory(k)} />
             ))}
           </ScrollView>
-          <Field label="Name renters will see" value={name} onChangeText={setName} placeholder={'e.g. 15" powered speaker'} />
+          <Field label="Name renters will see" value={name} onChangeText={setName} placeholder="e.g. Sony FX3 cinema camera" />
           <View style={styles.row}>
             <View style={{ flex: 1 }}><Field label="Brand" value={brand} onChangeText={setBrand} placeholder="JBL" /></View>
             <View style={{ flex: 1 }}><Field label="Model" value={model} onChangeText={setModel} placeholder="EON715" autoCapitalize="characters" /></View>

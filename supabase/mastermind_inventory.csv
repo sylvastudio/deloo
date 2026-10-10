@@ -1,0 +1,28 @@
+wc_id,name,site_category,day_rate_ngn,units_known,photo,note
+1630,Sony FX3 Full-Frame Cinema Camera,CAMERAS,50000,,2025/05/1746547141_1894322-1.avif,
+438,Sony ZV-E1 (body only),CAMERAS,40000,2,2025/04/unnamed.png,
+449,Sony FX30 (body only),CAMERAS,35000,,2025/04/unnamed-2.png,
+1194,Sony ZV-E10 (body only),CAMERAS,20000,1,2025/05/unnamed-6.png,
+1635,DJI FPV Drone Combo,CAMERAS,70000,,2025/05/DJI-FPV-Drone-Combo-3.avif,site shows "Inventory Missing"
+1633,Sony FE 24-70mm f/2.8 GM,CAMERAS,30000,,2025/05/sony_fe_24_70mm_f_2_8_gm_1651055728_1702384.avif,lens listed under Cameras on the site
+1202,Sony FE 85mm f/1.8,LENSES,17000,,2025/05/SONY-85MM-F1.8-FULL-FRAME-E-MOUNT-.png,
+1196,Sony FE 35mm f/1.8,LENSES,17000,,2025/05/unnamed-7.png,
+1200,Sony FE 50mm f/1.8,LENSES,10000,,2025/05/SONY-50MM-F1.8-FULL-FRAME-E-MOUNT.png,
+1198,Sigma 16mm f/1.4 DC DN Contemporary (Sony E),LENSES,15000,,2025/05/unnamed-4.jpg,
+1862,DJI RS 5 Gimbal,GRIP,45000,,2026/06/dji.avif,"sold, not rented, on the site (no /Day); confirm"
+1253,DJI RS 3 Mini Gimbal,GRIP,25000,1,2025/05/unnamed-25.png,
+1251,Impact Turtle Base C-Stand Kit (10.75 ft),GRIP,5000,,2025/05/unnamed-24.png,
+1247,Impact Pro Backdrop Support Kit (12.9 ft),GRIP,5000,,2025/05/unnamed-22.png,
+1249,Paper backdrop,GRIP,10000,,2025/05/unnamed-23.png,
+1236,Amaran F22c 2x2 ft RGB LED Mat (V-Mount),LIGHTING,25000,,2025/05/amaran_ap30235a14_f22c_rgbww_led_mat_1648740048_1698323.avif,
+1232,Amaran COB 200x S Bi-Color LED Monolight,LIGHTING,25000,2,2025/05/unnamed-15.png,
+1238,Godox S100W,LIGHTING,15000,1,2025/05/unnamed-18.png,
+1243,Aputure MC Pro RGB LED Panel,LIGHTING,10000,1,2025/05/unnamed-20.png,
+1234,Nanlite PavoTube 6C RGB,LIGHTING,8000,1,2025/05/nanlite_15_2017_pavotube_6c_10_rgbww_1587398873_1558196.avif,
+1230,RODECaster Pro II,AUDIO,45000,1,2025/05/unnamed-14.png,
+1222,RODE PodMic USB (USB and XLR),AUDIO,25000,1,2025/05/unnamed-10.png,
+1224,RODE PodMic (with stand and XLR),AUDIO,20000,1,2025/05/unnamed-11.png,
+1218,RODE Wireless PRO,AUDIO,15000,1,2025/05/unnamed-8.png,
+1220,RODE Wireless GO II (2-person),AUDIO,10000,1,2025/05/unnamed-9.png,
+1226,Audio-Technica headphones,AUDIO,5000,1,2025/05/unnamed-12.png,
+1228,Adjustable mic stand,AUDIO,2000,1,2025/05/unnamed-13.png,

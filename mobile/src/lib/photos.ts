@@ -38,3 +38,41 @@ export async function uploadItemPhoto(vendorId: string, photo: Photo): Promise<s
 export function itemPhotoUrl(path: string) {
   return supabase.storage.from('items').getPublicUrl(path).data.publicUrl;
 }
+
+/** The camera permission was refused; the screen offers "Open settings". */
+export class CameraDenied extends Error {
+  constructor() { super('Allow camera access so you can photograph the gear. Open settings, then tap Camera.'); }
+}
+
+export type Evidence = { uri: string; mediaType: 'photo' | 'video'; width?: number; height?: number; durationS?: number };
+
+async function cameraAllowed() {
+  const perm = await ImagePicker.requestCameraPermissionsAsync();
+  if (!perm.granted) throw new CameraDenied();
+}
+
+/**
+ * Handover evidence photo (PRD §5.8): camera only, longest side 1600 px, JPEG 0.7 (~250–400 KB).
+ * Returns a file in the cache; the handover queue moves it somewhere durable.
+ */
+export async function shootEvidencePhoto(): Promise<Evidence | null> {
+  await cameraAllowed();
+  const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1, allowsEditing: false, exif: false });
+  if (res.canceled || !res.assets?.[0]) return null;
+  const a = res.assets[0];
+  const ctx = ImageManipulator.manipulate(a.uri);
+  if (Math.max(a.width, a.height) > 1600) ctx.resize(a.width >= a.height ? { width: 1600, height: null } : { width: null, height: 1600 });
+  const saved = await (await ctx.renderAsync()).saveAsync({ format: SaveFormat.JPEG, compress: 0.7 });
+  return { uri: saved.uri, mediaType: 'photo', width: saved.width, height: saved.height };
+}
+
+/** A short power-on video (≤15 s, medium quality). */
+export async function shootEvidenceVideo(): Promise<Evidence | null> {
+  await cameraAllowed();
+  const res = await ImagePicker.launchCameraAsync({
+    mediaTypes: ['videos'], videoMaxDuration: 15, videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium, quality: 0.5,
+  });
+  if (res.canceled || !res.assets?.[0]) return null;
+  const a = res.assets[0];
+  return { uri: a.uri, mediaType: 'video', width: a.width, height: a.height, durationS: a.duration ? Math.round(a.duration / 100) / 10 : undefined };
+}
