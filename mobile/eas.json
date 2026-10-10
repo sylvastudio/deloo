@@ -7,14 +7,24 @@
     "preview": {
       "distribution": "internal",
       "environment": "preview",
-      "android": { "buildType": "apk" },
-      "env": { "EXPO_PUBLIC_API_URL": "https://deloo.space" }
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://deloo.space"
+      },
+      "channel": "preview"
     },
     "production": {
       "environment": "production",
       "autoIncrement": true,
-      "android": { "buildType": "app-bundle" },
-      "env": { "EXPO_PUBLIC_API_URL": "https://deloo.space" }
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://deloo.space"
+      },
+      "channel": "production"
     }
   }
 }

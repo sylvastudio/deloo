@@ -20,7 +20,13 @@
       },
       "predictiveBackGestureEnabled": true,
       "package": "space.deloo.app",
-      "softwareKeyboardLayoutMode": "resize"
+      "softwareKeyboardLayoutMode": "resize",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "web": {
       "output": "single",
@@ -53,6 +59,16 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6d27a8ec-46db-40d8-81b0-e9d254872259"
+      }
+    },
+    "owner": "sylva-studio",
+    "updates": {
+      "url": "https://u.expo.dev/6d27a8ec-46db-40d8-81b0-e9d254872259"
     }
   }
 }
