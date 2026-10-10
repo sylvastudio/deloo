@@ -14,7 +14,8 @@ import { categoryIcon, Icon } from '@/ui/icon';
 import { Screen } from '@/ui/layout';
 import { Text } from '@/ui/text';
 
-const EXAMPLES = ['3-person podcast in Lekki on Saturday, two cameras', 'Music video at night outdoors, moving shots', 'Interview for a brand, indoors in Ikeja, 2 days'];
+// Every example has days, so tapping one goes straight to a priced, checked setup.
+const EXAMPLES = ['3-person podcast in Lekki this Saturday, two cameras', 'Music video Fri to Sun in VI, under 100k', 'Wedding next sat, need delivery to Ajah'];
 const BROWSE = [['camera', 'camera', 'Cameras'], ['lens', 'lens', 'Lenses'], ['light', 'light', 'Lighting'], ['audio', 'mic', 'Audio'], ['grip', 'gimbal', 'Grip']] as const;
 
 /**

@@ -9,6 +9,8 @@ import {
   cachedSettings, createHold, GearTaken, getActiveHold, isOffline, itemCalendar, loadSettings, plain, quoteBooking, requestCancellation,
   setActiveHold, type ActiveHold, type Delivery, type PayMethod, type Quote, type QuoteLine, type Settings,
 } from '@/lib/bookings';
+import { WhatsCovered } from '@/ui/coverage-sheet';
+import { DEFAULT_SLOT, DeliverySlotPicker, saveDeliverySlot, type DeliverySlot } from '@/ui/delivery-slot';
 import { PayMethods } from '@/ui/pay-methods';
 import { daysText, lagosTime, naira, rangeLabel, whatsappUrl } from '@/lib/format';
 import { useSession } from '@/lib/session';
@@ -36,7 +38,9 @@ export default function Review() {
   const { profile } = useSession();
   const saved = useMemo(getCheckout, []);
   const [settings, setSettings] = useState<Settings | null>(cachedSettings);
-  const [delivery, setDelivery] = useState<Delivery>(saved?.delivery ?? 'delivery');
+  // What the plan said ("deliver to Ajah") wins over last time's choice.
+  const [delivery, setDelivery] = useState<Delivery>(draft?.delivery ?? saved?.delivery ?? 'delivery');
+  const [slot, setSlot] = useState<DeliverySlot>(DEFAULT_SLOT);
   const [zoneId, setZoneId] = useState<string | undefined>(saved?.zoneId);
   const [address, setAddress] = useState(saved?.address ?? '');
   const [phone, setPhone] = useState(saved?.phone || profile?.phone || '');
@@ -141,7 +145,8 @@ export default function Review() {
     const toPay = (id: string) => router.push({ pathname: '/book/pay', params: { booking: id, go: '1', method } });
     if (method === 'usdt') { setPayError('Paying in USDT is coming soon. Pick card, transfer or USSD for now.'); return; }
     saveCheckout({ delivery, zoneId, address: address.trim(), phone: phone.trim(), method });
-    if (held && hold) { toPay(hold.booking_id); return; }
+    // The slot is saved on the booking right after the hold; losing it never blocks paying (staff set it).
+    if (held && hold) { saveDeliverySlot(hold.booking_id, slot).catch(() => {}); toPay(hold.booking_id); return; }
     if (!ready || !draft?.first || !draft.last) return;
     setPaying(true); setPayError(''); setTaken(false);
     try {
@@ -151,6 +156,7 @@ export default function Review() {
       });
       const active = { ...h, draftKey: key };
       setActiveHold(active); setHold(active);
+      await saveDeliverySlot(h.booking_id, slot).catch(() => {});
       toPay(h.booking_id);
     } catch (e) {
       if (e instanceof GearTaken) { setTaken(true); setPickDays(true); runQuote(); }
@@ -249,6 +255,7 @@ export default function Review() {
                 Bring a valid ID. Return it to the same place the morning after your last day.
               </Text>
             )}
+            <DeliverySlotPicker value={slot} onChange={setSlot} pickup={delivery === 'pickup'} disabled={held} />
             {editPhone || !phoneOk ? (
               <Field label="Phone for the rider" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel"
                 error={touched && !phoneOk ? 'Add a phone number we can call or WhatsApp.' : undefined} />
@@ -270,7 +277,8 @@ export default function Review() {
           <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
             <Money label={`Rental · ${daysText(quote.days)}`} value={naira(quote.rental_kobo)} />
             <Money label={`Deloo Protection (${Math.round(quote.protection_rate * 100)}%)`} value={naira(quote.protection_kobo)}
-              hint="Damage cover for accidents during your rental. Your deposit is used first; Protection pays most of the rest, up to a limit. Not covered: careless loss, or theft without a police report." />
+              hint="Damage cover for accidents during your rental. Your deposit is used first." />
+            <WhatsCovered />
             <Money label={delivery === 'delivery' ? 'Delivery and collection' : 'Pickup'} value={delivery === 'delivery' ? naira(quote.delivery_kobo) : 'Free'} />
             <View style={[styles.divider, { backgroundColor: c.line }]} />
             <Money label="Refundable deposit" value={naira(quote.deposit_kobo)} hint="We send it back within 48 hours after we check the gear. Card refunds can take a few more working days to show." />
