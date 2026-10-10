@@ -1,0 +1,3 @@
+# app.deloo.space is the web app; pages carry noindex (meta + X-Robots-Tag). The landing page is deloo.space.
+User-agent: *
+Allow: /

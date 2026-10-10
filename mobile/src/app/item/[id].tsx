@@ -9,6 +9,8 @@ import { isOffline, itemCalendar, type CalendarDay } from '@/lib/bookings';
 import { CATEGORY_META, displayName } from '@/lib/catalog';
 import { dayLabel, daysText, naira, rangeLabel } from '@/lib/format';
 import { itemPhotoUrl } from '@/lib/photos';
+import { rememberReturn } from '@/lib/return-to';
+import { useSession } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
@@ -49,6 +51,7 @@ const HORIZON = 90;
 export default function ItemDetail() {
   const c = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { session } = useSession();
   const [item, setItem] = useState<Item | null | undefined>(undefined);
   const [itemError, setItemError] = useState('');
   const [days, setDays] = useState<CalendarDay[] | null>(null);
@@ -97,7 +100,7 @@ export default function ItemDetail() {
 
   if (item === null) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}><TopBar />
+      <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}><TopBar fallback="/explore" />
         <EmptyState icon="info" title="This item isn’t available" body="We may have retired it. Have a look at what else we have." action="Explore gear" onAction={() => router.replace('/explore')} />
       </SafeAreaView>
     );
@@ -105,6 +108,8 @@ export default function ItemDetail() {
 
   function book() {
     if (!item || !first || !last) return;
+    // Web, signed out (browsing from a shared link): sign in first, then come back to this item.
+    if (!session) { rememberReturn(`/item/${item.id}`); router.push('/welcome'); return; }
     setBookingDraft({ lines: [{ itemId: item.id, name: displayName(item.name), qty }], first, last, from: { kind: 'item', itemId: item.id } });
     router.push('/book/review');
   }
@@ -114,7 +119,7 @@ export default function ItemDetail() {
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: c.paper }}>
-      <TopBar />
+      <TopBar fallback="/explore" />
       <ScrollView contentContainerStyle={styles.content}>
         {itemError ? (
           <EmptyState icon="warning" title="Couldn’t load this item" body={itemError} action="Try again" onAction={loadItem} />

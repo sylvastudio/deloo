@@ -9,6 +9,7 @@ import {
   addCapture, confirmJob, removeCapture, signedUrls, startJob, updateJob, useHandoverJobs, waitingText,
   type Capture, type HandoverKind, type Shot,
 } from '@/lib/handover';
+import { useFileUri } from '@/lib/handover-files';
 import { CameraDenied, shootEvidencePhoto, shootEvidenceVideo } from '@/lib/photos';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
@@ -80,7 +81,7 @@ export default function Handover() {
       setDenied(false);
     } catch (err) {
       if (err instanceof CameraDenied) setDenied(true);
-      else setCaptureError('That didn’t save. Try again; if your phone is full, free some space first.');
+      else setCaptureError(err instanceof Error && /^Keep it/.test(err.message) ? err.message : 'That didn’t save. Try again; if your phone is full, free some space first.');
     } finally { setBusy(null); }
   }
 
@@ -219,6 +220,12 @@ function UnitCard({ item, n, of, find, busy, onTake, onRemove }: {
   );
 }
 
+/** A stored capture's thumbnail (on the web the stored uri is resolved to an object URL). */
+function Thumb({ uri }: { uri: string }) {
+  const src = useFileUri(uri);
+  return src ? <Image source={{ uri: src }} style={StyleSheet.absoluteFill} contentFit="cover" /> : null;
+}
+
 /** One photo to take: empty (tap to take), or the thumbnail (tap to retake, × to remove). */
 function Slot({ label, capture, busy, video, onTake, onRemove }: {
   label: string; capture?: Capture; busy?: boolean; video?: boolean; onTake: () => void; onRemove: (m: Capture) => void;
@@ -230,7 +237,7 @@ function Slot({ label, capture, busy, video, onTake, onRemove }: {
         android_ripple={{ color: c.lagoonTint }}
         style={[styles.slot, { borderColor: capture ? c.lagoon : c.line, backgroundColor: capture ? c.surface : c.raised }]}>
         {busy ? <ActivityIndicator color={c.lagoon} />
-          : capture && capture.mediaType === 'photo' ? <Image source={{ uri: capture.uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+          : capture && capture.mediaType === 'photo' ? <Thumb uri={capture.uri} />
           : capture ? <View style={{ alignItems: 'center', gap: 2 }}><Icon name="check" color={c.lagoon} /><Text variant="caption">{capture.durationS ? `${Math.round(capture.durationS)} s video` : 'Video saved'}</Text></View>
           : <View style={{ alignItems: 'center', gap: 4 }}><Icon name="camera" color={c.slate} /><Text variant="caption" tone="slate" style={{ textAlign: 'center' }}>{video ? 'Record' : 'Take photo'}</Text></View>}
       </Pressable>

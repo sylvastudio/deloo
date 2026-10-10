@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    <!-- The app (app.deloo.space) stays out of search; deloo.space owns SEO. Netlify also sends X-Robots-Tag. -->
+    <meta name="robots" content="noindex, nofollow" />
+    <title>%WEB_TITLE%</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <!-- react-native-web's recommended reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      html, body { height: 100%; }
+      body { overflow: hidden; margin: 0; background: #F3F5F4; }
+      #root { display: flex; height: 100%; flex: 1; }
+      @media (prefers-color-scheme: dark) { body { background: #0E1215; } }
+      /* Shown until the app's JavaScript renders (replaced by React). */
+      .boot { margin: auto; font: 700 28px/1 system-ui, sans-serif; letter-spacing: -0.5px; color: #0F6B73; }
+    </style>
+  </head>
+  <body>
+    <noscript>Deloo needs JavaScript to run. Turn it on, or use the Android app.</noscript>
+    <div id="root"><div class="boot">deloo</div></div>
+  </body>
+</html>

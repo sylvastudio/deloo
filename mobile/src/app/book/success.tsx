@@ -1,12 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Linking, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { ReduceMotion, ZoomIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { setBookingDraft } from '@/lib/booking-draft';
 import { bookingDays, cachedSettings, getBooking, PAID, plain, setActiveHold, type BookingDetail } from '@/lib/bookings';
 import { daysText, naira, rangeLabel } from '@/lib/format';
+import { shareOnWhatsApp } from '@/lib/share';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Button } from '@/ui/button';
@@ -45,9 +46,7 @@ export default function Success() {
   async function share() {
     if (!b || !days) return;
     const text = `I’ve booked camera gear on Deloo for ${rangeLabel(days.first, days.last)} (${b.ref}): ${b.booking_items.map((i) => i.item_name).join(', ')}.`;
-    const wa = `whatsapp://send?text=${encodeURIComponent(text)}`;
-    if (await Linking.canOpenURL(wa).catch(() => false)) Linking.openURL(wa).catch(() => {});
-    else Share.share({ message: text }).catch(() => {});
+    await shareOnWhatsApp(text);
   }
 
   return (

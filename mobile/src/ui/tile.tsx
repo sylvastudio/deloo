@@ -16,7 +16,7 @@ export function Tile({
       accessibilityRole={multi ? 'checkbox' : 'radio'}
       accessibilityState={{ checked: !!selected }}
       android_ripple={{ color: c.lagoonTint }}
-      onPress={() => { Haptics.selectionAsync(); onPress(); }}
+      onPress={() => { Haptics.selectionAsync().catch(() => {}); onPress(); }}
       style={({ pressed }) => [
         styles.tile,
         { backgroundColor: selected ? c.lagoonTint : c.surface, borderColor: selected ? c.lagoon : c.line },

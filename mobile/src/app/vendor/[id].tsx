@@ -32,11 +32,11 @@ export default function VendorProfile() {
       .then(({ data }) => setItems((data as Item[]) ?? []));
   }, [id]);
 
-  if (v === null) return <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}><TopBar /><EmptyState icon="info" title="Owner not found" /></SafeAreaView>;
+  if (v === null) return <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}><TopBar fallback="/explore" /><EmptyState icon="info" title="Owner not found" /></SafeAreaView>;
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.paper }}>
-      <TopBar />
+      <TopBar fallback="/explore" />
       <ScrollView contentContainerStyle={styles.content}>
         {!v ? <Skeleton style={{ height: 120 }} /> : <>
           <View style={styles.head}>

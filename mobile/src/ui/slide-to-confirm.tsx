@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
-import { AccessibilityInfo, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { AccessibilityInfo, Platform, Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
@@ -25,7 +25,7 @@ export function SlideToConfirm({ label, onConfirm, disabled }: { label: string; 
 
   function confirm() {
     setDone(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     onConfirm();
   }
 
@@ -59,7 +59,8 @@ export function SlideToConfirm({ label, onConfirm, disabled }: { label: string; 
       <Pressable
         style={StyleSheet.absoluteFill} accessible accessibilityRole="button" accessibilityLabel={label}
         accessibilityHint="Double tap to confirm" disabled={disabled || done}
-        onPress={() => { AccessibilityInfo.isScreenReaderEnabled().then((on) => { if (on) confirm(); }); }}
+        // Web: pointer clicks pass through (box-none), so a press here is the keyboard (Enter/Space) or a screen reader.
+        onPress={() => { if (Platform.OS === 'web') { confirm(); return; } AccessibilityInfo.isScreenReaderEnabled().then((on) => { if (on) confirm(); }); }}
         importantForAccessibility="yes" pointerEvents="box-none"
       />
     </View>

@@ -24,7 +24,8 @@ function mailError(e: { message?: string; status?: number } | null, what: string
 
 function safeNext(v: FormDataEntryValue | null) {
   const s = typeof v === "string" ? v : "";
-  return s.startsWith("/") && !s.startsWith("//") ? s : "/";
+  // The web sign-in is for staff; renters use app.deloo.space.
+  return s.startsWith("/") && !s.startsWith("//") ? s : "/admin";
 }
 
 export async function signIn(_: AuthState, form: FormData): Promise<AuthState> {
@@ -61,23 +62,6 @@ export async function signIn(_: AuthState, form: FormData): Promise<AuthState> {
   if (isCaptcha(error)) return { error: CAPTCHA_FAILED, email };
   if (error) return { error: "That email and password don't match.", email };
   redirect(safeNext(form.get("next")));
-}
-
-export async function signUp(_: AuthState, form: FormData): Promise<AuthState> {
-  const email = String(form.get("email") ?? "").trim();
-  const password = String(form.get("password") ?? "");
-  if (!email) return { error: "Add your email address.", email };
-  if (password.length < 8) return { error: "Use at least 8 characters for your password.", email };
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({
-    email, password,
-    options: { captchaToken: captcha(form), emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm?next=/onboarding` },
-  });
-  if (isCaptcha(error)) return { error: CAPTCHA_FAILED, email };
-  if (error && ((error.status ?? 0) >= 500 || error.status === 429)) return { error: mailError(error, "confirmation")!, email };
-  if (error) return { error: error.message, email };
-  if (!data.session) return { notice: `Check ${email} to confirm your address, then continue.`, email };
-  redirect("/onboarding");
 }
 
 export async function signOut() {

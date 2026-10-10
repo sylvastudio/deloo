@@ -12,7 +12,7 @@ export function Chip({ label, selected, onPress }: { label: string; selected?: b
       accessibilityRole={onPress ? 'button' : 'text'}
       accessibilityState={{ selected: !!selected }}
       disabled={!onPress}
-      onPress={() => { Haptics.selectionAsync(); onPress?.(); }}
+      onPress={() => { Haptics.selectionAsync().catch(() => {}); onPress?.(); }}
       hitSlop={6}
       style={[styles.chip, { backgroundColor: selected ? c.ink : c.surface, borderColor: selected ? c.ink : c.line }]}>
       <Text variant="label" style={{ color: selected ? c.paper : c.ink }}>{label}</Text>

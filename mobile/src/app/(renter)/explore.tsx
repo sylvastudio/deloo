@@ -24,11 +24,15 @@ type GroupKey = (typeof GROUPS)[number]['key'];
 /** Browse the public catalogue (RLS: active gear from approved vendors). */
 export default function Explore() {
   const c = useColors();
-  const params = useLocalSearchParams<{ group?: string }>();
+  const params = useLocalSearchParams<{ group?: string; category?: string }>();
   const [items, setItems] = useState<Item[] | null>(null);
   const [group, setGroup] = useState<GroupKey>('all');
   // Opened from a Plan home shortcut: start on that group.
-  useEffect(() => { if (params.group && GROUPS.some((g) => g.key === params.group)) setGroup(params.group as GroupKey); }, [params.group]);
+  // Shared web links (deloo.space category chips) use ?category=<category key or group>.
+  useEffect(() => {
+    const want = params.group ?? (params.category ? CATEGORY_META[params.category]?.group ?? params.category : undefined);
+    if (want && GROUPS.some((g) => g.key === want)) setGroup(want as GroupKey);
+  }, [params.group, params.category]);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 

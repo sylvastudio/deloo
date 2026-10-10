@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { radius, space, touch } from '@/theme/tokens';
@@ -8,17 +8,18 @@ import { Text } from './text';
 
 /**
  * Screen header for pushed screens: back, optional title, optional step progress, optional right action.
- * `steps` draws a segmented progress bar (question flow).
+ * `steps` draws a segmented progress bar (question flow). `fallback` is where Back goes when there's
+ * no history (a deep link or shared web URL opened straight on this screen).
  */
 export function TopBar({
-  title, onBack, steps, right,
-}: { title?: string; onBack?: () => void; steps?: { current: number; total: number }; right?: React.ReactNode }) {
+  title, onBack, steps, right, fallback = '/',
+}: { title?: string; onBack?: () => void; steps?: { current: number; total: number }; right?: React.ReactNode; fallback?: Href }) {
   const c = useColors();
   return (
     <View style={styles.bar}>
       <Pressable
         accessibilityRole="button" accessibilityLabel="Back" hitSlop={8}
-        onPress={onBack ?? (() => (router.canGoBack() ? router.back() : router.replace('/')))}
+        onPress={onBack ?? (() => (router.canGoBack() ? router.back() : router.replace(fallback)))}
         android_ripple={{ color: c.lagoonTint, borderless: true, radius: 24 }}
         style={styles.back}>
         <Icon name="back" />

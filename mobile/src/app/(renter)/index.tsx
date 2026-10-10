@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { answerChips, missingRequired } from '@/lib/answers-text';
 import { readShoot } from '@/lib/intake';
@@ -48,12 +48,15 @@ export default function Plan() {
             ref={input} value={text} onChangeText={setText} multiline placeholder="e.g. A podcast with 3 people, Saturday in Lekki"
             placeholderTextColor={c.faint} style={[type.body, styles.input, { color: c.ink }]} accessibilityLabel="Describe your shoot"
           />
+{/* Voice is the phone keyboard's mic; there's no such thing in a desktop browser. */}
+          {Platform.OS !== 'web' ? (
           <Pressable
             accessibilityRole="button" accessibilityLabel="Describe it by voice"
             onPress={() => { setVoiceTip(true); input.current?.focus(); }}
             style={[styles.mic, { backgroundColor: c.marigold }]} android_ripple={{ color: '#00000022', borderless: true }}>
             <Icon name="mic" size={24} color={c.onMarigold} />
           </Pressable>
+          ) : null}
         </View>
         {voiceTip ? <Text variant="caption" style={{ color: c.onLagoon }}>Tap the 🎙 on your keyboard and talk. We’ll read it.</Text> : null}
         {text.trim() ? (

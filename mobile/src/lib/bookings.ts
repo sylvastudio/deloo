@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import { windowDays } from '@/ui/date-range';
 import { apiGet, api } from './api';
 import type { DraftLine, NotIncluded } from './booking-draft';
@@ -138,7 +140,10 @@ export function setActiveHold(h: ActiveHold | null) {
 export const PAY_RETURN = 'deloo://pay';
 
 export function startPayment(bookingId: string) {
-  return api<{ authorization_url: string; reference: string }>('/api/paystack/init', { booking_id: bookingId });
+  // Web: Paystack sends the whole page back to <app origin>/pay?reference=… instead of deloo://pay.
+  return api<{ authorization_url: string; reference: string }>('/api/paystack/init', {
+    booking_id: bookingId, ...(Platform.OS === 'web' ? { return_to: 'web' } : {}),
+  });
 }
 export type Verify = { paid: boolean; booking_status?: BookingStatus; needs_refund: boolean; paystack_status?: string; error?: string };
 export function verifyPayment(reference: string) {

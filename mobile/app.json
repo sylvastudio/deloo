@@ -23,8 +23,13 @@
       "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "output": "single",
+      "favicon": "./assets/images/favicon.png",
+      "name": "Deloo",
+      "shortName": "Deloo",
+      "themeColor": "#0F6B73",
+      "backgroundColor": "#F3F5F4",
+      "lang": "en"
     },
     "plugins": [
       "expo-router",

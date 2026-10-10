@@ -1,13 +1,14 @@
-import { Directory, File, Paths } from 'expo-file-system';
 import { useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 
+import { deleteFile, deleteJobFiles, keepFile, readFile } from './handover-files';
 import type { Evidence } from './photos';
 import { supabase } from './supabase';
 
 /**
  * Renter handover evidence (PRD §5.8, R-42), offline-tolerant:
- *   1. every capture is moved into the app's documents folder and recorded in a queue (localStorage)
+ *   1. every capture is moved into durable storage (handover-files: documents folder on the phone,
+ *      IndexedDB on the web) and recorded in a queue (localStorage)
  *      before anything is uploaded, so closing the app or losing signal loses nothing;
  *   2. the slide ("I received these in this condition") marks the job ready, with the phone's time;
  *   3. sync inserts the `handovers` row, uploads each file to `handover-media/<booking>/<handover>/…`
@@ -76,12 +77,6 @@ export function startJob(bookingId: string, kind: HandoverKind): HandoverJob {
   return job;
 }
 
-function folder(jobId: string) {
-  const dir = new Directory(Paths.document, 'handover', jobId);
-  if (!dir.exists) dir.create({ intermediates: true, idempotent: true });
-  return dir;
-}
-
 /**
  * Keeps a capture: moves the file into the documents folder and records it. One overview and serial
  * per unit, one accessories photo and one video per hand-off (a retake replaces); damage photos add up.
@@ -92,10 +87,9 @@ export async function addCapture(jobId: string, shot: Shot, unitId: string | nul
   const ext = e.mediaType === 'video' ? 'mp4' : 'jpg';
   const seq = job.seq + 1;
   const name = `${shot}-${seq}.${ext}`;
-  const dest = new File(folder(jobId), name);
-  await new File(e.uri).move(dest);
+  const kept = await keepFile(jobId, name, e.uri);
   const capture: Capture = {
-    id: uuid(), shot, mediaType: e.mediaType, uri: dest.uri, name, bytes: dest.size ?? 0, width: e.width, height: e.height,
+    id: uuid(), shot, mediaType: e.mediaType, uri: kept.uri, name, bytes: kept.bytes, width: e.width, height: e.height,
     durationS: e.durationS, capturedAt: new Date().toISOString(), unitId,
   };
   const single = shot !== 'damage';
@@ -120,7 +114,7 @@ export function discardJob(jobId: string) {
   const job = jobs.find((j) => j.id === jobId);
   if (!job || job.state !== 'draft') return;
   job.media.forEach(removeFile);
-  try { new Directory(Paths.document, 'handover', jobId).delete(); } catch { /* already gone */ }
+  deleteJobFiles(jobId);
   commit(jobs.filter((j) => j.id !== jobId));
 }
 
@@ -131,7 +125,7 @@ export function confirmJob(jobId: string) {
 }
 
 function removeFile(m: Capture) {
-  try { const f = new File(m.uri); if (f.exists) f.delete(); } catch { /* ignore */ }
+  deleteFile(m.uri);
 }
 
 // ---------------------------------------------------------------------------
@@ -177,11 +171,10 @@ async function syncJob(jobId: string): Promise<boolean> {
     job = jobs.find((j) => j.id === jobId)!;
     for (const m of job.media.filter((x) => !x.uploaded)) {
       const path = `${job.bookingId}/${job.id}/${m.name}`;
-      const file = new File(m.uri);
-      if (file.exists) {
-        const bytes = await file.bytes();
+      const file = await readFile(m.uri);
+      if (file) {
         const { error: upErr } = await supabase.storage.from('handover-media')
-          .upload(path, bytes, { contentType: m.mediaType === 'video' ? 'video/mp4' : 'image/jpeg', upsert: false });
+          .upload(path, file.bytes, { contentType: file.type ?? (m.mediaType === 'video' ? 'video/mp4' : 'image/jpeg'), upsert: false });
         if (upErr && !/exists|duplicate/i.test(upErr.message)) throw upErr;
       }
       const { error: rowErr } = await supabase.from('handover_media').insert({
@@ -194,7 +187,7 @@ async function syncJob(jobId: string): Promise<boolean> {
       patchJob(jobId, (j) => ({ ...j, error: undefined, media: j.media.map((x) => (x.id === m.id ? { ...x, uploaded: true } : x)) }));
     }
     // All up: forget the job and its folder.
-    try { new Directory(Paths.document, 'handover', jobId).delete(); } catch { /* ignore */ }
+    deleteJobFiles(jobId);
     commit(jobs.filter((j) => j.id !== jobId));
     return true;
   } catch (e) {

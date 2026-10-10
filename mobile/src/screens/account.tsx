@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 import { useSession } from '@/lib/session';
 import { space } from '@/theme/tokens';
@@ -16,7 +16,8 @@ const TRUST = [
 /** "Me" in both modes: profile, verification tiers, mode switch, sign out. */
 export function AccountScreen() {
   const { profile, vendors, mode, setMode, signOut, session } = useSession();
-  const vendor = vendors[0];
+  // The web app is renter-only (vendor tools are in the Android app), so no mode switch there.
+  const vendor = Platform.OS === 'web' ? undefined : vendors[0];
   return (
     <Screen title={profile?.full_name ?? 'Me'} subtitle={session?.user.email}>
       {vendor ? (

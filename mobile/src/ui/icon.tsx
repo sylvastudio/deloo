@@ -33,6 +33,11 @@ const ICONS = {
   truck: { ios: 'truck.box.fill', android: 'local_shipping' },
   phone: { ios: 'phone.fill', android: 'call' },
   sparkles: { ios: 'sparkles', android: 'auto_awesome' },
+  // Tab bar (web build; native tabs name their own symbols)
+  search: { ios: 'magnifyingglass', android: 'search' },
+  person: { ios: 'person.crop.circle', android: 'account_circle' },
+  today: { ios: 'sun.max', android: 'today' },
+  money: { ios: 'banknote', android: 'payments' },
   // Gear categories (keys match public.categories)
   speaker: { ios: 'hifispeaker.fill', android: 'speaker' },
   subwoofer: { ios: 'hifispeaker.2.fill', android: 'speaker_group' },

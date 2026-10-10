@@ -17,7 +17,7 @@ export function Segmented<T extends string>({
         return (
           <Pressable
             key={o.value} accessibilityRole="tab" accessibilityState={{ selected: on }}
-            onPress={() => { if (!on) { Haptics.selectionAsync(); onChange(o.value); } }}
+            onPress={() => { if (!on) { Haptics.selectionAsync().catch(() => {}); onChange(o.value); } }}
             style={[styles.option, on && { backgroundColor: c.surface, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 }]}>
             <Text variant="label" tone={on ? 'ink' : 'slate'}>{o.label}</Text>
             {o.hint ? <Text variant="caption" tone={on ? 'lagoon' : 'faint'}>{o.hint}</Text> : null}

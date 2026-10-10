@@ -1,5 +1,6 @@
 import type { Session } from '@supabase/supabase-js';
 import { createContext, use, useCallback, useEffect, useState, type PropsWithChildren } from 'react';
+import { Platform } from 'react-native';
 
 import { supabase } from './supabase';
 
@@ -65,7 +66,8 @@ export function SessionProvider({ children }: PropsWithChildren) {
   const signOut = useCallback(async () => { await supabase.auth.signOut(); }, []);
 
   // Someone without gear can't be in vendor mode; someone with only gear starts there.
-  const effectiveMode: Mode = vendors.length === 0 ? 'renter' : profile && !profile.wants_to_rent ? 'vendor' : mode;
+  // The web app (app.deloo.space) is for renters only; vendor tools stay in the Android app.
+  const effectiveMode: Mode = Platform.OS === 'web' || vendors.length === 0 ? 'renter' : profile && !profile.wants_to_rent ? 'vendor' : mode;
 
   return (
     <SessionContext value={{ loading, session, profile, vendors, mode: effectiveMode, setMode, refresh, signOut }}>

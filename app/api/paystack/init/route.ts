@@ -4,16 +4,26 @@ import { createServiceClient } from "@/lib/supabase/server";
 
 export const maxDuration = 20;
 
+/** Where the web app may ask Paystack to send the renter back to. */
+const WEB_ORIGINS = ["https://app.deloo.space", "http://localhost:8081", ...(process.env.CORS_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean)];
+
 /**
  * The app has a booking on hold and wants to pay: creates a payment row and a Paystack checkout.
- * Body: { booking_id }. Returns { authorization_url, reference }. Reuses a checkout made in the last
- * 20 minutes for the same amount, so tapping Pay twice doesn't make two transactions.
+ * Body: { booking_id, return_to?: "web" }. Returns { authorization_url, reference }. Reuses a checkout
+ * made in the last 20 minutes for the same amount and return target, so tapping Pay twice doesn't make
+ * two transactions. Paystack adds ?reference=… to the callback URL.
+ *   Native app: callback deloo.space/pay/return, which hands over to deloo://pay.
+ *   Web app (app.deloo.space): callback <web origin>/pay, handled by the app's own /pay route.
  */
 export async function POST(request: Request) {
   const auth = await userFromBearer(request);
   if (auth instanceof Response) return auth;
-  const body = (await request.json().catch(() => null)) as { booking_id?: unknown } | null;
+  const body = (await request.json().catch(() => null)) as { booking_id?: unknown; return_to?: unknown } | null;
   const bookingId = typeof body?.booking_id === "string" ? body.booking_id : "";
+  const origin = request.headers.get("origin") ?? "";
+  const webOrigin = body?.return_to === "web" ? (WEB_ORIGINS.includes(origin) ? origin : WEB_ORIGINS[0]) : null;
+  const site = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
+  const callbackUrl = webOrigin ? `${webOrigin}/pay` : `${site}/pay/return`;
   if (!bookingId) return Response.json({ error: "Missing booking." }, { status: 400 });
 
   // As the renter (RLS): only their own booking is visible.
@@ -26,25 +36,24 @@ export async function POST(request: Request) {
 
   const db = createServiceClient();
   const { data: recent } = await db.from("payments")
-    .select("reference, authorization_url, amount_kobo, created_at").eq("booking_id", booking.id).eq("status", "initialized")
+    .select("reference, authorization_url, amount_kobo, created_at, callback_url").eq("booking_id", booking.id).eq("status", "initialized")
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
-  if (recent?.authorization_url && recent.amount_kobo === booking.total_kobo && Date.now() - Date.parse(recent.created_at) < 20 * 60_000) {
+  if (recent?.authorization_url && recent.amount_kobo === booking.total_kobo && recent.callback_url === callbackUrl && Date.now() - Date.parse(recent.created_at) < 20 * 60_000) {
     return Response.json({ authorization_url: recent.authorization_url, reference: recent.reference });
   }
 
   const { count } = await db.from("payments").select("id", { count: "exact", head: true }).eq("booking_id", booking.id);
   const reference = `${booking.ref}-${(count ?? 0) + 1}`;
   const { data: payment, error } = await db.from("payments")
-    .insert({ booking_id: booking.id, reference, amount_kobo: booking.total_kobo }).select("id").single();
+    .insert({ booking_id: booking.id, reference, amount_kobo: booking.total_kobo, callback_url: callbackUrl }).select("id").single();
   if (error || !payment) return Response.json({ error: "Couldn’t start the payment. Try again." }, { status: 500 });
 
-  const site = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
   try {
     const checkout = await initialize({
       email: auth.user.email ?? `${auth.user.id}@renters.deloo.space`,
       amountKobo: booking.total_kobo,
       reference,
-      callbackUrl: `${site}/pay/return`,
+      callbackUrl,
       metadata: { booking_id: booking.id, payment_id: payment.id, booking_ref: booking.ref },
     });
     await db.from("payments").update({ authorization_url: checkout.authorization_url }).eq("id", payment.id);

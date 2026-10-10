@@ -9,7 +9,7 @@ const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["lati
 
 export const metadata: Metadata = {
   title: "Deloo",
-  description: "Tell us your event, we'll supply the setup. Sound, screens, cameras and lights for events in Lagos.",
+  description: "Camera, light and sound gear for your shoot, delivered across Lagos. Rent by the day, refundable deposit, pay with Paystack.",
   appleWebApp: { capable: true, title: "Deloo", statusBarStyle: "default" },
   icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
 };
@@ -26,7 +26,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${atkinson.variable} ${bricolage.variable} ${jetbrains.variable}`}>
+    <html lang="en-NG" className={`${atkinson.variable} ${bricolage.variable} ${jetbrains.variable}`}>
       <body>
         {children}
         <RegisterSW />

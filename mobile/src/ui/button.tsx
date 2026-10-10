@@ -21,7 +21,7 @@ export function Button({
       accessibilityState={{ disabled: !!off, busy: !!loading }}
       disabled={off}
       android_ripple={{ color: kind === 'primary' ? '#ffffff33' : kind === 'accent' ? '#00000022' : c.lagoonTint }}
-      onPress={(e) => { Haptics.selectionAsync(); onPress?.(e); }}
+      onPress={(e) => { Haptics.selectionAsync().catch(() => {}); onPress?.(e); }}
       style={(state) => [
         styles.base,
         { backgroundColor: bg, opacity: off ? 0.5 : state.pressed ? 0.88 : 1 },

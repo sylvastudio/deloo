@@ -73,7 +73,7 @@ export default function Calendar() {
     setError('');
     const s = state(item, day);
     if (s.booked) return setError(`${displayName(item.name)} is booked on ${LONG.format(day)}. Open the booking from Today to change it.`);
-    Haptics.selectionAsync();
+    Haptics.selectionAsync().catch(() => {});
     if (s.blocked) {
       const ids = s.hits.filter((r) => !r.booking_id).map((r) => r.id);
       const { error: e } = await supabase.from('reservations').delete().in('id', ids);

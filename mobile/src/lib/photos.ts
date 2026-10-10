@@ -1,5 +1,6 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import { Platform } from 'react-native';
 
 import { supabase } from './supabase';
 
@@ -57,7 +58,7 @@ async function cameraAllowed() {
  */
 export async function shootEvidencePhoto(): Promise<Evidence | null> {
   await cameraAllowed();
-  const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1, allowsEditing: false, exif: false });
+  const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1, allowsEditing: false, exif: false, cameraType: ImagePicker.CameraType.back });
   if (res.canceled || !res.assets?.[0]) return null;
   const a = res.assets[0];
   const ctx = ImageManipulator.manipulate(a.uri);
@@ -66,13 +67,17 @@ export async function shootEvidencePhoto(): Promise<Evidence | null> {
   return { uri: saved.uri, mediaType: 'photo', width: saved.width, height: saved.height };
 }
 
-/** A short power-on video (≤15 s, medium quality). */
+/** A short power-on video (≤15 s, medium quality). On the web the length limit isn't enforced (file input). */
 export async function shootEvidenceVideo(): Promise<Evidence | null> {
   await cameraAllowed();
   const res = await ImagePicker.launchCameraAsync({
-    mediaTypes: ['videos'], videoMaxDuration: 15, videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium, quality: 0.5,
+    mediaTypes: ['videos'], videoMaxDuration: 15, cameraType: ImagePicker.CameraType.back, videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium, quality: 0.5,
   });
   if (res.canceled || !res.assets?.[0]) return null;
   const a = res.assets[0];
-  return { uri: a.uri, mediaType: 'video', width: a.width, height: a.height, durationS: a.duration ? Math.round(a.duration / 100) / 10 : undefined };
+  // The browser's file input can't cap the length, so check it after capture (web duration is seconds).
+  if (Platform.OS === 'web' && ((a.duration ?? 0) > 20 || (a.fileSize ?? 0) > 25 * 1024 * 1024)) {
+    throw new Error('Keep it under 15 seconds. Record a shorter video that shows it powering on.');
+  }
+  return { uri: a.uri, mediaType: 'video', width: a.width, height: a.height, durationS: a.duration ? Math.round((Platform.OS === 'web' ? a.duration * 1000 : a.duration) / 100) / 10 : undefined };
 }

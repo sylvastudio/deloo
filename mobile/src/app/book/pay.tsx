@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, AppState, Linking, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -26,8 +26,9 @@ const POLL_FOR_MS = 10 * 60_000;
 
 /**
  * R-31 Pay and R-32 Payment pending. The hold is already made (Review); this opens Paystack in an
- * in-app browser, then asks the server (verify) what happened. Success is only shown once the
- * booking row says 'confirmed' (the webhook or verify confirms it, never the app).
+ * in-app browser (on the web: this tab, coming back via /pay), then asks the server (verify) what
+ * happened. Success is only shown once the booking row says 'confirmed' (the webhook or verify
+ * confirms it, never the app).
  */
 export default function Pay() {
   const c = useColors();
@@ -118,6 +119,15 @@ export default function Pay() {
     return () => clearInterval(t);
   }, [phase, bookingId, done]);
 
+  // Web: the browser's Back button from Paystack can restore this page from the back/forward cache,
+  // still showing "Opening Paystack…". Ask the server what happened instead.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const onShow = (e: PageTransitionEvent) => { if (e.persisted && reference.current) check(); };
+    window.addEventListener('pageshow', onShow);
+    return () => window.removeEventListener('pageshow', onShow);
+  }, [check]);
+
   // Back in the app (from a banking app, or after the browser was left open): check again quietly.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (s) => {
@@ -134,6 +144,13 @@ export default function Pay() {
       reference.current = ref;
       const active = getActiveHold();
       if (active?.booking_id === bookingId) setActiveHold({ ...active, reference: ref });
+      if (Platform.OS === 'web') {
+        // Web: leave for Paystack in this tab (pop-ups get blocked or lost on phones). Paystack sends
+        // the page back to /pay?reference=…, which reopens this screen and checks with the server.
+        // The active hold, with this reference, is in localStorage, so nothing is lost on the way.
+        window.location.assign(authorization_url);
+        return;
+      }
       await WebBrowser.openAuthSessionAsync(authorization_url, PAY_RETURN);
       // Whatever the browser says (paid, closed, switched away), the server decides.
       await check();

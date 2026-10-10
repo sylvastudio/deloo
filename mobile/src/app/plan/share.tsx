@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
-import { Linking, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { answerChips } from '@/lib/answers-text';
 import { naira } from '@/lib/format';
 import { lineTitle } from '@/lib/line-text';
 import { usePlan } from '@/lib/plan';
 import { applyChoices, usePlanResult } from '@/lib/plan-result';
+import { shareOnWhatsApp, shareText } from '@/lib/share';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Button } from '@/ui/button';
@@ -38,10 +39,12 @@ export default function ShareSetup() {
     ].filter((x, i, all) => x !== '' || all[i - 1] !== '').join('\n').trim();
   }, [matches, draft]);
 
+  const [copied, setCopied] = useState(false);
   async function whatsapp() {
-    const url = `whatsapp://send?text=${encodeURIComponent(message)}`;
-    if (await Linking.canOpenURL(url).catch(() => false)) Linking.openURL(url);
-    else Share.share({ message });
+    if ((await shareOnWhatsApp(message)) === 'copied') setCopied(true);
+  }
+  async function other() {
+    if ((await shareText(message)) === 'copied') setCopied(true);
   }
 
   return (
@@ -54,7 +57,7 @@ export default function ShareSetup() {
         </View>
       ) : <Skeleton style={{ height: 160 }} />}
       <Button title="Send on WhatsApp" disabled={!message} onPress={whatsapp} />
-      <Button kind="secondary" title="Other apps or copy" disabled={!message} onPress={() => Share.share({ message })} />
+      <Button kind="secondary" title={copied ? 'Copied. Paste it anywhere' : 'Other apps or copy'} disabled={!message} onPress={other} />
     </ScrollView>
   );
 }

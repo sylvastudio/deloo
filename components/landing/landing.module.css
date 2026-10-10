@@ -1,0 +1,127 @@
+/* Landing page (docs/ux-landing-and-web.md §1). Plain and token-based; design polish comes later. */
+
+.page { background: var(--paper); color: var(--ink); font-size: 16px; }
+.wrap { width: 100%; max-width: 1080px; margin-inline: auto; padding-inline: 16px; }
+.section { padding-block: 48px; border-top: 1px solid var(--line); }
+.section:first-of-type { border-top: 0; }
+.h2 { font: 700 clamp(24px, 5vw, 32px)/1.15 var(--font-display); letter-spacing: -0.02em; margin: 0 0 12px; text-wrap: balance; }
+.lead { color: var(--slate); margin: 0 0 24px; max-width: 60ch; }
+.muted { color: var(--slate); }
+.small { font-size: 13px; color: var(--slate); }
+
+/* Buttons: 48px tap targets */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 20px;
+  border-radius: 6px; font: 700 16px/1.1 var(--font-body); text-decoration: none; border: 1px solid transparent;
+  transition: background-color .15s, border-color .15s;
+}
+.primary { background: var(--lagoon); color: var(--on-lagoon); }
+.primary:hover { background: var(--lagoon-strong); }
+.secondary { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.secondary:hover { border-color: var(--ink); }
+.accent { background: var(--marigold); color: var(--on-marigold); }
+.accent:hover { background: var(--marigold-strong); }
+.link { color: var(--lagoon); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+
+.ctaPair { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; margin-top: 24px; }
+.ctaPair > * { flex: 1 1 220px; }
+.apk { display: grid; gap: 6px; }
+.apk .btn { width: 100%; }
+.apkNote { font-size: 12px; color: var(--slate); margin: 0; }
+.ctaPair > .btn { width: 100%; }
+
+/* Top bar */
+.top { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--paper) 92%, transparent); border-bottom: 1px solid var(--line); backdrop-filter: blur(8px); }
+.topInner { display: flex; align-items: center; gap: 16px; min-height: 60px; }
+.wordmark { font: 700 24px/1 var(--font-display); letter-spacing: -0.03em; color: var(--ink); text-decoration: none; }
+.wordmark span { color: var(--marigold); }
+.nav { display: none; gap: 20px; margin-left: auto; }
+.nav a { color: var(--ink); text-decoration: none; padding: 12px 0; }
+.nav a:hover { color: var(--lagoon); }
+.topCta { margin-left: auto; min-height: 44px; padding: 10px 16px; }
+@media (min-width: 768px) { .nav { display: flex; } .topCta { margin-left: 0; } }
+
+/* Hero */
+.hero { padding-block: 40px 48px; }
+.h1 { font: 700 clamp(32px, 7vw, 56px)/1.05 var(--font-display); letter-spacing: -0.03em; margin: 0 0 16px; max-width: 20ch; text-wrap: balance; }
+.sub { font-size: 18px; color: var(--slate); margin: 0; max-width: 56ch; }
+.heroCtas { max-width: 560px; }
+.trust { margin: 20px 0 0; font-size: 14px; color: var(--slate); }
+.trust strong { color: var(--ink); }
+
+/* Gear cards */
+.grid { display: grid; gap: 16px; grid-template-columns: 1fr; list-style: none; padding: 0; margin: 0; }
+@media (min-width: 560px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 900px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+.card { display: grid; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; color: inherit; text-decoration: none; height: 100%; }
+.card:hover { border-color: var(--lagoon); }
+.photo { width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: var(--lagoon-tint); }
+.cardBody { padding: 14px 16px 16px; display: grid; gap: 4px; }
+.cardName { font-weight: 700; margin: 0; }
+.price { font: 700 18px/1.2 var(--font-display); margin: 0; }
+.seeAll { display: inline-block; margin-top: 20px; padding-block: 12px; }
+
+/* Category chips */
+.chips { display: flex; flex-wrap: wrap; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.chip { display: inline-flex; align-items: center; min-height: 48px; padding: 10px 18px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); text-decoration: none; font-weight: 700; }
+.chip:hover { border-color: var(--lagoon); color: var(--lagoon); }
+
+/* Shoot types */
+.bubble { display: inline-block; background: var(--lagoon-tint); border-radius: 16px 16px 16px 4px; padding: 12px 16px; margin: 0 0 20px; font-style: italic; }
+.tiles { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); list-style: none; padding: 0; margin: 0 0 8px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; font-weight: 700; min-height: 48px; }
+
+/* How it works */
+.steps { display: grid; gap: 16px; list-style: none; padding: 0; margin: 0; counter-reset: step; }
+@media (min-width: 768px) { .steps { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1000px) { .steps { grid-template-columns: repeat(4, 1fr); } }
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+.step h3, .point h3 { font: 700 18px/1.25 var(--font-display); margin: 0 0 6px; }
+.step p, .point p { margin: 0; color: var(--slate); }
+.stepNum { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--marigold); color: var(--on-marigold); font-weight: 700; margin-bottom: 10px; }
+
+/* Trust */
+.points { display: grid; gap: 16px; }
+@media (min-width: 768px) { .points { grid-template-columns: repeat(3, 1fr); } }
+.point { border-left: 3px solid var(--lagoon); padding-left: 14px; }
+.zonesTitle { font: 700 18px/1.25 var(--font-display); margin: 32px 0 12px; }
+.tableWrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; font-size: 15px; }
+.table th, .table td { text-align: left; padding: 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.table th { font-size: 13px; color: var(--slate); font-weight: 700; }
+.table td:last-child { white-space: nowrap; font-weight: 700; }
+
+/* FAQ */
+.faq { display: grid; gap: 8px; max-width: 760px; }
+.faq details { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.faq summary { cursor: pointer; padding: 14px 16px; min-height: 48px; font-weight: 700; list-style-position: inside; }
+.faq details p { margin: 0; padding: 0 16px 16px; color: var(--slate); }
+
+/* Waitlist + WhatsApp bands */
+.band { background: var(--lagoon-tint); border-radius: 12px; padding: 24px; display: grid; gap: 12px; justify-items: start; }
+.band p { margin: 0; }
+
+/* Footer */
+.footer { border-top: 1px solid var(--line); padding-block: 40px 32px; font-size: 14px; }
+.footCols { display: grid; gap: 24px; }
+@media (min-width: 768px) { .footCols { grid-template-columns: 2fr 1fr 1fr; } }
+.footer ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 2px; }
+.footer li a { display: inline-block; padding-block: 8px; color: var(--ink); }
+.footer h3 { font-size: 13px; color: var(--slate); margin: 0 0 6px; }
+.footBottom { margin-top: 32px; display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; color: var(--slate); font-size: 13px; }
+.footBottom a { color: var(--slate); }
+
+/* Phones: CSS-only sticky "Rent now" once the hero has scrolled past (sticks within the post-hero wrapper). */
+.afterHero { position: relative; }
+.stickyBar { position: sticky; bottom: 0; z-index: 15; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--line); }
+.stickyBar .btn { width: 100%; }
+@media (min-width: 768px) { .stickyBar { display: none; } }
+
+/* Legal pages */
+.legal { padding-block: 32px 64px; max-width: 760px; }
+.legal h1 { font: 700 clamp(28px, 6vw, 40px)/1.1 var(--font-display); margin: 0 0 12px; }
+.legal h2 { font: 700 20px/1.25 var(--font-display); margin: 32px 0 8px; }
+.legal p, .legal li { color: var(--ink); }
+.draft { background: color-mix(in srgb, var(--marigold) 18%, transparent); border: 1px solid var(--marigold); border-radius: 8px; padding: 12px 14px; margin: 0 0 24px; }
+
+@media (prefers-reduced-motion: reduce) { .btn, .card, .chip { transition: none; } }

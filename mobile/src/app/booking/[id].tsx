@@ -72,14 +72,14 @@ export default function Tracker() {
 
   if (b === null) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}><TopBar title="Booking" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}><TopBar title="Booking" fallback="/bookings" />
         <EmptyState icon="calendar" title="Booking not found" body="It may belong to another account." action="See all bookings" onAction={() => router.replace('/bookings')} />
       </SafeAreaView>
     );
   }
   if (!b) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}><TopBar title="Booking" />
+      <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}><TopBar title="Booking" fallback="/bookings" />
         {error ? (
           <View style={{ padding: space.xl }}>
             <EmptyState icon="warning" title="Couldn’t load this booking" body={error} action="Try again" onAction={load} />
@@ -104,7 +104,7 @@ export default function Tracker() {
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: c.paper }}>
-      <TopBar title={b.ref ?? 'Booking'} />
+      <TopBar title={b.ref ?? 'Booking'} fallback="/bookings" />
       <ScrollView contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} colors={[c.lagoon]} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}>
         <View style={{ gap: space.xs }}>
