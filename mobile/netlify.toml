@@ -5,7 +5,8 @@
 # Environment variables to set in THIS site's settings (public values, inlined into the JS at build):
 #   EXPO_PUBLIC_SUPABASE_URL
 #   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-#   EXPO_PUBLIC_API_URL            = https://deloo.space
+# EXPO_PUBLIC_API_URL is set below, not in the UI: values here win over the UI, so a development
+# address copied from mobile/.env (http://192.168…) can't reach the live app again.
 [build]
   base = "mobile"
   command = "npx expo export -p web"
@@ -13,6 +14,7 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  EXPO_PUBLIC_API_URL = "https://deloo.space"
   # The publishable Supabase key is meant to ship in the browser bundle.
   SECRETS_SCAN_OMIT_KEYS = "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,EXPO_PUBLIC_SUPABASE_URL,EXPO_PUBLIC_API_URL"
 
