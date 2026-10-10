@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BookingMessages } from "@/components/admin/booking-messages";
 import { notFound } from "next/navigation";
 import { addNote, inspectReturn, setBookingStatus, swapUnit, updateDelivery } from "@/app/admin/_actions/booking";
 import { addRefund } from "@/app/admin/_actions/money";
@@ -362,6 +363,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
             )}
             {can(staff.role, "refunds.process") && <Link className="btn btn-quiet btn-sm" href="/admin/payments/refunds">Open the refund queue</Link>}
           </Section>
+          <BookingMessages bookingId={id} />
         </div>
 
         <div className="grid gap-4">

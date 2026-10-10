@@ -18,12 +18,13 @@ export const STAFF_TEMPLATES: { key: StaffTemplateKey; label: string; needsBooki
     key: "payment_retry",
     label: "Payment retry",
     needsBooking: true,
-    subject: "Please try paying again for {ref}",
+    subject: "Your Deloo booking: please try paying again",
     body: [
       "Hi {first},",
-      "Your payment for booking {ref} ({dates}) didn't go through, so the booking isn't confirmed yet.",
-      "Please try paying again from your booking in the Deloo app. It's {total} for {items}.",
-      "If money left your account but the booking still shows unpaid, reply on WhatsApp and we'll check it for you.",
+      "Sorry about earlier. You tried to book with us and the payment didn't go through. Nothing was charged.",
+      "Your gear for {dates} ({items}) comes to {total}. To finish your booking, open https://app.deloo.space, add the gear for your days and tap Pay. You can pay by card or bank transfer, and we hold the gear for 30 minutes while you pay.",
+      "If anything gets in the way, just reply to this email and we'll sort it out with you directly.",
+      "Thanks for your patience,\nThe Deloo team",
     ].join("\n\n"),
   },
   {
