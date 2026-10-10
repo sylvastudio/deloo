@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { naira } from '@/lib/format';
 import { lineTitle, needLabel } from '@/lib/line-text';
 import { usePlan } from '@/lib/plan';
-import { applyChoices, usePlanResult } from '@/lib/plan-result';
+import { applyChoices, swapId, swapTarget, usePlanResult } from '@/lib/plan-result';
 import type { AlternativeKind, Offer } from '@/planner/types';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
@@ -29,9 +29,9 @@ export default function Swap() {
   const result = useMemo(() => (matches ? applyChoices(matches[draft.level], draft) : null), [matches, draft]);
   const l = result?.lines.find((x) => x.line.key === key);
 
-  function choose(index?: number) {
+  function choose(id?: string) {
     const swaps = { ...draft.swaps };
-    if (index === undefined) delete swaps[key]; else swaps[key] = String(index);
+    if (id === undefined) delete swaps[key]; else swaps[key] = id;
     update({ swaps, removed: draft.removed.filter((k) => k !== key) });
     router.back();
   }
@@ -50,7 +50,7 @@ export default function Swap() {
 
       {l.removed ? (
         <Button title="Add it back" onPress={() => choose(undefined)} />
-      ) : (
+      ) : !l.offers.length && l.alternatives.some((a) => a.offers.length) ? null : (
         <Option
           title={lineTitle(l.line, l.offers)} sub={l.offers.length ? perDay(l.offers) : l.shortReason === 'not_stocked' ? 'We don’t have this yet' : 'Booked on your dates'}
           label={current ? 'Current choice' : 'Original choice'} selected={!!current} onPress={() => choose(undefined)}
@@ -62,11 +62,12 @@ export default function Swap() {
         <Notice tone="tip">Nothing similar in our stock right now. We’ve noted your request so we know what to get next.</Notice>
       )}
       {l.alternatives.map((alt, i) => (
-        <Option key={i} label={KIND[alt.kind]} title={alt.offers.length ? lineTitle(l.line, alt.offers) : alt.trade}
+        <Option key={i} label={alt.fits === undefined ? KIND[alt.kind] : alt.fits ? 'Also suits this shoot' : 'Works, with a trade-off'}
+          title={alt.offers.length ? lineTitle(l.line, alt.offers) : alt.trade}
           sub={alt.offers.length ? `${perDay(alt.offers)} · ${alt.trade}` : undefined}
-          price={alt.priceDeltaKobo} incomplete={!alt.complete}
-          selected={draft.swaps[key] === String(i)} disabled={alt.kind === 'nearby_date'}
-          onPress={() => (alt.kind === 'nearby_date' ? (router.back(), router.push('/plan/ask/when?edit=1')) : choose(i))} />
+          price={alt.priceDeltaKobo} days={result?.match.days ?? 1} incomplete={!alt.complete}
+          selected={!!l.swappedTo && swapTarget(l.alternatives, draft.swaps[key]) === alt} disabled={alt.kind === 'nearby_date'}
+          onPress={() => (alt.kind === 'nearby_date' ? (router.back(), router.push('/plan/ask/when?edit=1')) : choose(swapId(alt)))} />
       ))}
 
       {!l.removed ? <>
@@ -77,8 +78,8 @@ export default function Swap() {
   );
 }
 
-function Option({ label, title, sub, price, selected, onPress, status, incomplete, disabled }: {
-  label: string; title: string; sub?: string; price?: number | null; selected?: boolean; onPress: () => void;
+function Option({ label, title, sub, price, days = 1, selected, onPress, status, incomplete, disabled }: {
+  label: string; title: string; sub?: string; price?: number | null; days?: number; selected?: boolean; onPress: () => void;
   status?: string; incomplete?: boolean; disabled?: boolean;
 }) {
   const c = useColors();
@@ -95,7 +96,7 @@ function Option({ label, title, sub, price, selected, onPress, status, incomplet
           {disabled ? <Badge label="Change the date" /> : null}
         </View>
       </View>
-      {price != null ? <Text variant="label" tone={price > 0 ? 'ink' : 'lagoon'}>{price === 0 ? 'Same price' : `${price > 0 ? '+' : '−'}${naira(Math.abs(price), true)}`}</Text> : null}
+      {price != null ? <Text variant="label" tone={price > 0 ? 'ink' : 'lagoon'}>{price === 0 ? 'Same price' : `${price > 0 ? '+' : '−'}${naira(Math.abs(price), true)}${days > 1 ? ` for ${days} days` : ''}`}</Text> : null}
     </Pressable>
   );
 }

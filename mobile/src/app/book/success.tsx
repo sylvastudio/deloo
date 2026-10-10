@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { ReduceMotion, ZoomIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -32,6 +32,16 @@ export default function Success() {
     } catch (e) { setError(plain(e, 'Couldn’t load your booking.')); }
   }, [booking]);
   useEffect(() => { load(); }, [load]);
+
+  // Web: Paystack's checkout is still behind this page in the browser history. Back goes to the booking
+  // instead of a stale Paystack screen.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !booking) return;
+    window.history.pushState(null, '', window.location.href);
+    const onPop = () => router.replace(`/booking/${booking}`);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [booking]);
 
   if (error) return <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}><EmptyState icon="warning" title="Couldn’t load your booking" body={error} action="Try again" onAction={load} /></SafeAreaView>;
   if (b === null) return <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}><EmptyState icon="calendar" title="Booking not found" action="See my bookings" onAction={() => router.replace('/bookings')} /></SafeAreaView>;

@@ -62,16 +62,24 @@ export default function Cancel() {
       ) : !q.can_cancel ? (
         <Notice tone="warning">Your gear is already on its way or with you, so this can’t be cancelled in the app. Message us on WhatsApp.</Notice>
       ) : <>
-        <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
-          <Text variant="caption" tone="slate">If you cancel now, you get back</Text>
-          <Text variant="number">{naira(q.refund_kobo)}</Text>
-          <Text variant="caption" tone="slate">
-            {q.refund_kobo === 0 ? 'You haven’t paid anything yet.' : q.hours_to_start > 72
-              ? 'Everything, because it’s more than 72 hours before your first day.'
-              : q.hours_to_start > 24 ? 'Your deposit, delivery and protection in full, plus half the rental (24–72 hours before your first day).'
-              : 'Your deposit and delivery. The rental isn’t refunded within 24 hours of your first day.'}
-          </Text>
-        </View>
+        {/* A paid booking always gets at least the deposit back, so ₦0 means nothing was paid yet. */}
+        {q.refund_kobo === 0 ? (
+          <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
+            <Text variant="bodyStrong">Nothing paid yet</Text>
+            <Text variant="caption" tone="slate">Cancelling lets the gear go so others can book it.</Text>
+          </View>
+        ) : (
+          <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
+            <Text variant="caption" tone="slate">If you cancel now, you get back</Text>
+            <Text variant="number">{naira(q.refund_kobo)}</Text>
+            <Text variant="caption" tone="slate">
+              {q.hours_to_start > 72
+                ? 'Everything, because it’s more than 72 hours before your first day.'
+                : q.hours_to_start > 24 ? 'Your deposit, delivery and protection in full, plus half the rental (24–72 hours before your first day).'
+                : 'Your deposit, delivery and protection. The rental isn’t refunded within 24 hours of your first day.'}
+            </Text>
+          </View>
+        )}
         <Text variant="caption" tone="slate">Full refund if you cancel within an hour of paying and more than a day before your first day. Refunds go back to the account you paid from.</Text>
         <Text variant="label">Why are you cancelling? (optional)</Text>
         <View style={styles.chips}>{REASONS.map((r) => <Chip key={r} label={r} selected={reason === r} onPress={() => setReason(reason === r ? '' : r)} />)}</View>

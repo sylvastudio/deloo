@@ -5,7 +5,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { answerChips } from '@/lib/answers-text';
 import { draftFromPlan, setBookingDraft } from '@/lib/booking-draft';
+import { cachedSettings, checkFree, isOffline, loadSettings, plain, type Settings } from '@/lib/bookings';
 import { naira } from '@/lib/format';
+import { lagosToday } from '@/ui/date-range';
 import { lineTitle, needLabel } from '@/lib/line-text';
 import { usePlan } from '@/lib/plan';
 import { applyChoices, PROTECTION_RATE, saveEvent, usePlanResult, type ChosenLine } from '@/lib/plan-result';
@@ -30,11 +32,25 @@ export default function Setup() {
   const { draft, update } = usePlan();
   const { setups, matches, datesKnown, error, retry } = usePlanResult(draft);
   const [open, setOpen] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [bookError, setBookError] = useState('');
+  const [resumeId, setResumeId] = useState<string>();
+  const [settings, setSettings] = useState<Settings | null>(cachedSettings);
+  useEffect(() => { loadSettings().then(setSettings).catch(() => {}); }, []);
   const level = draft.level;
   const setup = setups.find((s) => s.level === level) ?? setups[1];
   const result = useMemo(() => (matches ? applyChoices(matches[level], draft) : null), [matches, level, draft]);
   const chips = answerChips(draft.answers);
   const when = typeof draft.answers.startsAt === 'string' && draft.answers.startsAt !== 'unsure' ? DAY.format(new Date(draft.answers.startsAt)) : null;
+  // A saved plan whose date has come and gone: treat it as having no date (bookings start tomorrow).
+  const first = result ? draftFromPlan(result, draft).first : undefined;
+  const datePassed = !!first && first <= lagosToday();
+  const hasDate = datesKnown && !datePassed;
+  // Delivery and collection, both ways (as quote_booking prices it): the plan's area, or the cheapest.
+  const area = typeof draft.answers.area === 'string' ? draft.answers.area.toLowerCase() : '';
+  const zone = settings?.zones.find((z) => z.areas.some((a) => a.toLowerCase() === area));
+  const deliveryFrom = zone ? zone.price_kobo * 2 : settings?.zones.length ? Math.min(...settings.zones.map((z) => z.price_kobo)) * 2 : null;
+  const live = result?.lines.filter((l) => !l.removed && l.chosen.length) ?? [];
 
   // Save the event once (and record anything we couldn't supply) so Ops sees real demand.
   useEffect(() => {
@@ -50,6 +66,31 @@ export default function Setup() {
   // Say plainly which gaps are "we don't have this yet" and which are "booked on your dates".
   const notStocked = missing.filter((l) => !l.swappedTo && l.shortReason === 'not_stocked');
   const booked = missing.filter((l) => !notStocked.includes(l));
+
+  const setRemoved = (key: string, removed: boolean) => {
+    setBookError('');
+    update({ removed: removed ? [...draft.removed.filter((k) => k !== key), key] : draft.removed.filter((k) => k !== key) });
+  };
+
+  // Ask the server before Review: the plan's stock count may be minutes old.
+  async function book() {
+    if (!result) return;
+    const d = draftFromPlan(result, draft);
+    if (!d.first || !d.last || !hasDate) { router.push('/plan/ask/when?edit=1'); return; }
+    setChecking(true); setBookError(''); setResumeId(undefined);
+    try {
+      const r = await checkFree(d.lines, d.first, d.last);
+      if (!r.ok) {
+        setBookError(r.resumeBookingId || r.tooSoon ? r.message : `${r.message} Swap or remove it below, or try other days.`);
+        setResumeId(r.resumeBookingId); retry(); return;
+      }
+    } catch (e) {
+      setBookError(isOffline(e) ? 'You’re offline. Connect to check what’s free.' : plain(e, 'Couldn’t check what’s free. Try again.'));
+      return;
+    } finally { setChecking(false); }
+    setBookingDraft(d);
+    router.push('/book/review');
+  }
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.paper }}>
@@ -80,11 +121,14 @@ export default function Setup() {
             <Text variant="caption" tone="slate">
               {naira(result.rentalKobo)} rental{result.match.days > 1 ? ` for ${result.match.days} days` : ''} · {naira(result.depositKobo)} refundable deposit · {naira(result.protectionKobo)} Deloo Protection ({Math.round(PROTECTION_RATE * 100)}%)
             </Text>
+            <Text variant="caption" tone="slate">
+              {deliveryFrom ? `Plus delivery and collection ${zone ? `to ${zone.name}` : 'from'} ${naira(deliveryFrom)}, or free pickup.` : 'Plus delivery, or free pickup.'}
+            </Text>
           </View>
 
-          {!datesKnown ? (
+          {!hasDate ? (
             <Notice tone="warning" icon="calendar">
-              <Text variant="caption">Add your date and we’ll check what’s actually free. <Text variant="caption" tone="lagoon" onPress={() => router.push('/plan/ask/when?edit=1')}>Add date →</Text></Text>
+              <Text variant="caption">{datePassed ? 'Your shoot date has passed. Pick a new one and we’ll check what’s free.' : 'Add your date and we’ll check what’s actually free.'} <Text variant="caption" tone="lagoon" onPress={() => router.push('/plan/ask/when?edit=1')}>{datePassed ? 'Change date →' : 'Add date →'}</Text></Text>
             </Notice>
           ) : null}
 
@@ -118,7 +162,7 @@ export default function Setup() {
             return (
               <View key={g} style={{ gap: space.sm }}>
                 <Text variant="label" tone="slate">{label.toUpperCase()}</Text>
-                {lines.map((l) => <LineCard key={l.line.key} l={l} open={open === l.line.key} onToggle={() => setOpen(open === l.line.key ? null : l.line.key)} />)}
+                {lines.map((l) => <LineCard key={l.line.key} l={l} open={open === l.line.key} onToggle={() => setOpen(open === l.line.key ? null : l.line.key)} onRemove={(r) => setRemoved(l.line.key, r)} />)}
               </View>
             );
           })}
@@ -129,14 +173,23 @@ export default function Setup() {
         </>}
       </ScrollView>
       <View style={[styles.footer, { borderTopColor: c.line, backgroundColor: c.paper }]}>
-        <Button kind="secondary" title="Share" style={{ flex: 1 }} onPress={() => router.push('/plan/share')} />
-        <Button title="Book this setup" style={{ flex: 2 }} disabled={!result || result.totalKobo === 0} onPress={() => { if (result) { setBookingDraft(draftFromPlan(result, draft)); router.push('/book/review'); } }} />
+        {bookError ? (
+          <Text variant="caption" tone="red">
+            {bookError}
+            {resumeId ? <Text variant="caption" tone="lagoon" onPress={() => router.push({ pathname: '/book/pay', params: { booking: resumeId } })}> Resume payment →</Text> : null}
+          </Text>
+        ) : result && hasDate && !live.length ? <Text variant="caption" tone="slate">Everything is removed. Add something back to book.</Text> : null}
+        <View style={styles.footerRow}>
+          <Button kind="secondary" title="Share" style={{ flex: 1 }} onPress={() => router.push('/plan/share')} />
+          <Button title={hasDate ? 'Book this setup' : datePassed ? 'Change your date' : 'Add your date'} style={{ flex: 2 }} loading={checking}
+            disabled={!result || (hasDate && !live.length)} onPress={book} />
+        </View>
       </View>
     </SafeAreaView>
   );
 }
 
-function LineCard({ l, open, onToggle }: { l: ChosenLine; open: boolean; onToggle: () => void }) {
+function LineCard({ l, open, onToggle, onRemove }: { l: ChosenLine; open: boolean; onToggle: () => void; onRemove: (removed: boolean) => void }) {
   const c = useColors();
   const units = l.chosen.reduce((n, o) => n + o.units, 0);
   const status = l.removed ? null : units === 0 ? 'unavailable' : units < l.line.qty ? 'limited' : l.status;
@@ -159,15 +212,25 @@ function LineCard({ l, open, onToggle }: { l: ChosenLine; open: boolean; onToggl
         {price ? <Text variant="bodyStrong">{naira(price, true)}</Text> : null}
       </View>
       {open ? <Text variant="caption" style={[styles.why, { backgroundColor: c.lagoonTint }]}>{l.line.reason}</Text> : null}
+      {l.removed && l.line.essential ? (
+        <Text variant="caption" tone="red">
+          {l.line.category === 'camera' ? 'Without a camera, the lenses and gimbal have nothing to go on. Remove those too, or add it back.'
+            : l.line.category === 'lens' ? 'Without a lens, the camera can’t shoot. Add it back unless you have your own.'
+            : 'The shoot may not work as planned without this. Add it back unless you have your own.'}
+        </Text>
+      ) : null}
       <View style={styles.lineActions}>
         <Pressable onPress={onToggle} hitSlop={8} accessibilityRole="button" accessibilityState={{ expanded: open }}>
           <Text variant="label" tone="lagoon">{open ? 'Hide why' : 'Why?'}</Text>
         </Pressable>
-        {(l.alternatives.length || !l.line.essential || l.removed || l.swappedTo) ? (
+        {!l.removed && (l.alternatives.length || l.swappedTo) ? (
           <Pressable onPress={() => router.push(`/plan/swap?line=${encodeURIComponent(l.line.key)}`)} hitSlop={8} accessibilityRole="button">
-            <Text variant="label" tone="lagoon">{l.removed ? 'Add back' : 'Swap'}</Text>
+            <Text variant="label" tone="lagoon">{l.swappedTo ? 'Change' : 'Swap'}</Text>
           </Pressable>
         ) : null}
+        <Pressable onPress={() => onRemove(!l.removed)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`${l.removed ? 'Add back' : 'Remove'} ${needLabel(l.line)}`}>
+          <Text variant="label" tone={l.removed ? 'lagoon' : 'slate'}>{l.removed ? 'Add back' : 'Remove'}</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -183,5 +246,6 @@ const styles = StyleSheet.create({
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
   why: { padding: space.md, borderRadius: radius.md },
   lineActions: { flexDirection: 'row', gap: space.xl, paddingLeft: 56 },
-  footer: { flexDirection: 'row', gap: space.md, paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: space.lg, borderTopWidth: StyleSheet.hairlineWidth },
+  footer: { gap: space.sm, paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: space.lg, borderTopWidth: StyleSheet.hairlineWidth },
+  footerRow: { flexDirection: 'row', gap: space.md },
 });

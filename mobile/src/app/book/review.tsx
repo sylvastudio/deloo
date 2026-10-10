@@ -54,10 +54,14 @@ export default function Review() {
   useEffect(() => {
     loadSettings().then((s) => { setSettings(s); setOffline(false); }).catch((e) => { if (isOffline(e)) setOffline(true); });
   }, []);
-  // Settings arrive: default to the first zone so the price is complete.
+  // Settings arrive: pre-select the zone covering the plan's area, else the renter's last one. Never a
+  // guess: with neither, nothing is selected and the renter picks (a wrong zone means a wrong price).
   useEffect(() => {
-    if (settings && delivery === 'delivery' && (!zoneId || !settings.zones.some((z) => z.id === zoneId))) setZoneId(settings.zones[0]?.id);
-  }, [settings, delivery, zoneId]);
+    if (!settings || (zoneId && settings.zones.some((z) => z.id === zoneId))) return;
+    const area = draft?.area?.toLowerCase();
+    const match = area ? settings.zones.find((z) => z.areas.some((a) => a.toLowerCase() === area)) : undefined;
+    setZoneId(match?.id);
+  }, [settings, zoneId, draft?.area]);
 
   // An old unpaid hold for a different basket would block the same gear: let it go (never one being paid).
   useEffect(() => {
@@ -100,6 +104,13 @@ export default function Review() {
   const phoneOk = phone.replace(/\D/g, '').length >= 10;
   const addressOk = delivery === 'pickup' || address.trim().length >= 5;
   const ready = !!quote && problems.length === 0 && phoneOk && addressOk && !offline;
+  // What's still missing, said once above the Pay button (the field errors can be off-screen).
+  const missing = !draft.first || !draft.last ? 'Choose your days.'
+    : problems.includes('starts_too_soon') ? 'Bookings start from tomorrow. Pick new days.'
+    : short.length || gone.length ? 'Some gear isn’t free on these days. Change the days or remove it.'
+    : delivery === 'delivery' && !zoneId ? 'Choose your delivery area.'
+    : !addressOk ? 'Add your delivery address.'
+    : !phoneOk ? 'Add a phone number for the rider.' : '';
   const n = draft.first && draft.last ? dayCount(draft.first, draft.last) : 0;
   const help = settings?.support_whatsapp;
 
@@ -199,13 +210,13 @@ export default function Review() {
             {delivery === 'delivery' ? <>
               {!settings ? <Skeleton style={{ height: 40 }} /> : (
                 <View style={styles.chips}>
-                  {settings.zones.map((z) => <Chip key={z.id} label={z.name} selected={zoneId === z.id} onPress={() => setZoneId(z.id)} />)}
+                  {settings.zones.map((z) => <Chip key={z.id} label={`${z.name} · ${naira(z.price_kobo * 2, true)}`} selected={zoneId === z.id} onPress={() => setZoneId(z.id)} />)}
                 </View>
               )}
               {settings?.zones.find((z) => z.id === zoneId) ? (
                 <Text variant="caption" tone="slate">{settings.zones.find((z) => z.id === zoneId)!.areas.join(', ')}. We drop it off and collect it.</Text>
               ) : null}
-              {problems.includes('choose_zone') ? <Text variant="caption" tone="red">Choose your area so we can price delivery.</Text> : null}
+              {!zoneId ? <Text variant="caption" tone={touched ? 'red' : 'slate'}>Choose your area so we can price delivery. The price covers drop-off and collection.</Text> : null}
               <Field label="Delivery address" value={address} onChangeText={setAddress} multiline autoComplete="street-address"
                 placeholder="House number, street, area. Add a landmark" style={{ minHeight: 76, paddingTop: space.md, textAlignVertical: 'top' }}
                 error={touched && !addressOk ? 'Add the address we should deliver to.' : undefined} />
@@ -235,7 +246,10 @@ export default function Review() {
             <Money label="Refundable deposit" value={naira(quote.deposit_kobo)} hint="Back to you within 48 hours after we check the gear." />
             <View style={[styles.divider, { backgroundColor: c.line }]} />
             <Money label="Total today" value={naira(quote.total_kobo)} strong />
-            <Text variant="caption" tone="slate">Free cancellation up to 72 hours before your first day. By paying you agree to Deloo’s rental terms.</Text>
+            <Text variant="caption" tone="slate">
+              Free cancellation up to 72 hours before your first day. Deloo Protection covers accidental damage, not careless loss or theft without a police report. By paying you agree to{' '}
+              <Text variant="caption" tone="lagoon" accessibilityRole="link" onPress={() => Linking.openURL('https://deloo.space/terms').catch(() => {})}>Deloo’s rental terms</Text>.
+            </Text>
           </View>
         )}
         {payError ? <Notice tone="problem">{payError}</Notice> : null}
@@ -246,9 +260,10 @@ export default function Review() {
         ) : null}
       </ScrollView>
       <View style={[styles.footer, { borderTopColor: c.line, backgroundColor: c.paper }]}>
+        {!held && missing && quote ? <Text variant="caption" tone={touched ? 'red' : 'slate'}>{missing}</Text> : null}
         <Button
           title={held && hold ? `Continue to pay ${naira(hold.total_kobo)}` : quote ? `Pay ${naira(quote.total_kobo)}` : 'Pay'}
-          loading={paying} disabled={held ? false : !quote || problems.length > 0 || offline} onPress={pay} />
+          loading={paying} disabled={held ? false : !quote || offline} onPress={pay} />
       </View>
     </SafeAreaView>
   );
@@ -272,6 +287,10 @@ function LineRow({ line, q, gone, held, days, onRemove, onFewer, onDays }: {
           {onFewer && q ? <Button kind="quiet" title={`Book ${q.free}`} onPress={onFewer} /> : null}
           {onRemove ? <Button kind="quiet" title="Remove" onPress={onRemove} /> : null}
         </View>
+      ) : onRemove ? (
+        <Pressable onPress={onRemove} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Remove ${line.name}`}>
+          <Text variant="label" tone="slate">Remove</Text>
+        </Pressable>
       ) : null}
     </View>
   );
@@ -327,5 +346,5 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', marginLeft: -space.xl },
   note: { borderRadius: radius.md, padding: space.md },
   divider: { height: StyleSheet.hairlineWidth, marginVertical: space.xs },
-  footer: { paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: space.lg, borderTopWidth: StyleSheet.hairlineWidth },
+  footer: { gap: space.sm, paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: space.lg, borderTopWidth: StyleSheet.hairlineWidth },
 });

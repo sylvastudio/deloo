@@ -9,7 +9,7 @@ import { useColors } from '@/theme/use-colors';
 import { Button } from '@/ui/button';
 import { Text } from '@/ui/text';
 
-const WORDS = ['Sound', 'Screens', 'Cameras', 'Lights', 'Power'];
+const WORDS = ['Cameras', 'Lenses', 'Lights', 'Mics', 'Gimbals'];
 
 export default function Welcome() {
   const c = useColors();
@@ -34,14 +34,13 @@ export default function Welcome() {
             {WORDS[i]}
           </Animated.Text>
         </View>
-        <Text style={[type.hero, { color: c.onLagoon }]}>for your event,{'\n'}sorted.</Text>
+        <Text style={[type.hero, { color: c.onLagoon }]}>for your shoot,{'\n'}sorted.</Text>
         <Text style={[type.body, { color: c.onLagoon, opacity: 0.85, marginTop: space.lg }]}>
-          Tell us about your event. We’ll recommend the right setup and find it free on your date, from trusted owners across Lagos.
+          Tell us about your shoot. We’ll recommend the right kit from Deloo’s own gear and check it’s free on your dates.
         </Text>
       </View>
       <View style={styles.bottom}>
         <Button title="Get started" kind="accent" onPress={() => router.push('/sign-in')} />
-        <Text style={[type.caption, { color: c.onLagoon, opacity: 0.75, textAlign: 'center' }]}>Have gear to rent out? Start here too.</Text>
       </View>
     </SafeAreaView>
   );

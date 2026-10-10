@@ -166,6 +166,8 @@ export interface Alternative {
   complete: boolean;
   /** Rental difference vs the current choice for the same days; null when not priced (nearby date). */
   priceDeltaKobo: number | null;
+  /** Other stock in the category: true when it meets the plan's spec, false when it's a trade-off. */
+  fits?: boolean;
 }
 
 /**

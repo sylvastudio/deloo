@@ -37,7 +37,9 @@ export default function Bookings() {
   }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const shown = (list ?? []).filter((b) => (tab === 'active' ? isActive(b) : !isActive(b)));
+  // Tries that were never paid (a hold that ran out, or was let go to change details) aren't bookings.
+  const neverPaid = (b: NonNullable<typeof list>[number]) => !b.confirmed_at && !b.needs_refund && (b.status === 'expired' || b.status === 'cancelled' || (b.status === 'hold' && !isActive(b)));
+  const shown = (list ?? []).filter((b) => !neverPaid(b) && (tab === 'active' ? isActive(b) : !isActive(b)));
   const help = cachedSettings()?.support_whatsapp;
 
   return (

@@ -4,7 +4,8 @@
 --
 -- Day rates: as on the Mastermind site. Units: 1 each, except ZV-E1 and Amaran COB 200x S (2 each).
 -- Replacement value: new in Lagos, researched 10 Oct 2026 (Nigerian dealers; else B&H USD × ₦1,585,
--- i.e. ₦1,378/$ plus 15% import). Deposit: 10% of replacement value, rounded up to ₦5,000, at least ₦10,000.
+-- i.e. ₦1,378/$ plus 15% import). Deposit: one day's rate, at least ₦10,000 and at most ₦50,000
+-- (founder decision 10 Oct 2026; theft risk is covered by verifying renters, not by the deposit).
 -- Decommissioned: DJI FPV Drone Combo (not listed).
 -- Photos: supabase/inventory-photos, uploaded to the `items` bucket as <vendor id>/<site id>-<n>.jpg
 -- by scripts/upload-inventory-photos.ts.
@@ -63,7 +64,7 @@ ins as (
                             replacement_value_kobo, technician_required, photos, active)
   select 'de100000-0000-4000-8000-000000000001', s.cat, s.name, s.brand, s.model, s.note, s.specs::jsonb,
          s.rate::bigint * 100,
-         greatest(1000000, ceil(s.replacement * 0.10 / 5000.0) * 5000 * 100)::bigint,
+         least(5000000, greatest(1000000, s.rate::bigint * 100)),
          s.replacement::bigint * 100, false,
          array(select 'de100000-0000-4000-8000-000000000001/' || s.site_id || '-' || n || '.jpg' from generate_series(0, s.photos - 1) n),
          true

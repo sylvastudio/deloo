@@ -5,7 +5,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { setBookingDraft } from '@/lib/booking-draft';
-import { isOffline, itemCalendar, type CalendarDay } from '@/lib/bookings';
+import { checkFree, isOffline, itemCalendar, plain, type CalendarDay } from '@/lib/bookings';
 import { CATEGORY_META, displayName } from '@/lib/catalog';
 import { dayLabel, daysText, naira, rangeLabel } from '@/lib/format';
 import { itemPhotoUrl } from '@/lib/photos';
@@ -50,15 +50,19 @@ const HORIZON = 90;
 /** R-12 Item detail with R-13 choose dates inline: availability calendar, quantity, then Book. */
 export default function ItemDetail() {
   const c = useColors();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // first/last come back in the link after signing in, so the chosen days aren't lost.
+  const { id, first: firstParam, last: lastParam } = useLocalSearchParams<{ id: string; first?: string; last?: string }>();
   const { session } = useSession();
   const [item, setItem] = useState<Item | null | undefined>(undefined);
   const [itemError, setItemError] = useState('');
   const [days, setDays] = useState<CalendarDay[] | null>(null);
   const [calError, setCalError] = useState<'offline' | 'error' | null>(null);
   const [qty, setQty] = useState(1);
-  const [first, setFirst] = useState<string>();
-  const [last, setLast] = useState<string>();
+  const [first, setFirst] = useState<string | undefined>(firstParam);
+  const [last, setLast] = useState<string | undefined>(lastParam);
+  const [checking, setChecking] = useState(false);
+  const [bookError, setBookError] = useState('');
+  const [resumeId, setResumeId] = useState<string>();
 
   const loadItem = useCallback(async () => {
     setItemError('');
@@ -106,11 +110,21 @@ export default function ItemDetail() {
     );
   }
 
-  function book() {
+  async function book() {
     if (!item || !first || !last) return;
     // Web, signed out (browsing from a shared link): sign in first, then come back to this item.
-    if (!session) { rememberReturn(`/item/${item.id}`); router.push('/welcome'); return; }
-    setBookingDraft({ lines: [{ itemId: item.id, name: displayName(item.name), qty }], first, last, from: { kind: 'item', itemId: item.id } });
+    if (!session) { rememberReturn(`/item/${item.id}?first=${first}&last=${last}`); router.push('/welcome'); return; }
+    const lines = [{ itemId: item.id, name: displayName(item.name), qty }];
+    // The calendar may be minutes old: ask the server again so Review never opens on gear that's gone.
+    setChecking(true); setBookError(''); setResumeId(undefined);
+    try {
+      const r = await checkFree(lines, first, last);
+      if (!r.ok) { setBookError(r.message); setResumeId(r.resumeBookingId); loadCalendar(); return; }
+    } catch (e) {
+      setBookError(isOffline(e) ? 'You’re offline. Connect to check these days.' : plain(e, 'Couldn’t check these days. Try again.'));
+      return;
+    } finally { setChecking(false); }
+    setBookingDraft({ lines, first, last, from: { kind: 'item', itemId: item.id } });
     router.push('/book/review');
   }
 
@@ -168,14 +182,14 @@ export default function ItemDetail() {
               ))}
             </View>
           ) : null}
-          <Notice tone="tip" icon="shield">From Deloo’s own kit · insured handover. We check it, charge it and photograph it before it leaves.</Notice>
+          <Notice tone="tip" icon="shield">From Deloo’s own kit. We check it, charge it and photograph it before it leaves.</Notice>
 
           <View style={{ gap: space.md, marginTop: space.sm }}>
             <Text variant="heading" accessibilityRole="header">Choose your days</Text>
             {total > 1 ? (
               <View style={styles.qtyRow}>
                 <Text style={{ flex: 1 }}>How many?</Text>
-                <Stepper value={qty} min={1} max={total} onChange={setQty} label="units" />
+                <Stepper value={qty} min={1} max={total} onChange={(v) => { setQty(v); setBookError(''); }} label="units" />
               </View>
             ) : null}
             {calError === 'offline' ? (
@@ -194,13 +208,13 @@ export default function ItemDetail() {
               ) : !nextFree ? <Notice tone="warning">{`Fully booked for the next ${HORIZON} days.`}</Notice> : null}
               <DateRangeCalendar
                 first={first} last={last} unavailable={unavailable} limited={limited} months={4} maxDate={addDays(lagosToday(), HORIZON)}
-                onChange={(a, b) => { setFirst(a); setLast(b); }}
+                onChange={(a, b) => { setFirst(a); setLast(b); setBookError(''); }}
               />
               <View style={styles.legend}>
                 <Legend dot={c.marigold} label="Few left" />
                 <Text variant="caption" tone="faint" style={{ textDecorationLine: 'line-through' }}>12</Text><Text variant="caption" tone="slate">Booked</Text>
               </View>
-              <Text variant="caption" tone="slate">We deliver from 8am on your first day and collect the morning after your last. Book by 6pm for next-day delivery.</Text>
+              <Text variant="caption" tone="slate">We deliver from 8am on your first day and collect the morning after your last. Bookings start from tomorrow.</Text>
             </>}
           </View>
         </>}
@@ -217,7 +231,14 @@ export default function ItemDetail() {
         ) : (
           <Text variant="caption" tone="slate">{item ? 'Pick your first and last day to see the price.' : ' '}</Text>
         )}
-        <Button title={n ? 'Book' : 'Choose days'} disabled={!item || !n || !!calError} onPress={book} />
+        {bookError ? (
+          <Text variant="caption" tone="red">
+            {bookError}
+            {resumeId ? <Text variant="caption" tone="lagoon" onPress={() => router.push({ pathname: '/book/pay', params: { booking: resumeId } })}> Resume payment →</Text>
+              : nextFree ? ` Free from ${dayLabel(nextFree)}, or pick days that aren’t crossed out.` : null}
+          </Text>
+        ) : null}
+        <Button title={n ? 'Book' : 'Choose days'} loading={checking} disabled={!item || !n || !!calError} onPress={book} />
       </View>
     </SafeAreaView>
   );

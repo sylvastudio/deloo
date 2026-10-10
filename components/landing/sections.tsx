@@ -135,7 +135,7 @@ export function Trust({ d }: { d: LandingData }) {
         <div className={s.points}>
           <div className={s.point}>
             <h3>Deposit refunded</h3>
-            <p>Your deposit is held, not spent. It comes back within 48 hours after we check the gear.</p>
+            <p>You pay it with your rental and get it back within 48 hours after we check the gear.</p>
           </div>
           <div className={s.point}>
             {/* TODO(founder): confirm the protection rate and cap. */}

@@ -182,6 +182,47 @@ function equivalents(line: Line): Variant[] {
   return v;
 }
 
+const NO_WIDE_SWAP = new Set<CategoryKey>(['grip', 'mic', 'backdrop']);
+
+/**
+ * What changes if the renter takes `item` instead: against the item they have now (`base`), or the
+ * plan's need when nothing is free. Plain, concrete words, at most two.
+ */
+function differences(item: CatalogueItem, base: CatalogueItem | undefined, need: SpecNeed): string[] {
+  const p = item.specs, b = base?.specs ?? {};
+  const out: string[] = [];
+  const ff = (v: unknown) => v === true;
+  switch (item.category) {
+    case 'camera':
+      if (ff(p.full_frame) && (base ? !ff(b.full_frame) : !need.fullFrame)) out.push('Full frame · better in low light');
+      else if (!ff(p.full_frame) && (base ? ff(b.full_frame) : need.fullFrame)) out.push('Smaller sensor · a little less low light and background blur');
+      if (p.kind === 'cinema' && b.kind !== 'cinema') out.push('Cinema body · records for hours without overheating');
+      else if (p.kind !== 'cinema' && b.kind === 'cinema') out.push('Lighter body · shorter recording limits');
+      break;
+    case 'lens':
+      if (p.kind === 'zoom' && b.kind !== 'zoom') out.push(`${p.focal_mm}mm zoom · one lens for every framing`);
+      else if (p.kind === 'prime') out.push(`${p.focal_mm}mm prime · ${num(p.focal_mm) >= 70 ? 'tight portraits, soft background' : num(p.focal_mm) <= 24 ? 'wide, fits small rooms' : 'natural view, walk closer to frame'}`);
+      if (!ff(p.full_frame) && (need.fullFrame || ff(b.full_frame))) out.push('only fits the FX30 and ZV-E10');
+      break;
+    case 'light': {
+      const w = num(p.watts), bw = num(b.watts);
+      if (Number.isFinite(w) && Number.isFinite(bw) && w > bw * 1.5) out.push(`Brighter (${w} W)`);
+      else if (Number.isFinite(w) && Number.isFinite(bw) && w < bw / 1.5) out.push(`Smaller (${w} W) · place it closer`);
+      if (p.rgb === true && b.rgb !== true) out.push('any colour');
+      if (p.battery === true && b.battery !== true) out.push('runs on battery, no socket needed');
+      else if (p.battery !== true && (b.battery === true || need.battery)) out.push('needs a power socket');
+      break;
+    }
+    case 'gimbal': {
+      const kg = num(p.payload_kg);
+      if (Number.isFinite(kg)) out.push(kg > num(b.payload_kg) ? `Carries up to ${kg} kg · any lens` : `Carries up to ${kg} kg · small lenses only`);
+      break;
+    }
+  }
+  if (!out.length) out.push(meetsSpec(item, need) ? 'Does the same job' : 'A different take on what we planned');
+  return out.slice(0, 2);
+}
+
 /** 3. A different approach (several categories together). None for the shoot catalogue yet. */
 function approaches(_line: Line): { parts: Variant[]; trade: string }[] {
   return [];
@@ -213,6 +254,21 @@ function alternativesFor(ctx: Ctx, line: Line, chosen: Offer[], strict: Catalogu
     const { offers, units } = allocate(ctx, candidates(ctx, v.category, v.spec, strictIds), want, false);
     if (units === 0) continue;
     alts.push({ kind: 'equivalent', trade: v.trade + (units < want ? ` · only ${units} free` : ''), offers, units, complete: units >= want, priceDeltaKobo: sumRental(offers) - current });
+  }
+
+  // 2b. Anything else we stock in this category, one option per item (cheapest first), so Swap always
+  // shows real choices, including a cheaper one. Skips what's already chosen or offered above, and
+  // categories where "anything else" is nonsense (a backdrop kit is not a C-stand, a desk mic not a lav).
+  if (!NO_WIDE_SWAP.has(line.category)) {
+    const offered = new Set([...chosen, ...alts.flatMap((a) => a.offers)].map((o) => o.itemId));
+    const base = ctx.catalogue.find((i) => i.id === chosen[0]?.itemId);
+    for (const item of candidates(ctx, line.category, {}, offered)) {
+      const { offers, units } = allocate(ctx, [item], need, false);
+      if (units === 0) continue;
+      const parts = differences(item, base, line.spec);
+      if (units < need) parts.push(`only ${units} free`);
+      alts.push({ kind: 'equivalent', trade: parts.join(' · '), offers, units, complete: units >= need, priceDeltaKobo: sumRental(offers) - current, fits: meetsSpec(item, line.spec) });
+    }
   }
 
   // 3. A different approach (several categories together).

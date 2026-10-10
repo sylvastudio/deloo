@@ -1,11 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, Linking, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
-  bookingDays, bookingStatus, cachedSettings, getActiveHold, getBooking, IN_FLIGHT, isOffline, loadSettings, PAID, PAY_RETURN, plain,
+  bookingDays, bookingStatus, cachedSettings, clockOffset, getActiveHold, getBooking, IN_FLIGHT, isOffline, loadSettings, PAID, PAY_RETURN, plain,
   setActiveHold, startPayment, verifyPayment, type BookingDetail,
 } from '@/lib/bookings';
 import { daysText, naira, rangeLabel, whatsappUrl } from '@/lib/format';
@@ -38,6 +38,9 @@ export default function Pay() {
   const [phase, setPhase] = useState<Phase>('loading');
   const [message, setMessage] = useState('');
   const [left, setLeft] = useState(0);
+  // Phone clock vs server clock (ms). Asked once; every hold-time check below adds it.
+  const skewP = useMemo(() => clockOffset().catch(() => 0), []);
+  const [skew, setSkew] = useState(0);
   const [attempt, setAttempt] = useState(0);
   const [stillWaiting, setStillWaiting] = useState(false);
   const reference = useRef<string | undefined>(params.reference ?? getActiveHold()?.reference);
@@ -85,25 +88,32 @@ export default function Pay() {
       const started = row.payments.filter((p) => p.status === 'initialized' || p.status === 'success').sort((x, y) => y.created_at.localeCompare(x.created_at))[0];
       if (!reference.current && started) reference.current = started.reference;
       if (reference.current) return check();
-      setPhase(row.status === 'hold' && row.hold_expires_at && Date.parse(row.hold_expires_at) > Date.now() ? 'ready' : 'ended');
+      const now = Date.now() + (await skewP);
+      setPhase(row.status === 'hold' && row.hold_expires_at && Date.parse(row.hold_expires_at) > now ? 'ready' : 'ended');
     } catch (e) {
       setMessage(plain(e, 'Couldn’t load your booking.'));
       setPhase('error');
     }
-  }, [bookingId, check, done]);
+  }, [bookingId, check, done, skewP]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { skewP.then(setSkew); }, [skewP]);
 
-  // Hold countdown.
+  // Hold countdown. The end check uses the fresh remaining time, not `left`: on the render where the
+  // booking first arrives, `left` still holds the pre-load value (≤ 0) and would end every hold at once.
+  const loaded = !!b;
   useEffect(() => {
+    if (!loaded) return;
     const until = b?.hold_expires_at ? Date.parse(b.hold_expires_at) : 0;
-    const tick = () => setLeft(until - Date.now());
+    const tick = () => {
+      const ms = until - (Date.now() + skew);
+      setLeft(ms);
+      if (ms <= 0) setPhase((p) => (p === 'ready' || p === 'unfinished' ? 'ended' : p));
+    };
     tick();
     const t = setInterval(tick, 1000);
     return () => clearInterval(t);
-  }, [b?.hold_expires_at]);
-  useEffect(() => {
-    if (b && left <= 0 && (phase === 'ready' || phase === 'unfinished')) setPhase('ended');
-  }, [left, phase, b]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, b?.hold_expires_at, skew]);
 
   // Transfer in flight: watch the booking row every 5 s for a while (the webhook confirms it).
   useEffect(() => {
@@ -182,7 +192,8 @@ export default function Pay() {
   const mins = Math.max(0, Math.floor(left / 60000)), secs = Math.max(0, Math.floor((left % 60000) / 1000));
   const clock = `${mins}:${String(secs).padStart(2, '0')}`;
   const days = b ? bookingDays(b) : null;
-  const holdBadge = !b || phase === 'refund' ? null
+  // While a transfer is landing, the hold time no longer matters: no red "Hold ended" next to "Waiting".
+  const holdBadge = !b || phase === 'refund' || phase === 'pending' ? null
     : left <= 0 ? <Badge label="Hold ended" status="unavailable" />
     : <Badge label={`Held ${clock}`} status={mins < 5 ? 'limited' : 'neutral'} />;
 
@@ -215,8 +226,10 @@ export default function Pay() {
         </>}
       </ScrollView>
       <View style={[styles.footer, { borderTopColor: c.line }]}>
-        {phase === 'ready' && b ? (
-          <SlideToConfirm key={attempt} label={`Slide to pay ${naira(b.total_kobo)}`} disabled={left <= 0} onConfirm={pay} />
+        {/* Web (often WhatsApp's in-app browser): a drag fights page scrolling, and Paystack is the confirm step anyway. */}
+        {phase === 'ready' && b ? (Platform.OS === 'web'
+          ? <Button title={`Pay ${naira(b.total_kobo)}`} disabled={left <= 0} onPress={pay} />
+          : <SlideToConfirm key={attempt} label={`Slide to pay ${naira(b.total_kobo)}`} disabled={left <= 0} onConfirm={pay} />
         ) : phase === 'opening' || phase === 'checking' || phase === 'loading' ? (
           <Button title={phase === 'checking' ? 'Checking your payment…' : 'Opening Paystack…'} loading disabled />
         ) : phase === 'unfinished' ? (

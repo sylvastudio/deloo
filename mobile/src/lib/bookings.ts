@@ -82,6 +82,42 @@ export type Delivery = 'pickup' | 'delivery';
 
 const rpcLines = (lines: DraftLine[]) => lines.map((l) => ({ item_id: l.itemId, qty: l.qty }));
 
+/** Server time minus phone time, in ms, so a wrong phone clock can't end a hold early. 0 when unknown. */
+export async function clockOffset(): Promise<number> {
+  const t0 = Date.now();
+  const { data, error } = await supabase.rpc('server_now');
+  if (error || typeof data !== 'string') return 0;
+  return Date.parse(data) - (t0 + Date.now()) / 2;
+}
+
+export type FreeCheck =
+  | { ok: true }
+  | { ok: false; message: string; tooSoon?: boolean; takenIds?: string[]; resumeBookingId?: string };
+
+/**
+ * Before Review: is everything free on these days right now? Priced as pickup, so a missing delivery
+ * area isn't a problem yet. `message` is renter-facing; throws only when the request itself fails.
+ * The renter's own unpaid hold (no checkout started) is let go first, so it never blocks them.
+ */
+export async function checkFree(lines: DraftLine[], first: string, last: string): Promise<FreeCheck> {
+  const hold = getActiveHold();
+  if (hold && !hold.reference) {
+    await requestCancellation(hold.booking_id, 'Changed before paying').catch(() => {});
+    setActiveHold(null);
+  }
+  const q = await quoteBooking(lines, first, last, 'pickup');
+  if (q.ok) return { ok: true };
+  if (q.problems.includes('starts_too_soon')) return { ok: false, tooSoon: true, message: 'Bookings start from tomorrow. Pick later days.' };
+  const taken = q.lines.filter((l) => !l.ok);
+  // A checkout already started for this gear: send them back to it rather than saying it's taken.
+  if (hold?.reference && Date.parse(hold.hold_expires_at) > Date.now()) {
+    return { ok: false, resumeBookingId: hold.booking_id, message: 'You’ve started paying for this gear. Finish that payment, or wait for it to end.' };
+  }
+  if (!taken.length) return { ok: false, message: 'Some of this gear isn’t available any more.' };
+  const names = taken.map((l) => (l.free > 0 ? `${l.name} (only ${l.free} free)` : l.name)).join(', ');
+  return { ok: false, takenIds: taken.map((l) => l.item_id), message: `${names} ${taken.length === 1 ? 'isn’t' : 'aren’t'} free on these days.` };
+}
+
 export async function quoteBooking(lines: DraftLine[], first: string, last: string, delivery: Delivery, zoneId?: string): Promise<Quote> {
   const { data, error } = await supabase.rpc('quote_booking', {
     p_lines: rpcLines(lines), p_first: first, p_last: last, p_delivery: delivery, p_zone: delivery === 'delivery' ? zoneId ?? null : null,

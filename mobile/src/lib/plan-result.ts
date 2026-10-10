@@ -56,12 +56,20 @@ export type Result = { match: SetupMatch; lines: ChosenLine[]; rentalKobo: numbe
 
 export const PROTECTION_RATE = 0.07;
 
-/** Applies swaps (line key → alternative index) and removals, and recomputes the totals. */
+/** The alternative a saved swap points at: by its item id (survives date changes), or an old saved index. */
+export function swapTarget(alternatives: Alternative[], saved: string | undefined): Alternative | undefined {
+  if (saved === undefined) return undefined;
+  if (/^\d+$/.test(saved)) return alternatives[Number(saved)];
+  return alternatives.find((a) => a.offers[0]?.itemId === saved);
+}
+/** What a swap is saved as: the alternative's first item. */
+export const swapId = (alt: Alternative) => alt.offers[0]?.itemId ?? '';
+
+/** Applies swaps (line key → alternative's item id) and removals, and recomputes the totals. */
 export function applyChoices(match: SetupMatch, draft: Pick<Draft, 'swaps' | 'removed'>): Result {
   const lines: ChosenLine[] = match.lines.map((l) => {
     const removed = draft.removed.includes(l.line.key);
-    const idx = draft.swaps[l.line.key];
-    const alt = idx !== undefined ? l.alternatives[Number(idx)] : undefined;
+    const alt = swapTarget(l.alternatives, draft.swaps[l.line.key]);
     return { ...l, removed, swappedTo: alt, chosen: removed ? [] : alt ? alt.offers : l.offers };
   });
   const rentalKobo = lines.reduce((s, l) => s + l.chosen.reduce((t, o) => t + o.rentalKobo, 0), 0);

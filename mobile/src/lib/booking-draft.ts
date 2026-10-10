@@ -22,6 +22,8 @@ export type BookingDraft = {
   last?: string;
   eventId?: string;
   notIncluded?: NotIncluded[];
+  /** The plan's area answer (e.g. "Lekki"), to pre-select the delivery zone. */
+  area?: string;
   /** Where it came from, so "Change" can go back there. */
   from: { kind: 'item'; itemId: string } | { kind: 'plan' };
 };
@@ -87,5 +89,6 @@ export function draftFromPlan(result: Result, plan: Draft): BookingDraft {
     typeof a.startsAt === 'string' && a.startsAt !== 'unsure' ? a.startsAt : undefined,
     typeof a.endsAt === 'string' && a.endsAt !== 'unsure' ? a.endsAt : undefined,
   );
-  return { lines: [...by.values()], first, last, eventId: plan.eventId, notIncluded, from: { kind: 'plan' } };
+  const area = typeof a.area === 'string' && a.area !== 'unsure' ? a.area : undefined;
+  return { lines: [...by.values()], first, last, eventId: plan.eventId, notIncluded, area, from: { kind: 'plan' } };
 }

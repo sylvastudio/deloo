@@ -45,6 +45,8 @@ export function usePlan() {
   return p;
 }
 
+const KEEP_CHOICES = new Set(['startsAt', 'endsAt', 'area', 'budget']);
+
 export const QUESTION_KEYS = ['shootType', 'people', 'angles', 'location', 'sound', 'movement', 'startsAt', 'area', 'budget'] as const;
 
 export function PlanProvider({ children }: PropsWithChildren) {
@@ -57,7 +59,10 @@ export function PlanProvider({ children }: PropsWithChildren) {
   }, []);
 
   const answer = useCallback((patch: Partial<Answers>) => setDraft((d) => {
-    const next = { ...d, answers: { ...d.answers, ...patch }, swaps: {}, removed: [], eventId: undefined };
+    // Dates, area and budget don't change what the shoot needs, so the renter's swaps and removals stay
+    // (a swap to gear that isn't free on the new dates simply stops applying). Anything else re-sizes it.
+    const keep = Object.keys(patch).every((k) => KEEP_CHOICES.has(k));
+    const next = { ...d, answers: { ...d.answers, ...patch }, swaps: keep ? d.swaps : {}, removed: keep ? d.removed : [], eventId: undefined };
     try { localStorage.setItem(KEY, JSON.stringify({ ...next, updatedAt: new Date().toISOString() })); } catch { /* ignore */ }
     return { ...next, updatedAt: new Date().toISOString() };
   }), []);

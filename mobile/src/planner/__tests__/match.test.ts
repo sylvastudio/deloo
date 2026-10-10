@@ -108,3 +108,12 @@ test('end to end: Best 3-person podcast says what we don’t have enough of', ()
   assert.equal(mics.shortReason, 'booked', 'we stock podcast mics, just not 3');
   assert.ok(m.unmet.some((u) => u.lineKey === 'audio.mics' && u.qty === 1));
 });
+
+test('swap always offers the other cameras we stock, each on its own, cheapest first', () => {
+  const m = matchSetup(one('camera.main', 'camera', 1, { minGrade: 1 }), stock(), { days: 1 });
+  const chosen = m.lines[0].offers[0].itemId;
+  const alts = m.lines[0].alternatives.filter((a) => a.kind === 'equivalent');
+  assert.ok(alts.length >= 2, 'several real choices');
+  assert.ok(alts.every((a) => a.offers.length === 1 && a.offers[0].itemId !== chosen), 'one other item each, never the current one');
+  assert.equal(new Set(alts.map((a) => a.offers[0].itemId)).size, alts.length, 'no duplicates');
+});
