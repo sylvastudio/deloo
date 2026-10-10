@@ -71,7 +71,7 @@ export default function ComingSoon() {
           </View>}
           <Field label="Anything we should know?" value={details} onChangeText={setDetails} multiline placeholder={vertical === 'gear' ? 'e.g. Sony A7 III, two Godox lights, a RODE mic' : role === 'supplier' ? 'e.g. I have a podcast studio in Yaba' : 'e.g. A studio in Lekki for 3 hours'} hint="Optional." />
         </>}
-        {joined ? <Notice tone="tip" icon="check">You’re on the list 🎉 We’ll let you know on WhatsApp.</Notice> : null}
+        {joined ? <Notice tone="tip" icon="check">You’re on the list. We’ll tell you on WhatsApp.</Notice> : null}
         {error ? <Notice tone="problem">{error}</Notice> : null}
       </ScrollView>
       <View style={[styles.footer, { borderTopColor: c.line }]}>

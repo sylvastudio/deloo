@@ -2,6 +2,7 @@ import type { Session } from '@supabase/supabase-js';
 import { createContext, use, useCallback, useEffect, useState, type PropsWithChildren } from 'react';
 import { Platform } from 'react-native';
 
+import { setBookingDraft } from './booking-draft';
 import { supabase } from './supabase';
 
 export type Profile = { full_name: string; phone: string; wants_to_rent: boolean; has_gear: boolean; trust_level: number; is_ops: boolean };
@@ -63,7 +64,15 @@ export function SessionProvider({ children }: PropsWithChildren) {
 
   const setMode = useCallback((m: Mode) => { localStorage.setItem(MODE_KEY, m); setModeState(m); }, []);
   const refresh = useCallback(async () => { await load((await supabase.auth.getSession()).data.session); }, [load]);
-  const signOut = useCallback(async () => { await supabase.auth.signOut(); }, []);
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+    // Shared phones and browsers: drop this person's plan, basket, address, hold and booking cache.
+    // Handover photos still waiting to upload are kept: they're evidence for a booking.
+    try {
+      for (const k of Object.keys(localStorage)) if (k.startsWith('deloo.') && k !== 'deloo.handover.queue' && k !== 'deloo.settings') localStorage.removeItem(k);
+    } catch { /* storage unavailable */ }
+    setBookingDraft(null);
+  }, []);
 
   // Someone without gear can't be in vendor mode; someone with only gear starts there.
   // The web app (app.deloo.space) is for renters only; vendor tools stay in the Android app.

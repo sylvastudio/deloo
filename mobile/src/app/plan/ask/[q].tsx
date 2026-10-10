@@ -12,6 +12,7 @@ import { useColors } from '@/theme/use-colors';
 import { Button } from '@/ui/button';
 import { Chip } from '@/ui/chip';
 import { DateRangeCalendar, dayCount, rentalWindow, windowDays } from '@/ui/date-range';
+import type { IconName } from '@/ui/icon';
 import { Text } from '@/ui/text';
 import { Tile } from '@/ui/tile';
 import { TopBar } from '@/ui/top-bar';
@@ -24,15 +25,16 @@ import { TopBar } from '@/ui/top-bar';
 export const QUESTIONS = ['type', 'where', 'when'] as const;
 type Q = (typeof QUESTIONS)[number] | 'people' | 'angles' | 'sound' | 'movement' | 'area' | 'budget';
 
-const SHOOT_TYPES: [ShootType, string, string, string][] = [
-  ['podcast', 'Podcast', 'People talking at a desk', '🎙️'],
-  ['interview', 'Interview', 'Talking heads, testimonials', '🗣️'],
-  ['content', 'YouTube or social content', 'Vlogs, reels, ads', '📱'],
-  ['music_video', 'Music video', 'Shot to playback', '🎶'],
-  ['short_film', 'Short film or skit', 'Scenes, actors, story', '🎬'],
-  ['photo', 'Photo shoot', 'Portraits, products, studio', '📸'],
-  ['event', 'Event coverage', 'Weddings, conferences, services', '🎉'],
-  ['other', 'Something else', 'Tell us in your own words', '✨'],
+// Icons, not emoji (spec §1: emoji render differently across Android skins and say nothing to screen readers).
+const SHOOT_TYPES: [ShootType, string, string, IconName][] = [
+  ['podcast', 'Podcast', 'People talking at a desk', 'mic_cat'],
+  ['interview', 'Interview', 'Talking heads, testimonials', 'people'],
+  ['content', 'YouTube or social content', 'Vlogs, reels, ads', 'camera'],
+  ['music_video', 'Music video', 'Shot to playback', 'speaker'],
+  ['short_film', 'Short film or skit', 'Scenes, actors, story', 'camera_cat'],
+  ['photo', 'Photo shoot', 'Portraits, products, studio', 'light'],
+  ['event', 'Event coverage', 'Weddings, conferences, services', 'calendar'],
+  ['other', 'Something else', 'Tell us in your own words', 'edit'],
 ];
 const COUNTS: [number, string][] = [[1, '1'], [2, '2'], [3, '3'], [4, '4 or more']];
 
@@ -70,8 +72,8 @@ export default function Ask() {
   switch (q) {
     case 'type':
       title = 'What are you shooting?';
-      body = <>{SHOOT_TYPES.map(([k, label, desc, emoji]) => (
-        <Tile key={k} emoji={emoji} title={label} description={desc} selected={a.shootType === k}
+      body = <>{SHOOT_TYPES.map(([k, label, desc, icon]) => (
+        <Tile key={k} icon={icon} title={label} description={desc} selected={a.shootType === k}
           onPress={() => pick({ shootType: k, ...(k === 'podcast' && a.sound === undefined ? { sound: 'desk' as SoundMode } : {}) })} />
       ))}{notSure({ shootType: 'unsure' })}</>;
       break;

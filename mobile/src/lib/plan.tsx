@@ -1,6 +1,7 @@
-import { createContext, use, useCallback, useMemo, useState, type PropsWithChildren } from 'react';
+import { createContext, use, useCallback, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react';
 
 import type { Answers, Level } from '@/planner/types';
+import { useSession } from './session';
 
 /** A plan in progress. Saved on the phone after every change (user-flows §2 rule 3). */
 export type Draft = {
@@ -75,6 +76,13 @@ export function PlanProvider({ children }: PropsWithChildren) {
   }), []);
 
   const reset = useCallback(() => save(EMPTY), [save]);
+  // Signed out: the next person on this phone starts with an empty plan.
+  const { session } = useSession();
+  const hadSession = useRef(!!session);
+  useEffect(() => {
+    if (hadSession.current && !session) setDraft(EMPTY);
+    hadSession.current = !!session;
+  }, [session]);
   const answered = useMemo(() => QUESTION_KEYS.filter((k) => draft.answers[k] !== undefined).length, [draft.answers]);
 
   return <PlanContext value={{ draft, answer, update, reset, answered }}>{children}</PlanContext>;

@@ -40,7 +40,7 @@ export default function Review() {
   const [phone, setPhone] = useState(saved?.phone || profile?.phone || '');
   // A phone we already have is shown as one line with "Change", not an open field.
   const [editPhone, setEditPhone] = useState(!(saved?.phone || profile?.phone));
-  const [method, setMethod] = useState<PayMethod>(saved?.method ?? 'card');
+  const [method, setMethod] = useState<PayMethod>(saved?.method && saved.method !== 'usdt' ? saved.method : 'card');
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState('');
   const [offline, setOffline] = useState(false);
@@ -53,6 +53,10 @@ export default function Review() {
   const seq = useRef(0);
 
   const key = draft ? draftKey(draft) : '';
+  // Saved as they type, so going Back (or a reload) never loses the address or phone.
+  useEffect(() => {
+    saveCheckout({ delivery, zoneId, address: address.trim(), phone: phone.trim(), method });
+  }, [delivery, zoneId, address, phone, method]);
   const held = !!hold && hold.draftKey === key && Date.parse(hold.hold_expires_at) > Date.now();
 
   useEffect(() => {
@@ -254,10 +258,10 @@ export default function Review() {
           <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
             <Money label={`Rental · ${daysText(quote.days)}`} value={naira(quote.rental_kobo)} />
             <Money label={`Deloo Protection (${Math.round(quote.protection_rate * 100)}%)`} value={naira(quote.protection_kobo)}
-              hint="Covers accidental damage beyond normal wear, so a small knock doesn’t cost you the deposit." />
+              hint="Damage cover for accidents during your rental. Your deposit is used first; Protection pays most of the rest, up to a limit. Not covered: careless loss, or theft without a police report." />
             <Money label={delivery === 'delivery' ? 'Delivery and collection' : 'Pickup'} value={delivery === 'delivery' ? naira(quote.delivery_kobo) : 'Free'} />
             <View style={[styles.divider, { backgroundColor: c.line }]} />
-            <Money label="Refundable deposit" value={naira(quote.deposit_kobo)} hint="Back to you within 48 hours after we check the gear." />
+            <Money label="Refundable deposit" value={naira(quote.deposit_kobo)} hint="We send it back within 48 hours after we check the gear. Card refunds can take a few more working days to show." />
             <View style={[styles.divider, { backgroundColor: c.line }]} />
             <Money label="Total today" value={naira(quote.total_kobo)} strong />
             <Text variant="caption" tone="slate">

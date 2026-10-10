@@ -43,7 +43,7 @@ export default function RenterTabsWeb() {
         headerStyle: { backgroundColor: c.paper },
         headerShadowVisible: false,
         headerRight: () => (
-          <Pressable accessibilityRole="button" onPress={() => router.push('/welcome')} hitSlop={8} style={{ paddingHorizontal: 16 }}>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/sign-in')} hitSlop={8} style={{ paddingHorizontal: 16 }}>
             <Text variant="label" tone="lagoon">Sign in</Text>
           </Pressable>
         ),

@@ -6,6 +6,7 @@ import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTi
 
 import { radius, space, type } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
+import { Button } from './button';
 import { Icon } from './icon';
 import { Text } from './text';
 
@@ -16,7 +17,18 @@ const KNOB = 56;
  * Needs a deliberate drag past 85%, so it can't fire from a pocket or a scroll. Screen readers get a
  * double-tap button instead of the drag.
  */
-export function SlideToConfirm({ label, onConfirm, disabled }: { label: string; onConfirm: () => void; disabled?: boolean }) {
+export function SlideToConfirm(props: { label: string; onConfirm: () => void; disabled?: boolean }) {
+  // Web (often inside WhatsApp's browser): a sideways drag fights page scrolling, so it's a plain button.
+  if (Platform.OS === 'web') return <WebConfirm {...props} />;
+  return <Slider {...props} />;
+}
+
+function WebConfirm({ label, onConfirm, disabled }: { label: string; onConfirm: () => void; disabled?: boolean }) {
+  const [done, setDone] = useState(false);
+  return <Button title={label.replace(/^Slide to /, '').replace(/^./, (ch) => ch.toUpperCase())} disabled={disabled || done} onPress={() => { setDone(true); onConfirm(); }} />;
+}
+
+function Slider({ label, onConfirm, disabled }: { label: string; onConfirm: () => void; disabled?: boolean }) {
   const c = useColors();
   const [width, setWidth] = useState(0);
   const [done, setDone] = useState(false);

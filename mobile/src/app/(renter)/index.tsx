@@ -41,8 +41,8 @@ export default function Plan() {
 
   return (
     <Screen kicker={first ? `Hi ${first}` : undefined} title="What are you shooting?">
-      <View style={[styles.start, { backgroundColor: c.lagoon }]}>
-        <Text style={[type.heading, { color: c.onLagoon }]}>Tell us about it the way you’d tell a friend.</Text>
+      <View style={[styles.start, { backgroundColor: c.brand }]}>
+        <Text style={[type.heading, { color: c.onBrand }]}>Tell us about it the way you’d tell a friend.</Text>
         <View style={[styles.inputRow, { backgroundColor: c.surface }]}>
           <TextInput
             ref={input} value={text} onChangeText={setText} multiline placeholder="e.g. A podcast with 3 people, Saturday in Lekki"
@@ -58,14 +58,14 @@ export default function Plan() {
           </Pressable>
           ) : null}
         </View>
-        {voiceTip ? <Text variant="caption" style={{ color: c.onLagoon }}>Tap the 🎙 on your keyboard and talk. We’ll read it.</Text> : null}
+        {voiceTip ? <Text variant="caption" style={{ color: c.onBrand }}>Tap the mic on your keyboard and talk. We’ll read what you say.</Text> : null}
         {text.trim() ? (
           <Button kind="accent" title="Suggest my kit" onPress={size} />
         ) : (
           <View style={styles.examples}>
             {EXAMPLES.map((e) => (
               <Pressable key={e} onPress={() => setText(e)} style={styles.example} accessibilityRole="button" accessibilityLabel={`Use example: ${e}`}>
-                <Text variant="caption" style={{ color: c.onLagoon }}>{e}</Text>
+                <Text variant="caption" style={{ color: c.onBrand }}>{e}</Text>
               </Pressable>
             ))}
           </View>

@@ -56,7 +56,9 @@ export default function Pay() {
 
   const done = useCallback(() => {
     setActiveHold(null);
-    router.replace(`/book/success?booking=${bookingId}`);
+    // Clear review/pay off the stack, so Back from success goes to the tabs, not an empty Review.
+    if (router.canDismiss()) router.dismissAll();
+    router.push(`/book/success?booking=${bookingId}`);
   }, [bookingId]);
 
   /** Reads what the server says after checkout and picks the screen state. */
@@ -243,7 +245,7 @@ export default function Pay() {
           </View>
           <View style={[styles.card, { backgroundColor: c.greenTint, borderColor: c.greenTint }]}>
             <View style={styles.row}><Icon name="shield" size={18} color={c.greenInk} /><Text variant="bodyStrong" style={{ color: c.greenInk }}>Deposit {naira(b.deposit_kobo)}</Text></View>
-            <Text variant="caption">Refundable. Comes back within 48 hours after we check the gear.</Text>
+            <Text variant="caption">Refundable. We send it back within 48 hours after we check the gear.</Text>
           </View>
           {phase === 'ready' || phase === 'unfinished' ? <PayMethods value={method} onChange={chooseMethod} /> : null}
         </>}

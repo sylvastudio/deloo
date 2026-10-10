@@ -29,7 +29,7 @@ export function Tile({
         {description ? <Text variant="caption" tone="slate">{description}</Text> : null}
       </View>
       <View style={[styles.mark, { borderColor: selected ? c.lagoon : c.line, backgroundColor: selected ? c.lagoon : 'transparent', borderRadius: multi ? 6 : 12 }]}>
-        {selected ? <Text style={{ color: c.onLagoon, fontSize: 13, lineHeight: 16 }}>✓</Text> : null}
+        {selected ? <Icon name="check" size={16} color={c.onLagoon} /> : null}
       </View>
     </Pressable>
   );

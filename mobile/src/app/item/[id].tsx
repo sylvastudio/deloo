@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -63,6 +63,9 @@ export default function ItemDetail() {
   const [checking, setChecking] = useState(false);
   const [bookError, setBookError] = useState('');
   const [resumeId, setResumeId] = useState<string>();
+  // "Choose days" scrolls to the calendar (it's below the photos and specs).
+  const scroller = useRef<ScrollView>(null);
+  const daysY = useRef(0);
 
   const loadItem = useCallback(async () => {
     setItemError('');
@@ -140,7 +143,7 @@ export default function ItemDetail() {
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: c.paper }}>
       <TopBar fallback="/explore" />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView ref={scroller} contentContainerStyle={styles.content}>
         {itemError ? (
           <EmptyState icon="warning" title="Couldn’t load this item" body={itemError} action="Try again" onAction={loadItem} />
         ) : !item ? (
@@ -190,7 +193,7 @@ export default function ItemDetail() {
           ) : null}
           <Notice tone="tip" icon="shield">From Deloo’s own kit. We check it, charge it and photograph it before it leaves.</Notice>
 
-          <View style={{ gap: space.md, marginTop: space.sm }}>
+          <View style={{ gap: space.md, marginTop: space.sm }} onLayout={(e) => { daysY.current = e.nativeEvent.layout.y; }}>
             <Text variant="heading" accessibilityRole="header">Choose your days</Text>
             {total > 1 ? (
               <View style={styles.qtyRow}>
@@ -244,7 +247,8 @@ export default function ItemDetail() {
               : nextFree ? ` Free from ${dayLabel(nextFree)}, or pick days that aren’t crossed out.` : null}
           </Text>
         ) : null}
-        <Button title={n ? 'Book' : 'Choose days'} loading={checking} disabled={!item || !n || !!calError} onPress={book} />
+        <Button title={n ? 'Book' : 'Choose days'} loading={checking} disabled={!item || !!calError}
+          onPress={n ? book : () => scroller.current?.scrollTo({ y: Math.max(0, daysY.current - 16), animated: true })} />
       </View>
     </SafeAreaView>
   );

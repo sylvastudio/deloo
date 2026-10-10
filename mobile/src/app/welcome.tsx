@@ -20,12 +20,12 @@ export default function Welcome() {
   }, []);
 
   return (
-    <SafeAreaView style={[styles.fill, { backgroundColor: c.lagoon }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.fill, { backgroundColor: c.brand }]} edges={['top', 'bottom']}>
       <View style={styles.top}>
-        <Text style={[type.heading, { color: c.onLagoon }]}>deloo<Text style={[type.heading, { color: c.marigold }]}>.</Text></Text>
+        <Text style={[type.heading, { color: c.onBrand }]}>deloo<Text style={[type.heading, { color: c.marigold }]}>.</Text></Text>
       </View>
       <View style={styles.middle}>
-        <View style={styles.wordBox} accessible accessibilityLabel={`${WORDS.join(', ')} for your event`}>
+        <View style={styles.wordBox} accessible accessibilityLabel={`${WORDS.join(', ')} for your shoot`}>
           <Animated.Text
             key={WORDS[i]}
             entering={FadeInDown.duration(380).reduceMotion(ReduceMotion.System)}
@@ -34,8 +34,8 @@ export default function Welcome() {
             {WORDS[i]}
           </Animated.Text>
         </View>
-        <Text style={[type.hero, { color: c.onLagoon }]}>for your shoot,{'\n'}sorted.</Text>
-        <Text style={[type.body, { color: c.onLagoon, opacity: 0.85, marginTop: space.lg }]}>
+        <Text style={[type.hero, { color: c.onBrand }]}>for your shoot,{'\n'}sorted.</Text>
+        <Text style={[type.body, { color: c.onBrand, opacity: 0.85, marginTop: space.lg }]}>
           Tell us about your shoot. We’ll recommend the right kit from Deloo’s own gear and check it’s free on your dates.
         </Text>
       </View>
@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   top: { paddingHorizontal: space.xl, paddingTop: space.lg },
   middle: { flex: 1, justifyContent: 'center', paddingHorizontal: space.xl },
-  wordBox: { height: 48, overflow: 'hidden' },
+  wordBox: { height: 54, overflow: 'hidden', marginBottom: space.xs },
   word: { position: 'absolute' },
   bottom: { paddingHorizontal: space.xl, paddingBottom: space.lg, gap: space.md },
 });

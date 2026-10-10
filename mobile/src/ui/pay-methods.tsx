@@ -12,12 +12,10 @@ export function PayMethods({ value, onChange }: { value: PayMethod; onChange: (m
     <View style={{ gap: space.sm }}>
       <View style={styles.chips} accessibilityRole="radiogroup" accessibilityLabel="Payment method">
         {PAY_METHODS.map((m) => (
-          <Chip key={m.key} label={m.soon ? `${m.label} · soon` : m.label} selected={value === m.key} onPress={() => onChange(m.key)} />
+          <Chip key={m.key} label={m.soon ? `${m.label} · coming soon` : m.label} selected={!m.soon && value === m.key} onPress={m.soon ? undefined : () => onChange(m.key)} />
         ))}
       </View>
-      <Text variant="caption" tone={chosen.soon ? 'red' : 'slate'}>
-        {chosen.soon ? 'Paying in USDT is coming soon. Pick card, transfer or USSD for now.' : chosen.note}
-      </Text>
+      <Text variant="caption" tone="slate">{chosen.soon ? PAY_METHODS[0].note : chosen.note}</Text>
     </View>
   );
 }

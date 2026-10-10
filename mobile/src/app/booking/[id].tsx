@@ -132,10 +132,10 @@ export default function Tracker() {
         ) : null}
 
         {!ended && b.status !== 'hold' ? <>
-          <View style={[styles.now, { backgroundColor: c.lagoon }]}>
-            <Text variant="label" style={{ color: c.onLagoon, opacity: 0.85 }}>NOW</Text>
-            <Text variant="heading" style={{ color: c.onLagoon }}>{label(stage)}</Text>
-            <Text style={{ color: c.onLagoon }}>{stageDetail(b, stage, pickup)}</Text>
+          <View style={[styles.now, { backgroundColor: c.brand }]}>
+            <Text variant="label" style={{ color: c.onBrand, opacity: 0.85 }}>NOW</Text>
+            <Text variant="heading" style={{ color: c.onBrand }}>{label(stage)}</Text>
+            <Text style={{ color: c.onBrand }}>{stageDetail(b, stage, pickup)}</Text>
           </View>
 
           {canReceive ? <Button title="I’ve received it: take photos" icon={<Icon name="camera" color={c.onLagoon} />}

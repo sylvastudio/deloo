@@ -6,9 +6,11 @@
 export type ShareResult = 'shared' | 'copied' | 'failed';
 
 export async function shareOnWhatsApp(text: string): Promise<ShareResult> {
-  const w = window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
-  if (w !== null) return 'shared';
-  // Pop-up blocked (rare: this runs from a tap): navigate instead.
+  // No 'noopener' feature string: with it, window.open always returns null (by spec), which looked
+  // like a blocked pop-up and sent this tab to WhatsApp too. Cut the opener link by hand instead.
+  const w = window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  if (w) { try { w.opener = null; } catch { /* cross-origin already */ } return 'shared'; }
+  // Pop-up really blocked (rare: this runs from a tap): navigate instead.
   window.location.assign(`https://wa.me/?text=${encodeURIComponent(text)}`);
   return 'shared';
 }

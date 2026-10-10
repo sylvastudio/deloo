@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CATEGORY_META, displayName, GROUPS } from '@/lib/catalog';
@@ -10,7 +10,8 @@ import { itemPhotoUrl } from '@/lib/photos';
 import { supabase } from '@/lib/supabase';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
-import { Badge, Chip } from '@/ui/chip';
+import { Chip } from '@/ui/chip';
+import { EmptyState, Skeleton } from '@/ui/feedback';
 import { categoryIcon, Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
 
@@ -41,8 +42,10 @@ export default function Explore() {
       .from('items')
       .select('id, name, brand, model, category_key, day_rate_kobo, technician_required, photos, units(count)')
       .eq('active', true).order('category_key').order('day_rate_kobo', { ascending: false });
-    if (err) setError('Couldn’t load gear. Pull down to try again.');
-    else { setError(''); setItems(data as unknown as Item[]); }
+    if (err) { setError('Check your connection and try again.'); return; }
+    // Cameras first (what most people come for), then lenses, light, sound, grip; dearest first in each.
+    const rank = (i: Item) => { const g = GROUPS.findIndex((x) => x.key === CATEGORY_META[i.category_key]?.group); return g < 0 ? 99 : g; };
+    setError(''); setItems((data as unknown as Item[]).sort((a, b) => rank(a) - rank(b) || b.day_rate_kobo - a.day_rate_kobo));
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -62,7 +65,11 @@ export default function Explore() {
           {GROUPS.map((g) => <Chip key={g.key} label={g.label} selected={group === g.key} onPress={() => setGroup(g.key)} />)}
         </ScrollView>
       </View>
-      {!items && !error ? <ActivityIndicator style={{ marginTop: space.xxl }} color={c.lagoon} /> : (
+      {error && !items ? (
+        <EmptyState icon="warning" title="Couldn’t load the gear" body={error} action="Try again" onAction={load} />
+      ) : !items ? (
+        <View style={[styles.grid, styles.skeletons]}>{[0, 1, 2, 3].map((i) => <Skeleton key={i} style={styles.skeleton} />)}</View>
+      ) : (
         <FlatList
           data={shown}
           keyExtractor={(i) => i.id}
@@ -70,7 +77,7 @@ export default function Explore() {
           columnWrapperStyle={{ gap: space.md }}
           contentContainerStyle={styles.grid}
           refreshControl={<RefreshControl refreshing={refreshing} colors={[c.lagoon]} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
-          ListEmptyComponent={<Text tone="slate" style={{ textAlign: 'center', marginTop: space.xl }}>{error || 'Nothing listed here yet.'}</Text>}
+          ListEmptyComponent={<Text tone="slate" style={{ textAlign: 'center', marginTop: space.xl }}>Nothing in this group right now.</Text>}
           renderItem={({ item }) => <GearCard item={item} />}
         />
       )}
@@ -85,7 +92,10 @@ function GearCard({ item }: { item: Item }) {
     <Pressable onPress={() => router.push(`/item/${item.id}`)} android_ripple={{ color: c.lagoonTint }}
       style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]} accessibilityRole="button" accessibilityLabel={`${displayName(item.name)}, ${naira(item.day_rate_kobo)} a day`}>
       {item.photos[0] ? (
-        <Image source={{ uri: itemPhotoUrl(item.photos[0]) }} style={[styles.art, { backgroundColor: '#fff' }]} contentFit="contain" transition={150} />
+        // Light backdrop while the photo loads (no glaring blank box in dark mode); product shots are on white.
+        <View style={[styles.art, { backgroundColor: c.raised }]}>
+          <Image source={{ uri: itemPhotoUrl(item.photos[0]) }} style={[StyleSheet.absoluteFill, { backgroundColor: '#fff' }]} contentFit="contain" transition={200} />
+        </View>
       ) : (
         <View style={[styles.art, { backgroundColor: c.lagoonTint }]}>
           <Icon name={categoryIcon(item.category_key)} size={40} color={c.lagoon} />
@@ -93,10 +103,10 @@ function GearCard({ item }: { item: Item }) {
       )}
       <View style={{ gap: 2, padding: space.md }}>
         <Text variant="label" numberOfLines={2}>{displayName(item.name)}</Text>
-        <Text variant="caption" tone="slate" numberOfLines={1}>{[item.brand, item.model].filter(Boolean).join(' ')}</Text>
+        {/* Brand and model only when the name doesn't already say it. */}
+        {item.model && !item.name.includes(item.model) ? <Text variant="caption" tone="slate" numberOfLines={1}>{[item.brand, item.model].filter(Boolean).join(' ')}</Text> : null}
         <Text variant="bodyStrong" style={{ marginTop: space.xs }}>{naira(item.day_rate_kobo)}<Text variant="caption" tone="slate"> /day</Text></Text>
-        {units > 1 ? <Text variant="caption" tone="faint">{units} available</Text> : null}
-        {item.technician_required ? <View style={{ marginTop: space.xs }}><Badge label="Technician included" /></View> : null}
+        {units > 1 ? <Text variant="caption" tone="slate">{units} in stock</Text> : null}
       </View>
     </Pressable>
   );
@@ -107,5 +117,7 @@ const styles = StyleSheet.create({
   chips: { paddingHorizontal: space.xl, paddingVertical: space.lg, gap: space.sm },
   grid: { paddingHorizontal: space.xl, paddingBottom: space.xxxl, gap: space.md },
   card: { flex: 1, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden', maxWidth: '50%' },
-  art: { height: 120, width: '100%', alignItems: 'center', justifyContent: 'center' },
+  art: { width: '100%', aspectRatio: 4 / 3, alignItems: 'center', justifyContent: 'center' },
+  skeletons: { flexDirection: 'row', flexWrap: 'wrap' },
+  skeleton: { width: '47%', aspectRatio: 0.8, borderRadius: radius.lg },
 });

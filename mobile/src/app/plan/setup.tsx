@@ -93,7 +93,7 @@ export default function Setup() {
   }
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: c.paper }}>
+    <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: c.paper }}>
       <TopBar title="Your setup" right={
         <Pressable accessibilityRole="button" accessibilityLabel="Share to WhatsApp" hitSlop={8} onPress={() => router.push('/plan/share')}><Icon name="share" /></Pressable>
       } />

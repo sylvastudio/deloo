@@ -46,7 +46,7 @@ export default function Cancel() {
     return (
       <View style={[styles.sheet, { backgroundColor: c.paper }]}>
         <EmptyState icon="check" title="Booking cancelled"
-          body={done > 0 ? `We’ll refund ${naira(done)} to the account you paid from, usually within 3 working days.` : 'Nothing was charged, so there’s nothing to refund.'}
+          body={done > 0 ? `We’ll refund ${naira(done)} to the account you paid from, within 48 hours. Card refunds can take a few more working days to show.` : 'Nothing was charged, so there’s nothing to refund.'}
           action="Done" onAction={() => router.back()} />
       </View>
     );

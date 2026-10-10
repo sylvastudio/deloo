@@ -16,6 +16,8 @@ export const palette = {
     lagoonStrong: '#0B5359',
     lagoonTint: '#E0EFEF',
     onLagoon: '#FFFFFF',
+    brand: '#0F6B73',        // deep lagoon panels (welcome, plan card, NOW card): deep in both themes
+    onBrand: '#FFFFFF',
     marigold: '#F2A900',     // highlight, "limited"
     marigoldTint: '#FDF1D3',
     onMarigold: '#12161C',
@@ -37,6 +39,8 @@ export const palette = {
     lagoonStrong: '#5CC3CA',
     lagoonTint: '#12292C',
     onLagoon: '#081214',
+    brand: '#0F5A61',        // bright lagoon would put marigold at 1.6:1 on these panels
+    onBrand: '#FFFFFF',
     marigold: '#F5B82E',
     marigoldTint: '#2D2410',
     onMarigold: '#12161C',

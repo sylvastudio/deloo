@@ -4,7 +4,8 @@ import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { ReduceMotion, ZoomIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { setBookingDraft } from '@/lib/booking-draft';
+import { getBookingDraft, setBookingDraft } from '@/lib/booking-draft';
+import { usePlan } from '@/lib/plan';
 import { bookingDays, cachedSettings, getBooking, PAID, plain, setActiveHold, type BookingDetail } from '@/lib/bookings';
 import { daysText, naira, rangeLabel } from '@/lib/format';
 import { shareOnWhatsApp } from '@/lib/share';
@@ -21,16 +22,21 @@ export default function Success() {
   const { booking } = useLocalSearchParams<{ booking: string }>();
   const [b, setB] = useState<BookingDetail | null | undefined>(undefined);
   const [error, setError] = useState('');
+  const { reset: resetPlan } = usePlan();
 
   const load = useCallback(async () => {
     setError('');
     try {
       const row = await getBooking(booking);
       if (row && !PAID.includes(row.status)) { router.replace(`/book/pay?booking=${booking}`); return; }
-      if (row) { setBookingDraft(null); setActiveHold(null); }
+      if (row) {
+        // Booked from a plan: that plan is done, so Plan home stops offering "Continue your plan".
+        if (getBookingDraft()?.from.kind === 'plan') resetPlan();
+        setBookingDraft(null); setActiveHold(null);
+      }
       setB(row);
     } catch (e) { setError(plain(e, 'Couldn’t load your booking.')); }
-  }, [booking]);
+  }, [booking, resetPlan]);
   useEffect(() => { load(); }, [load]);
 
   // Web: Paystack's checkout is still behind this page in the browser history. Back goes to the booking
