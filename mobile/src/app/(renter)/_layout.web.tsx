@@ -13,13 +13,13 @@ import { Text } from '@/ui/text';
 /**
  * Web build of the renter tabs (_layout.tsx uses NativeTabs, which has no proper web bar): the JS
  * bottom tab bar from expo-router, same four tabs. Signed out (the web lets people browse gear from a
- * shared link), only Explore shows, with a Sign in button; the other tabs go to Welcome.
+ * shared link), only Gear shows, with a Sign in button; the other tabs go to Welcome.
  */
 const TABS: { name: string; title: string; icon: IconName }[] = [
   { name: 'index', title: 'Plan', icon: 'sparkles' },
-  { name: 'explore', title: 'Explore', icon: 'search' },
+  { name: 'explore', title: 'Gear', icon: 'camera' },
   { name: 'bookings', title: 'Bookings', icon: 'calendar' },
-  { name: 'me', title: 'Me', icon: 'person' },
+  { name: 'me', title: 'Account', icon: 'person' },
 ];
 
 export default function RenterTabsWeb() {

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutUp, ReduceMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,6 +10,10 @@ import { Button } from '@/ui/button';
 import { Text } from '@/ui/text';
 
 const WORDS = ['Cameras', 'Lenses', 'Lights', 'Mics', 'Gimbals'];
+const TRUST = 'Deloo’s own gear · Checked and charged before it leaves · Deposit back within 48 hours · Pay securely with Paystack';
+// Signed-out browsing exists only on the web (the root layout lets /explore through there); on a
+// phone the gear tabs need an account, so the link would bounce straight back here.
+const BROWSE = Platform.OS === 'web';
 
 export default function Welcome() {
   const c = useColors();
@@ -40,7 +44,13 @@ export default function Welcome() {
         </Text>
       </View>
       <View style={styles.bottom}>
+        <Text variant="caption" style={{ color: c.onBrand, opacity: 0.85, textAlign: 'center' }}>{TRUST}</Text>
         <Button title="Get started" kind="accent" onPress={() => router.push('/sign-in')} />
+        {BROWSE ? (
+          <Text variant="label" accessibilityRole="link" onPress={() => router.push('/explore')} style={[styles.browse, { color: c.onBrand }]}>
+            Browse gear first
+          </Text>
+        ) : null}
       </View>
     </SafeAreaView>
   );
@@ -52,5 +62,6 @@ const styles = StyleSheet.create({
   middle: { flex: 1, justifyContent: 'center', paddingHorizontal: space.xl },
   wordBox: { height: 54, overflow: 'hidden', marginBottom: space.xs },
   word: { position: 'absolute' },
+  browse: { textAlign: 'center', paddingVertical: space.sm, textDecorationLine: 'underline' },
   bottom: { paddingHorizontal: space.xl, paddingBottom: space.lg, gap: space.md },
 });

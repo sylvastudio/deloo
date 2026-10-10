@@ -21,6 +21,13 @@ type State = {
 };
 
 const SessionContext = createContext<State | null>(null);
+
+/**
+ * Deloo is renter-only for now (peer vendors are a Coming soon waitlist). The vendor screens stay in
+ * the code but are unreachable unless a build sets EXPO_PUBLIC_VENDOR_MODE=on.
+ */
+export const VENDOR_MODE = process.env.EXPO_PUBLIC_VENDOR_MODE === 'on';
+
 const MODE_KEY = 'deloo.mode';
 
 export function useSession() {
@@ -74,9 +81,9 @@ export function SessionProvider({ children }: PropsWithChildren) {
     setBookingDraft(null);
   }, []);
 
-  // Someone without gear can't be in vendor mode; someone with only gear starts there.
-  // The web app (app.deloo.space) is for renters only; vendor tools stay in the Android app.
-  const effectiveMode: Mode = Platform.OS === 'web' || vendors.length === 0 ? 'renter' : profile && !profile.wants_to_rent ? 'vendor' : mode;
+  // Renter unless the vendor flag is on. With it on: someone without gear can't be in vendor mode,
+  // someone with only gear starts there, and the web app (app.deloo.space) stays renter-only.
+  const effectiveMode: Mode = !VENDOR_MODE || Platform.OS === 'web' || vendors.length === 0 ? 'renter' : profile && !profile.wants_to_rent ? 'vendor' : mode;
 
   return (
     <SessionContext value={{ loading, session, profile, vendors, mode: effectiveMode, setMode, refresh, signOut }}>

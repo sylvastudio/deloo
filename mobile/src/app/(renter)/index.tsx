@@ -6,22 +6,26 @@ import { answerChips, missingRequired } from '@/lib/answers-text';
 import { readShoot } from '@/lib/intake';
 import { QUESTION_KEYS, usePlan } from '@/lib/plan';
 import { useSession } from '@/lib/session';
+import { NextBookingCard, useNextBooking } from '@/screens/account';
 import { radius, space, type } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Button } from '@/ui/button';
-import { Notice } from '@/ui/feedback';
 import { categoryIcon, Icon } from '@/ui/icon';
-import { Card, Screen } from '@/ui/layout';
+import { Screen } from '@/ui/layout';
 import { Text } from '@/ui/text';
 
 const EXAMPLES = ['3-person podcast in Lekki on Saturday, two cameras', 'Music video at night outdoors, moving shots', 'Interview for a brand, indoors in Ikeja, 2 days'];
 const BROWSE = [['camera', 'camera', 'Cameras'], ['lens', 'lens', 'Lenses'], ['light', 'light', 'Lighting'], ['audio', 'mic', 'Audio'], ['grip', 'gimbal', 'Grip']] as const;
 
-/** R1 Plan home: describe the shoot (type or voice), answer questions, or continue a saved plan. */
+/**
+ * R1 Plan home: your next booking (if any) on top, then describe the shoot (type or voice), answer
+ * questions, or pick up a saved plan.
+ */
 export default function Plan() {
   const c = useColors();
   const { profile } = useSession();
   const { draft, answer, update, reset, answered } = usePlan();
+  const next = useNextBooking();
   const [text, setText] = useState('');
   const [voiceTip, setVoiceTip] = useState(false);
   const input = useRef<TextInput>(null);
@@ -41,6 +45,8 @@ export default function Plan() {
 
   return (
     <Screen kicker={first ? `Hi ${first}` : undefined} title="What are you shooting?">
+      {next ? <NextBookingCard b={next} /> : null}
+
       <View style={[styles.start, { backgroundColor: c.brand }]}>
         <Text style={[type.heading, { color: c.onBrand }]}>Tell us about it the way you’d tell a friend.</Text>
         <View style={[styles.inputRow, { backgroundColor: c.surface }]}>
@@ -75,12 +81,19 @@ export default function Plan() {
       <Button kind="secondary" title="Or answer a few quick questions" onPress={() => { reset(); router.push('/plan/ask/type'); }} />
 
       {answered > 0 ? (
-        <Card>
-          <Text variant="label" tone="slate">Continue your plan</Text>
-          <Text variant="bodyStrong">{chips.slice(0, 3).map((ch) => ch.label).join(' · ') || 'Your shoot'}</Text>
-          <Text variant="caption" tone="slate">{answered} of {QUESTION_KEYS.length} answered</Text>
-          <Button title="Continue" onPress={() => router.push(missingRequired(draft.answers).length ? '/plan/details' : '/plan/setup')} />
-        </Card>
+        <Pressable
+          onPress={() => router.push(missingRequired(draft.answers).length ? '/plan/details' : '/plan/setup')}
+          accessibilityRole="button" accessibilityLabel={`Continue your plan, ${answered} of ${QUESTION_KEYS.length} answered`}
+          android_ripple={{ color: c.lagoonTint }} style={[styles.resume, { backgroundColor: c.surface, borderColor: c.line }]}>
+          <Icon name="edit" size={20} color={c.lagoon} />
+          <View style={{ flex: 1 }}>
+            <Text variant="label">Continue your plan</Text>
+            <Text variant="caption" tone="slate" numberOfLines={1}>
+              {chips.slice(0, 3).map((ch) => ch.label).join(' · ') || 'Your shoot'} · {answered} of {QUESTION_KEYS.length} answered
+            </Text>
+          </View>
+          <Icon name="chevron" size={20} color={c.slate} />
+        </Pressable>
       ) : null}
 
       <View style={{ gap: space.sm }}>
@@ -95,10 +108,6 @@ export default function Plan() {
           ))}
         </View>
       </View>
-
-      <Pressable onPress={() => router.push('/coming-soon')} accessibilityRole="button">
-        <Notice tone="tip" icon="sparkles">Coming soon: rent out your own gear, crews by the hour, studios. Join the list →</Notice>
-      </Pressable>
     </Screen>
   );
 }
@@ -110,6 +119,7 @@ const styles = StyleSheet.create({
   mic: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   examples: { gap: space.sm },
   example: { borderWidth: 1, borderColor: '#ffffff55', borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: 6, alignSelf: 'flex-start' },
+  resume: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
   browse: { flexDirection: 'row', gap: space.sm },
   browseItem: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: space.md, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth },
 });
