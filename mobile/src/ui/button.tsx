@@ -1,18 +1,19 @@
-import * as Haptics from 'expo-haptics';
 import { ActivityIndicator, Pressable, StyleSheet, View, type PressableProps } from 'react-native';
 
-import { radius, space, touch, type } from '@/theme/tokens';
+import { radius, space, touch } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Text } from './text';
 
-type Kind = 'primary' | 'accent' | 'secondary' | 'quiet';
+/** `danger` is for destructive actions only (cancel booking, remove, delete): red fill. */
+type Kind = 'primary' | 'accent' | 'secondary' | 'quiet' | 'danger';
 
+/** Buttons give no haptic: the spec keeps haptics for selection changes and confirmations (§1 rule 10). */
 export function Button({
   title, kind = 'primary', loading, disabled, onPress, icon, style, ...rest
 }: Omit<PressableProps, 'children'> & { title: string; kind?: Kind; loading?: boolean; icon?: React.ReactNode }) {
   const c = useColors();
-  const bg = { primary: c.lagoon, accent: c.marigold, secondary: c.surface, quiet: 'transparent' }[kind];
-  const fg = { primary: c.onLagoon, accent: c.onMarigold, secondary: c.ink, quiet: c.lagoon }[kind];
+  const bg = { primary: c.lagoon, accent: c.marigold, secondary: c.surface, quiet: 'transparent', danger: c.red }[kind];
+  const fg = { primary: c.onLagoon, accent: c.onMarigold, secondary: c.ink, quiet: c.lagoon, danger: c.onRed }[kind];
   const off = disabled || loading;
   return (
     <Pressable
@@ -20,8 +21,8 @@ export function Button({
       accessibilityRole="button"
       accessibilityState={{ disabled: !!off, busy: !!loading }}
       disabled={off}
-      android_ripple={{ color: kind === 'primary' ? '#ffffff33' : kind === 'accent' ? '#00000022' : c.lagoonTint }}
-      onPress={(e) => { Haptics.selectionAsync().catch(() => {}); onPress?.(e); }}
+      android_ripple={{ color: kind === 'primary' || kind === 'danger' ? '#ffffff33' : kind === 'accent' ? '#00000022' : c.lagoonTint }}
+      onPress={onPress}
       style={(state) => [
         styles.base,
         { backgroundColor: bg, opacity: off ? 0.5 : state.pressed ? 0.88 : 1 },
@@ -31,7 +32,7 @@ export function Button({
       {loading ? <ActivityIndicator color={fg} /> : (
         <View style={styles.row}>
           {icon}
-          <Text style={[type.bodyStrong, { color: fg }]}>{title}</Text>
+          <Text variant="bodyStrong" style={{ color: fg, textAlign: 'center', flexShrink: 1 }}>{title}</Text>
         </View>
       )}
     </Pressable>
@@ -39,6 +40,6 @@ export function Button({
 }
 
 const styles = StyleSheet.create({
-  base: { minHeight: touch + 6, borderRadius: radius.pill, paddingHorizontal: space.xl, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  base: { minHeight: touch + 6, borderRadius: radius.pill, paddingHorizontal: space.xl, paddingVertical: space.sm, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
 });

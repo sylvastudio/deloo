@@ -37,7 +37,8 @@ function Slider({ label, onConfirm, disabled }: { label: string; onConfirm: () =
 
   function confirm() {
     setDone(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    // The thumb reached the end (spec §1 rule 10). The screen plays notificationSuccess when the action succeeds.
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     onConfirm();
   }
 

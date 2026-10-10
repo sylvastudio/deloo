@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { useGutter } from '@/theme/gutter';
 import { space } from '@/theme/tokens';
 import { Chip } from './chip';
 import { Notice } from './feedback';
@@ -24,6 +25,7 @@ const label = (h: number) => (h === 12 ? '12 noon' : h < 12 ? `${h}am` : `${h - 
  * No calendar widget: on a small phone, chips are faster and need no extra package.
  */
 export function WhenPicker({ startsAt, endsAt, onChange }: { startsAt?: string; endsAt?: string; onChange: (startsAt: string, endsAt: string) => void }) {
+  const gutter = useGutter();
   const days = useMemo(() => Array.from({ length: 35 }, (_, i) => lagosDate(i + 1)), []);
   const [date, setDate] = useState(startsAt?.slice(0, 10));
   const [hour, setHour] = useState(startsAt ? Number(startsAt.slice(11, 13)) : undefined);
@@ -40,7 +42,7 @@ export function WhenPicker({ startsAt, endsAt, onChange }: { startsAt?: string; 
     <View style={{ gap: space.lg }}>
       <View style={{ gap: space.sm }}>
         <Text variant="label">Day</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.row, { paddingRight: gutter }]}>
           {days.map((d) => (
             <Chip key={d} label={DAY.format(new Date(`${d}T12:00:00+01:00`))} selected={date === d} onPress={() => { setDate(d); emit(d); }} />
           ))}
@@ -64,6 +66,6 @@ export function WhenPicker({ startsAt, endsAt, onChange }: { startsAt?: string; 
 }
 
 const styles = StyleSheet.create({
-  row: { gap: space.sm, paddingRight: space.xl },
+  row: { gap: space.sm },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
 });

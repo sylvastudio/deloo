@@ -10,6 +10,7 @@ const ICONS = {
   back: { ios: 'chevron.left', android: 'arrow_back' },
   close: { ios: 'xmark', android: 'close' },
   chevron: { ios: 'chevron.right', android: 'chevron_right' },
+  chevronLeft: { ios: 'chevron.left', android: 'chevron_left' },
   mic: { ios: 'mic.fill', android: 'mic' },
   send: { ios: 'arrow.up', android: 'arrow_upward' },
   check: { ios: 'checkmark', android: 'check' },

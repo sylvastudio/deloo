@@ -21,8 +21,9 @@ export const palette = {
     marigold: '#F2A900',     // highlight, "limited"
     marigoldTint: '#FDF1D3',
     onMarigold: '#12161C',
-    red: '#C23A2E',          // "not available", errors
+    red: '#C23A2E',          // "not available", errors (4.9:1 on paper)
     redTint: '#FBEAE7',
+    onRed: '#FFFFFF',        // danger button label (5.3:1)
     green: '#1F8A5B',        // "available", verified
     greenTint: '#E1F2E9',
     greenInk: '#15603F',     // text on greenTint (AA contrast)
@@ -46,6 +47,7 @@ export const palette = {
     onMarigold: '#12161C',
     red: '#EE6A5C',
     redTint: '#2E1714',
+    onRed: '#12161C',        // white on this red is 3.1:1; ink is 5.9:1
     green: '#4CC08A',
     greenTint: '#11261C',
     greenInk: '#7FD9AE',
@@ -82,3 +84,12 @@ export type TypeVariant = keyof typeof type;
 
 /** Minimum touch target (Material: 48dp). */
 export const touch = 48;
+
+/**
+ * Largest system font scale each variant follows. Display sizes stop at 1.6x so a 40pt total
+ * doesn't become 64pt+ and break the layout; reading sizes go to 2x (WCAG 1.4.4, 200%).
+ */
+export const maxScale: Record<TypeVariant, number> = {
+  hero: 1.6, number: 1.6, title: 1.6, heading: 1.8,
+  body: 2, bodyStrong: 2, label: 2, caption: 2,
+};

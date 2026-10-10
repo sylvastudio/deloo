@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
@@ -23,15 +23,28 @@ export function EmptyState({
   );
 }
 
-/** Pulsing placeholder block while content loads. */
+/** How long a load can take before a skeleton shows: fast loads never flash grey (spec §1 rule 15). */
+const SKELETON_DELAY = 300;
+
+/**
+ * Pulsing placeholder block while content loads. It holds its space from the start but stays
+ * invisible for the first 300 ms, so the layout doesn't jump and quick loads show nothing.
+ */
 export function Skeleton({ style }: { style?: ViewStyle }) {
   const c = useColors();
+  const [shown, setShown] = useState(false);
   const o = useSharedValue(0.5);
   useEffect(() => {
-    o.value = withRepeat(withTiming(1, { duration: 700, reduceMotion: ReduceMotion.System }), -1, true);
-  }, [o]);
+    const t = setTimeout(() => setShown(true), SKELETON_DELAY);
+    return () => clearTimeout(t);
+  }, []);
+  useEffect(() => {
+    if (shown) o.value = withRepeat(withTiming(1, { duration: 700, reduceMotion: ReduceMotion.System }), -1, true);
+  }, [o, shown]);
   const a = useAnimatedStyle(() => ({ opacity: o.value }));
-  return <Animated.View style={[{ backgroundColor: c.raised, borderRadius: radius.md, height: 16 }, style, a]} />;
+  const base = { backgroundColor: c.raised, borderRadius: radius.md, height: 16 };
+  if (!shown) return <View style={[base, style, { opacity: 0 }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />;
+  return <Animated.View style={[base, style, a]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />;
 }
 
 /** A coloured note: tip (lagoon), warning (marigold), problem (red). */

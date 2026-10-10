@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { radius, space } from '@/theme/tokens';
+import { radius, space, touch } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Icon } from './icon';
 import { Text } from './text';
@@ -73,16 +73,20 @@ export function DateRangeCalendar({ first, last, onChange, unavailable, limited,
   return (
     <View style={{ gap: space.md }}>
       <View style={styles.head}>
-        <Pressable onPress={() => setMonth(month - 1)} disabled={month === 0} hitSlop={12} accessibilityRole="button" accessibilityLabel="Previous month" style={{ opacity: month === 0 ? 0.3 : 1 }}>
-          <Icon name="back" />
+        <Pressable onPress={() => setMonth(month - 1)} disabled={month === 0} accessibilityRole="button" accessibilityLabel="Previous month"
+          accessibilityState={{ disabled: month === 0 }} android_ripple={{ color: c.lagoonTint, borderless: true, radius: touch / 2 }}
+          style={[styles.nav, { opacity: month === 0 ? 0.3 : 1 }]}>
+          <Icon name="chevronLeft" />
         </Pressable>
-        <Text variant="heading">{MONTH.format(new Date(`${monthStart}T00:00:00Z`))}</Text>
-        <Pressable onPress={() => setMonth(month + 1)} disabled={month >= months - 1} hitSlop={12} accessibilityRole="button" accessibilityLabel="Next month" style={{ opacity: month >= months - 1 ? 0.3 : 1 }}>
+        <Text variant="heading" accessibilityRole="header" accessibilityLiveRegion="polite">{MONTH.format(new Date(`${monthStart}T00:00:00Z`))}</Text>
+        <Pressable onPress={() => setMonth(month + 1)} disabled={month >= months - 1} accessibilityRole="button" accessibilityLabel="Next month"
+          accessibilityState={{ disabled: month >= months - 1 }} android_ripple={{ color: c.lagoonTint, borderless: true, radius: touch / 2 }}
+          style={[styles.nav, { opacity: month >= months - 1 ? 0.3 : 1 }]}>
           <Icon name="chevron" />
         </Pressable>
       </View>
       <View style={styles.grid}>
-        {WEEK.map((w, i) => <Text key={i} variant="caption" tone="faint" style={styles.week}>{w}</Text>)}
+        {WEEK.map((w, i) => <Text key={i} variant="caption" tone="slate" style={styles.week} importantForAccessibility="no" accessibilityElementsHidden>{w}</Text>)}
         {cells.map((d, i) => {
           if (!d) return <View key={`e${i}`} style={styles.cell} />;
           const off = blocked(d);
@@ -109,6 +113,7 @@ export function DateRangeCalendar({ first, last, onChange, unavailable, limited,
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  nav: { width: touch, height: touch, borderRadius: touch / 2, alignItems: 'center', justifyContent: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   week: { width: `${100 / 7}%`, textAlign: 'center', paddingBottom: space.xs },
   cell: { width: `${100 / 7}%`, aspectRatio: 1, padding: 2 },
