@@ -26,23 +26,25 @@ export async function POST(request: Request) {
   const callbackUrl = webOrigin ? `${webOrigin}/pay` : `${site}/pay/return`;
   if (!bookingId) return Response.json({ error: "Missing booking." }, { status: 400 });
 
-  // As the renter (RLS): only their own booking is visible.
-  const { data: booking } = await auth.supabase
-    .from("bookings").select("id, ref, status, total_kobo, hold_expires_at").eq("id", bookingId).maybeSingle();
+  // The three lookups run together: on a cold start the whole call has to fit in Netlify's function
+  // time limit (10 s by default), or the browser gets Netlify's error page and the app thinks it's offline.
+  const db = createServiceClient();
+  const [{ data: booking }, { data: recent }, { count }] = await Promise.all([
+    // As the renter (RLS): only their own booking is visible.
+    auth.supabase.from("bookings").select("id, ref, status, total_kobo, hold_expires_at").eq("id", bookingId).maybeSingle(),
+    db.from("payments")
+      .select("reference, authorization_url, amount_kobo, created_at, callback_url").eq("booking_id", bookingId).eq("status", "initialized")
+      .order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    db.from("payments").select("id", { count: "exact", head: true }).eq("booking_id", bookingId),
+  ]);
   if (!booking) return Response.json({ error: "Booking not found." }, { status: 404 });
   if (booking.status !== "hold" || !booking.hold_expires_at || Date.parse(booking.hold_expires_at) < Date.now()) {
     return Response.json({ error: "Your hold has ended. Go back and check the gear is still free." }, { status: 409 });
   }
-
-  const db = createServiceClient();
-  const { data: recent } = await db.from("payments")
-    .select("reference, authorization_url, amount_kobo, created_at, callback_url").eq("booking_id", booking.id).eq("status", "initialized")
-    .order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (recent?.authorization_url && recent.amount_kobo === booking.total_kobo && recent.callback_url === callbackUrl && Date.now() - Date.parse(recent.created_at) < 20 * 60_000) {
     return Response.json({ authorization_url: recent.authorization_url, reference: recent.reference });
   }
 
-  const { count } = await db.from("payments").select("id", { count: "exact", head: true }).eq("booking_id", booking.id);
   const reference = `${booking.ref}-${(count ?? 0) + 1}`;
   const { data: payment, error } = await db.from("payments")
     .insert({ booking_id: booking.id, reference, amount_kobo: booking.total_kobo, callback_url: callbackUrl }).select("id").single();

@@ -13,16 +13,23 @@ export class ApiError extends Error {
 async function call<T>(method: 'GET' | 'POST', path: string, body: unknown, timeoutMs: number): Promise<T> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
+  const send = () => fetch(`${BASE}${path}`, {
+    method,
+    headers: { ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(timeoutMs),
+  });
   let res: Response;
   try {
-    res = await fetch(`${BASE}${path}`, {
-      method,
-      headers: { ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    res = await send();
   } catch {
-    throw new ApiError(0, 'No connection. Check your data and try again.');
+    // A server cold start that runs past the host's time limit fails like a dropped connection (the
+    // browser can't read the host's error page). One retry usually lands on a warm server. Our API
+    // routes are safe to repeat (payment init reuses its checkout).
+    try { res = await send(); } catch {
+      const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+      throw new ApiError(0, offline ? 'No connection. Check your data and try again.' : 'We couldn’t reach Deloo just now. Try again in a moment.');
+    }
   }
   const json = (await res.json().catch(() => ({}))) as T & { error?: string };
   if (!res.ok) throw new ApiError(res.status, json.error ?? 'Something went wrong. Try again.');
