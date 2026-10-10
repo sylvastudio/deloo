@@ -21,7 +21,7 @@ export default async function Dashboard() {
   const count = { count: "exact" as const, head: true };
   const notDead = "(hold,expired,cancelled)";
 
-  const [deliveries, collections, holds, awaitingPrep, refundsQueued, needsRefund, unmet, mismatch, deliveryList, collectionList, live, withRenters] = await Promise.all([
+  const [deliveries, collections, holds, awaitingPrep, refundsQueued, needsRefund, unmet, mismatch, deliveryList, collectionList, live, withRenters, toInspect, disputed, overdue] = await Promise.all([
     db.from("bookings").select("id", count).neq("delivery", "pickup").gte("starts_at", t0).lt("starts_at", t1).not("status", "in", notDead),
     // Last rental day today ⇔ ends_at is tomorrow 00:00 Lagos.
     db.from("bookings").select("id", count).gt("ends_at", t0).lte("ends_at", t1).in("status", ["delivered", "out_for_delivery"]),
@@ -39,12 +39,19 @@ export default async function Dashboard() {
     // (The tiles above only look at today, so a booking that starts later would otherwise vanish from here.)
     db.from("bookings").select("id", count).in("status", LIVE_STATUSES),
     db.from("bookings").select("id", count).in("status", ["out_for_delivery", "delivered"]),
+    db.from("bookings").select("id", count).eq("status", "collected"),
+    db.from("bookings").select("id", count).eq("status", "disputed"),
+    // Last rental day has passed and the gear isn't back.
+    db.from("bookings").select("id", count).in("status", ["delivered", "out_for_delivery"]).lt("ends_at", now.toISOString()),
   ]);
 
-  const failed = [deliveries, collections, holds, awaitingPrep, refundsQueued, needsRefund, unmet, mismatch, live, withRenters].find((r) => r.error);
+  const failed = [deliveries, collections, holds, awaitingPrep, refundsQueued, needsRefund, unmet, mismatch, live, withRenters, toInspect, disputed, overdue].find((r) => r.error);
   const tiles: { n: number | null; label: string; href: string; alert?: boolean }[] = [
     { n: live.count, label: "Live bookings (any date)", href: `/admin/bookings?status=live` },
-    { n: withRenters.count, label: "Out with renters now", href: `/admin/bookings?status=live` },
+    { n: withRenters.count, label: "Out with renters now", href: `/admin/bookings?view=with_renters` },
+    { n: overdue.count, label: "Overdue returns", href: `/admin/bookings?view=overdue`, alert: (overdue.count ?? 0) > 0 },
+    { n: toInspect.count, label: "Back at base, to inspect", href: `/admin/bookings?view=to_inspect` },
+    { n: disputed.count, label: "Disputed", href: `/admin/bookings?view=disputed`, alert: (disputed.count ?? 0) > 0 },
     { n: deliveries.count, label: "Deliveries today", href: `/admin/bookings?view=deliveries_today` },
     { n: collections.count, label: "Collections today", href: `/admin/bookings?view=collections_today` },
     { n: holds.count, label: "Holds expiring in 15 min", href: `/admin/bookings?view=holds_expiring` },

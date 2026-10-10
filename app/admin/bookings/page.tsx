@@ -15,6 +15,10 @@ const VIEWS: Record<string, string> = {
   tomorrow: "Going out tomorrow",
   holds_expiring: "Holds expiring in 15 min",
   needs_refund: "Paid but can’t honour",
+  with_renters: "Out with renters",
+  overdue: "Overdue returns",
+  to_inspect: "Back at base, to inspect",
+  disputed: "Disputed",
 };
 
 type Row = {
@@ -65,6 +69,18 @@ export default async function BookingsPage({ searchParams }: { searchParams: SP 
     ascending = true;
   } else if (view === "needs_refund") {
     query = query.eq("needs_refund", true);
+  } else if (view === "with_renters") {
+    query = query.in("status", ["out_for_delivery", "delivered"]);
+    ascending = true;
+  } else if (view === "overdue") {
+    // Last rental day has passed and the gear isn't back.
+    query = query.in("status", ["delivered", "out_for_delivery"]).lt("ends_at", new Date().toISOString());
+    ascending = true;
+  } else if (view === "to_inspect") {
+    query = query.eq("status", "collected");
+    ascending = true;
+  } else if (view === "disputed") {
+    query = query.eq("status", "disputed");
   }
 
   let nameIds: string[] = [];

@@ -78,7 +78,10 @@ export async function proxy(request: NextRequest) {
     },
   });
   const { data } = await supabase.auth.getClaims();
-  if (!data?.claims && under(target, PROTECTED)) {
+  // A Server Action POST (from a page left open) can't follow a redirect to the sign-in page: let it
+  // through, and the action answers "Your session ended…" itself (lib/admin/auth.ts requireStaff).
+  const serverAction = request.method === "POST" && request.headers.has("next-action");
+  if (!data?.claims && under(target, PROTECTED) && !serverAction) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     // After sign-in, go back to where they were. On the admin host, /admin/x is served as-is.

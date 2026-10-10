@@ -1,10 +1,10 @@
 "use server";
 import type { ActionResult } from "@/lib/admin/action-result";
 import { evidenceCoverage, friendlyError, riderOwns } from "@/lib/admin/data";
-import { koboFromNaira, naira } from "@/lib/admin/format";
+import { fmtWeekday, koboFromNaira, naira } from "@/lib/admin/format";
 import { act, bool, isUuid, str } from "@/lib/admin/guard";
 import { can } from "@/lib/admin/roles";
-import { canMove, EVIDENCE_FOR, HANDOVER_KINDS, STATUS_LABEL, type BookingStatus, type HandoverKind } from "@/lib/admin/status";
+import { canInspect, canMove, collectTooEarly, EVIDENCE_FOR, HANDOVER_KINDS, STATUS_LABEL, type BookingStatus, type HandoverKind } from "@/lib/admin/status";
 import { createClient } from "@/lib/supabase/server";
 
 /** Move a booking to its next status via staff_set_booking_status (role-checked in the database too). */
@@ -15,14 +15,19 @@ export async function setBookingStatus(_: ActionResult, form: FormData): Promise
     const note = str(form, "note").slice(0, 500);
     if (!isUuid(id)) return { error: "Unknown booking." };
     const db = await createClient();
-    const { data: b, error } = await db.from("bookings").select("id, status, rider_name, rider_phone").eq("id", id).maybeSingle();
+    const { data: b, error } = await db.from("bookings").select("id, ref, status, ends_at, rider_name, rider_phone").eq("id", id).maybeSingle();
     if (error || !b) return { error: friendlyError(error) || "Booking not found." };
     if (!riderOwns(staff, b)) return { error: "This job isn’t assigned to you." };
     if (!canMove(b.status as BookingStatus, to, staff.role)) return { error: `Can’t move from ${STATUS_LABEL[b.status as BookingStatus]} to ${STATUS_LABEL[to] ?? to} with your role.` };
     if ((to === "cancelled" || to === "disputed") && note.length < 3) return { error: "Add a short note saying why." };
+    if (to === "collected") {
+      const early = collectTooEarly(staff.role, b.ends_at as string);
+      if (early) return { error: `Collection opens on the last rental day (${fmtWeekday(early)}). Ask ops if the renter wants to return early.` };
+    }
 
-    // Hand-offs need a staff handover with a photo of every unit (riders always; others can override).
+    // Hand-offs need a staff handover with a photo of every unit (riders always; others can override with a note).
     const kind = EVIDENCE_FOR[to];
+    let overrideNote = "";
     if (kind) {
       const cov = await evidenceCoverage(db, id, kind);
       const override = staff.role !== "rider" && bool(form, "override");
@@ -31,30 +36,60 @@ export async function setBookingStatus(_: ActionResult, form: FormData): Promise
           ? "This booking has no units assigned yet."
           : `First add a ${kind} handover with at least one photo of each unit (${cov.missing.length} of ${cov.units.length} still missing).` };
       }
+      if (!cov.complete) {
+        overrideNote = str(form, "override_note").slice(0, 500);
+        if (overrideNote.length < 3) return { error: "Say why you’re continuing without the photos." };
+      }
     }
 
-    // Cancelling: work out the refund before the status changes (the policy depends on timing).
-    let refund = 0;
     if (to === "cancelled") {
-      const { data: q } = await db.rpc("quote_cancellation", { p_booking: id });
-      refund = Number((q as { refund_kobo?: number } | null)?.refund_kobo ?? 0);
-      const typed = koboFromNaira(form.get("refund"));
-      if (typed != null && can(staff.role, "refunds.process")) refund = typed;
+      // staff_cancel (0020) cancels and queues the refund in one go. Only Finance roles may change the amount.
+      const typed = can(staff.role, "refunds.process") ? koboFromNaira(form.get("refund")) : null;
+      const { data, error: cErr } = await db.rpc("staff_cancel", { p_booking: id, p_note: note, p_refund_kobo: typed });
+      if (cErr) return { error: friendlyError(cErr) };
+      const refund = Number((data as { refund_kobo?: number } | null)?.refund_kobo ?? 0);
+      return { ok: refund > 0 ? `Cancelled. Refund of ${naira(refund)} queued for Finance.` : "Cancelled. No refund due." };
     }
 
     const { error: moveErr } = await db.rpc("staff_set_booking_status", { p_booking: id, p_status: to, p_note: note });
     if (moveErr) return { error: friendlyError(moveErr) };
-
-    if (to === "cancelled" && refund > 0) {
-      if (can(staff.role, "refunds.process")) {
-        const { error: rErr } = await db.from("refunds").insert({ booking_id: id, purpose: "cancellation", amount_kobo: refund, reason: `Cancelled by staff: ${note}`.slice(0, 500) });
-        if (rErr) return { error: `Cancelled, but the refund couldn’t be queued: ${friendlyError(rErr)}` };
-        return { ok: `Cancelled. Refund of ${naira(refund)} queued for Finance.` };
-      }
-      await db.from("booking_notes").insert({ booking_id: id, body: `Refund due after cancellation: ${naira(refund)}. Finance to queue it.` });
-      return { ok: `Cancelled. Finance needs to queue a refund of ${naira(refund)} (noted on the booking).` };
+    if (overrideNote) {
+      await db.from("booking_notes").insert({ booking_id: id, body: `Moved to ${STATUS_LABEL[to]} without ${kind} photos of every unit: ${overrideNote}` });
     }
     return { ok: `Moved to ${STATUS_LABEL[to]}.` };
+  });
+}
+
+/**
+ * Return inspection (A-42) through staff_inspect (0020): one result per unit, Problem units go to
+ * quarantine, any problem makes the booking disputed, and all OK closes it when there's no deposit or
+ * open refund left. Form: unit ids in "unit", and per unit "result_<id>" (ok | problem) and "note_<id>".
+ */
+export async function inspectReturn(_: ActionResult, form: FormData): Promise<ActionResult> {
+  return act("bookings.move", async (staff) => {
+    const id = str(form, "booking_id");
+    if (!isUuid(id)) return { error: "Unknown booking." };
+    if (!canInspect(staff.role)) return { error: "Only ops, admin or the owner can inspect returns." };
+    const unitIds = form.getAll("unit").map(String).filter(isUuid);
+    if (!unitIds.length) return { error: "No units to inspect." };
+    const results: { unit_id: string; ok: boolean; note: string }[] = [];
+    for (const u of unitIds) {
+      const r = str(form, `result_${u}`);
+      const note = str(form, `note_${u}`).slice(0, 500);
+      if (r !== "ok" && r !== "problem") return { error: "Mark every unit OK or Problem." };
+      if (r === "problem" && note.length < 3) return { error: "Describe the problem on each unit marked Problem." };
+      results.push({ unit_id: u, ok: r === "ok", note });
+    }
+    const overrideNote = staff.role === "owner" && bool(form, "override") ? str(form, "override_note").slice(0, 500) : "";
+    const db = await createClient();
+    const { data, error } = await db.rpc("staff_inspect", { p_booking: id, p_results: results, p_override_note: overrideNote });
+    if (error) return { error: friendlyError(error) };
+    const out = data as { status?: string; problems?: number } | null;
+    if (out?.status === "disputed") {
+      const n = out.problems ?? 0;
+      return { ok: `Inspected: ${n} unit${n === 1 ? "" : "s"} quarantined and the booking is disputed. Add the claim details in Notes.` };
+    }
+    return { ok: out?.status === "closed" ? "Inspected: all OK. No deposit to return, so the booking is closed." : "Inspected: all OK. Finance closes it once the deposit or open refund is settled." };
   });
 }
 
@@ -118,9 +153,13 @@ export async function addNote(_: ActionResult, form: FormData): Promise<ActionRe
 // pass through a server action), between these two calls.
 // ---------------------------------------------------------------------------
 
-export async function createHandover(input: { bookingId: string; kind: HandoverKind; result: "ok" | "issue"; note: string }): Promise<{ id?: string; error?: string }> {
+/**
+ * Start a handover. The browser makes the id, so a retry after a lost response finds the same row
+ * instead of making a second one (insert … on conflict do nothing).
+ */
+export async function createHandover(input: { id: string; bookingId: string; kind: HandoverKind; result: "ok" | "issue"; note: string }): Promise<{ id?: string; error?: string }> {
   const r = await act("handover.capture", async (staff) => {
-    if (!isUuid(input.bookingId)) return { error: "Unknown booking." };
+    if (!isUuid(input.bookingId) || !isUuid(input.id)) return { error: "Unknown booking." };
     if (!HANDOVER_KINDS.includes(input.kind)) return { error: "Choose the kind of handover." };
     const result = input.result === "issue" ? "issue" : "ok";
     const note = String(input.note ?? "").trim().slice(0, 2000);
@@ -129,10 +168,13 @@ export async function createHandover(input: { bookingId: string; kind: HandoverK
     const { data: b } = await db.from("bookings").select("rider_name, rider_phone").eq("id", input.bookingId).maybeSingle();
     if (!b) return { error: "Booking not found." };
     if (!riderOwns(staff, b)) return { error: "This job isn’t assigned to you." };
-    const { data, error } = await db.from("handovers")
-      .insert({ booking_id: input.bookingId, kind: input.kind, party: "staff", result, problem_note: note, device_completed_at: new Date().toISOString() })
-      .select("id").single();
-    if (error || !data) return { error: friendlyError(error) };
+    const { error } = await db.from("handovers").upsert(
+      { id: input.id, booking_id: input.bookingId, kind: input.kind, party: "staff", result, problem_note: note, device_completed_at: new Date().toISOString() },
+      { onConflict: "id", ignoreDuplicates: true },
+    );
+    if (error) return { error: friendlyError(error) };
+    const { data } = await db.from("handovers").select("id, booking_id").eq("id", input.id).maybeSingle();
+    if (!data || data.booking_id !== input.bookingId) return { error: "Couldn’t start the handover. Reload the page and try again." };
     return { id: data.id as string, ok: "Handover started." };
   });
   return { id: r?.id, error: r?.error };

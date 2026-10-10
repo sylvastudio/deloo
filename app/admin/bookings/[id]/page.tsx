@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { addNote, setBookingStatus, swapUnit, updateDelivery } from "@/app/admin/_actions/booking";
+import { addNote, inspectReturn, setBookingStatus, swapUnit, updateDelivery } from "@/app/admin/_actions/booking";
+import { addRefund } from "@/app/admin/_actions/money";
 import { ActionForm, Submit } from "@/components/admin/action-form";
+import { CancelRefund } from "@/components/admin/cancel-refund";
 import { EvidenceGallery } from "@/components/admin/evidence-gallery";
 import { HandoverCapture } from "@/components/admin/handover-capture";
 import { Chip, Empty, ErrorBox, PageHead, Section, StatusChip } from "@/components/admin/ui";
@@ -9,7 +11,7 @@ import { pageStaff } from "@/lib/admin/auth";
 import { evidenceCoverage, loadEvidence, namesFor, riderOwns } from "@/lib/admin/data";
 import { fmtDateTime, fmtRental, naira, nairaInput } from "@/lib/admin/format";
 import { can, maskPhone, maskText } from "@/lib/admin/roles";
-import { EVIDENCE_FOR, HANDOVER_KINDS, movesFor, REFUND_PURPOSE_LABEL, STATUS_LABEL, type BookingStatus } from "@/lib/admin/status";
+import { canInspect, EVIDENCE_FOR, HANDOVER_KINDS, movesFor, REFUND_PURPOSE_LABEL, STATUS_LABEL, type BookingStatus, type HandoverKind } from "@/lib/admin/status";
 import { one, type BookingItemRow, type BookingRow, type PaymentRow, type RefundRow } from "@/lib/admin/types";
 import { bookingMessages, mapsLink, telLink, waLink } from "@/lib/admin/whatsapp";
 import { createClient } from "@/lib/supabase/server";
@@ -30,6 +32,8 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
   // Riders only see their own jobs.
   if (!riderOwns(staff, b)) notFound();
 
+  // The audit log is readable by admin, finance and the owner only (RLS audit_select).
+  const canAudit = staff.role === "owner" || staff.role === "admin" || staff.role === "finance";
   const [itemsRes, profileRes, paymentsRes, refundsRes, notesRes, zonesRes, ridersRes, resvRes, auditRes, quoteRes] = await Promise.all([
     db.from("booking_items").select("id, booking_id, item_id, unit_id, item_name, day_rate_kobo, days, rental_kobo, deposit_kobo, kind, units(tag, serial)").eq("booking_id", id).order("created_at"),
     db.from("profiles").select("id, full_name, phone, blocked").eq("id", b.renter_id).maybeSingle(),
@@ -39,7 +43,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
     db.from("delivery_zones").select("id, name, price_kobo, active").order("sort"),
     db.from("staff_members").select("user_id, display_name, phone").eq("role", "rider").eq("active", true),
     db.from("reservations").select("id, unit_id, booking_item_id, period, live").eq("booking_id", id).eq("live", true),
-    db.from("audit_log").select("id, actor_id, before, after, at").eq("entity", "bookings").eq("entity_id", id).order("at"),
+    canAudit ? db.from("audit_log").select("id, actor_id, before, after, at").eq("entity", "bookings").eq("entity_id", id).order("at") : Promise.resolve({ data: [], error: null }),
     ["hold", "confirmed", "preparing", "out_for_delivery", "delivered"].includes(b.status) ? db.rpc("quote_cancellation", { p_booking: id }) : Promise.resolve({ data: null }),
   ]);
 
@@ -65,8 +69,9 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
 
   // Free active units of the same item for a swap: none of their live reservations overlap this booking's period.
   const canSwap = can(staff.role, "units.swap") && ["hold", "confirmed", "preparing"].includes(b.status);
-  const swapOptions = new Map<string, { id: string; label: string }[]>();
-  if (canSwap && rentalLines.length) {
+  const loadSwapOptions = async () => {
+    const out = new Map<string, { id: string; label: string }[]>();
+    if (!canSwap || !rentalLines.length) return out;
     const itemIds = [...new Set(rentalLines.map((i) => i.item_id))];
     const period = reservations[0]?.period;
     const { data: units } = await db.from("units").select("id, item_id, tag, serial").in("item_id", itemIds).eq("status", "active");
@@ -76,19 +81,35 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
       for (const r of clash ?? []) busy.add(r.unit_id as string);
     }
     for (const it of itemIds) {
-      swapOptions.set(it, (units ?? []).filter((u) => u.item_id === it && !busy.has(u.id as string))
+      out.set(it, (units ?? []).filter((u) => u.item_id === it && !busy.has(u.id as string))
         .map((u) => ({ id: u.id as string, label: [u.tag, u.serial].filter(Boolean).join(" · ") || (u.id as string).slice(0, 8) })));
     }
-  }
+    return out;
+  };
 
-  const evidence = await loadEvidence(db, [id]);
-  const names = await namesFor(db, [...notes.map((n) => n.author_id), ...audit.map((a) => a.actor_id), ...refunds.map((r) => r.processed_by)]);
   const moves = movesFor(b.status, staff.role);
-  const coverage = new Map<string, Awaited<ReturnType<typeof evidenceCoverage>>>();
-  for (const m of moves) {
-    const k = EVIDENCE_FOR[m.to];
-    if (k && !coverage.has(k)) coverage.set(k, await evidenceCoverage(db, id, k));
-  }
+  const inspecting = b.status === "collected" && canInspect(staff.role);
+  // Evidence kinds to check: the moves on offer, plus inspection photos for the Inspect return panel.
+  const kinds = [...new Set([...moves.map((m) => EVIDENCE_FOR[m.to]).filter((k): k is HandoverKind => !!k), ...(inspecting ? ["inspection" as const] : [])])];
+  const [swapOptions, evidence, names, coverageList] = await Promise.all([
+    loadSwapOptions(),
+    loadEvidence(db, [id]),
+    namesFor(db, [...notes.map((n) => n.author_id), ...audit.map((a) => a.actor_id), ...refunds.map((r) => r.processed_by)]),
+    Promise.all(kinds.map(async (k) => [k, await evidenceCoverage(db, id, k)] as const)),
+  ]);
+  const coverage = new Map(coverageList);
+  const inspectCov = coverage.get("inspection");
+
+  // What closing leaves behind: an unrefunded deposit (older bookings) or refunds still open.
+  const depositQueued = refunds.some((r) => r.purpose === "deposit" && r.status !== "failed");
+  const openRefunds = refunds.filter((r) => r.status === "queued" || r.status === "processing").length;
+  const ref = b.ref ?? id.slice(0, 8);
+  const closeConfirm = [
+    `Close ${ref}? The rental is marked finished and leaves the live lists.`,
+    hasDeposit && !depositQueued ? `The ${naira(b.deposit_kobo)} deposit hasn’t been queued for refund yet: add it under Money first if it’s owed.` : "",
+    openRefunds ? `${openRefunds} refund${openRefunds === 1 ? " is" : "s are"} still open in the Finance queue.` : "",
+  ].filter(Boolean).join(" ");
+  const inspectUnits = [...new Map(rentalLines.filter((i) => i.unit_id).map((i) => [i.unit_id as string, unitLabel(i)])).entries()];
 
   const renterName = profile?.full_name ?? "Unknown renter";
   const phone = b.contact_phone || profile?.phone || "";
@@ -101,7 +122,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
     <div className="adm-page">
       <PageHead
         crumbs={staff.role === "rider" ? [{ href: "/admin/jobs", label: "Jobs" }] : [{ href: "/admin/bookings", label: "Bookings" }]}
-        title={<span className="mono">{b.ref ?? id.slice(0, 8)}</span>}
+        title={<span className="mono">{ref}</span>}
         actions={<><StatusChip status={b.status} />{b.needs_refund && <Chip tone="bad">Needs refund</Chip>}</>}
       />
 
@@ -133,7 +154,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                 const simple = !m.note && !missingEvidence;
                 if (simple) {
                   return (
-                    <ActionForm key={m.to} action={setBookingStatus} confirm={`${m.label}? The booking moves to “${STATUS_LABEL[m.to]}”.`}>
+                    <ActionForm key={m.to} action={setBookingStatus} confirm={`${m.label}? ${ref} moves to “${STATUS_LABEL[m.to]}”.`}>
                       <input type="hidden" name="booking_id" value={id} />
                       <input type="hidden" name="to" value={m.to} />
                       <Submit className={m.danger ? "btn btn-secondary" : "btn"}>{m.label}</Submit>
@@ -143,14 +164,19 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                 return (
                   <details key={m.to} className="card" style={{ padding: 10, minWidth: 260, flex: "1 1 260px" }}>
                     <summary className={m.danger ? "btn btn-secondary" : "btn"} style={{ listStyle: "none" }}>{m.label}…</summary>
-                    <ActionForm action={setBookingStatus} className="grid gap-2" confirm={m.to === "cancelled" ? "Cancel this booking? Its units are released straight away." : `${m.label}?`}>
+                    <ActionForm action={setBookingStatus} className="grid gap-2"
+                      confirm={m.to === "cancelled" ? undefined : m.to === "closed" ? closeConfirm : m.to === "disputed" ? `Mark ${ref} as disputed? Finance and ops then settle the claim.` : `${m.label}? ${ref} moves to “${STATUS_LABEL[m.to]}”.`}>
                       <input type="hidden" name="booking_id" value={id} />
                       <input type="hidden" name="to" value={m.to} />
                       {missingEvidence && cov && (
                         <div className="warn-box">
                           {cov.units.length === 0 ? "No units are assigned." : `No ${kind} photos yet for ${cov.missing.length} of ${cov.units.length} unit${cov.units.length === 1 ? "" : "s"}. Add them below in Evidence.`}
-                          {staff.role !== "rider" && (
-                            <label className="switch" style={{ marginTop: 6 }}><input type="checkbox" name="override" /> Continue without the photos</label>
+                          {staff.role !== "rider" && cov.units.length > 0 && (
+                            <div className="grid gap-1" style={{ marginTop: 6 }}>
+                              <label className="switch"><input type="checkbox" name="override" /> Continue without the photos</label>
+                              <textarea className="control" name="override_note" rows={2} style={{ minHeight: 50 }} aria-label="Why continue without the photos"
+                                placeholder="Why? (saved in Notes) e.g. renter collected at base, photos on the rider’s phone" />
+                            </div>
                           )}
                         </div>
                       )}
@@ -161,13 +187,8 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                             placeholder={m.to === "cancelled" ? "Why? (shown in the audit trail)" : m.to === "disputed" ? "What’s wrong, on which unit?" : ""} />
                         </label>
                       )}
-                      {m.to === "cancelled" && (
-                        <label className="field">
-                          <span className="field-label">Refund (₦) <span className="opt">policy: {naira(refundQuote)}</span></span>
-                          <input className="control" name="refund" inputMode="decimal" defaultValue={nairaInput(refundQuote)} disabled={!can(staff.role, "refunds.process")} />
-                          {!can(staff.role, "refunds.process") && <span className="hint">Finance queues the refund; we’ll note the amount on the booking.</span>}
-                        </label>
-                      )}
+                      {m.to === "cancelled" && <CancelRefund bookingRef={ref} policyKobo={refundQuote} editable={can(staff.role, "refunds.process")} />}
+                      {m.to === "closed" && <p className="hint" style={{ margin: 0 }}>{closeConfirm}</p>}
                       <Submit className={m.danger ? "btn btn-secondary" : "btn"}>Confirm: {m.label}</Submit>
                     </ActionForm>
                   </details>
@@ -175,8 +196,45 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
               })}
             </div>
           </div>
-        ) : (
+        ) : !inspecting && (
           staff.role !== "readonly" && <p className="hint" style={{ borderTop: "1px solid var(--line)", paddingTop: 10 }}>No status moves available to your role from here.</p>
+        )}
+
+        {inspecting && (
+          <div className="grid gap-2" style={{ borderTop: "1px solid var(--line)", paddingTop: 10 }} id="inspect">
+            <p className="kicker">Inspect return</p>
+            {inspectUnits.length === 0 ? <p className="warn-box">No units are assigned to this booking.</p> : (
+              <ActionForm action={inspectReturn} className="grid gap-3"
+                confirm={`Save the inspection of ${ref}? Units marked Problem go to quarantine and the booking becomes disputed. If every unit is OK and nothing is owed back, the booking closes.`}>
+                <input type="hidden" name="booking_id" value={id} />
+                {inspectCov && !inspectCov.complete && (
+                  <div className="warn-box">
+                    No inspection photos yet for {inspectCov.missing.length} of {inspectCov.units.length} unit{inspectCov.units.length === 1 ? "" : "s"}. Add them in <a href="#evidence" style={{ color: "var(--lagoon)" }}>Handover evidence</a> (kind: Return inspection), then save.
+                    {staff.role === "owner" && (
+                      <div className="grid gap-1" style={{ marginTop: 6 }}>
+                        <label className="switch"><input type="checkbox" name="override" /> Owner override: inspect without the photos</label>
+                        <textarea className="control" name="override_note" rows={2} style={{ minHeight: 50 }} aria-label="Why inspect without the photos" placeholder="Why? (saved in Notes)" />
+                      </div>
+                    )}
+                  </div>
+                )}
+                {inspectUnits.map(([unitId, label]) => (
+                  <fieldset key={unitId} className="grid gap-1" style={{ border: 0, padding: 0, margin: 0, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
+                    <input type="hidden" name="unit" value={unitId} />
+                    <legend className="small" style={{ fontWeight: 500 }}>{label}</legend>
+                    <div className="actions">
+                      <label className="switch"><input type="radio" name={`result_${unitId}`} value="ok" required /> OK</label>
+                      <label className="switch"><input type="radio" name={`result_${unitId}`} value="problem" /> Problem</label>
+                    </div>
+                    <input className="control" name={`note_${unitId}`} aria-label={`Note for ${label}`} placeholder="Note (required for a problem): e.g. cracked LCD, battery missing" />
+                  </fieldset>
+                ))}
+                <div className="actions">
+                  <Submit disabled={!!inspectCov && !inspectCov.complete && staff.role !== "owner"}>Save inspection</Submit>
+                </div>
+              </ActionForm>
+            )}
+          </div>
         )}
       </div>
 
@@ -228,8 +286,8 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                 <HandoverCapture
                   bookingId={id}
                   units={rentalLines.filter((i) => i.unit_id).map((i) => ({ unitId: i.unit_id as string, label: unitLabel(i) }))}
-                  kinds={[...HANDOVER_KINDS]}
-                  defaultKind={b.status === "confirmed" || b.status === "preparing" ? "dispatch" : b.status === "out_for_delivery" ? "delivery" : b.status === "delivered" ? "collection" : "inspection"}
+                  kinds={HANDOVER_KINDS.filter((k) => k !== "inspection" || staff.role !== "rider")}
+                  defaultKind={b.status === "confirmed" || b.status === "preparing" ? "dispatch" : b.status === "out_for_delivery" ? "delivery" : b.status === "delivered" || staff.role === "rider" ? "collection" : "inspection"}
                 />
               </div>
             )}
@@ -280,6 +338,27 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                   </tbody>
                 </table>
               </div>
+            )}
+            {can(staff.role, "refunds.process") && (
+              <details className="card" style={{ padding: 10 }}>
+                <summary className="btn btn-secondary btn-sm" style={{ listStyle: "none" }}>Add refund…</summary>
+                <ActionForm action={addRefund} className="grid gap-2" resetOnSuccess confirm={`Add this refund on ${ref} to Finance’s queue? Pay it from the refund queue once the money is sent.`}>
+                  <input type="hidden" name="booking_id" value={id} />
+                  <div className="cols-2">
+                    <label className="field"><span className="field-label">For</span>
+                      <select className="control" name="purpose" defaultValue="goodwill" required>
+                        <option value="goodwill">{REFUND_PURPOSE_LABEL.goodwill}</option>
+                        <option value="claim_balance">{REFUND_PURPOSE_LABEL.claim_balance}</option>
+                        {hasDeposit && <option value="deposit">{REFUND_PURPOSE_LABEL.deposit}</option>}
+                      </select></label>
+                    <label className="field"><span className="field-label">Amount (₦)</span>
+                      <input className="control" name="amount" inputMode="decimal" required defaultValue={hasDeposit && !depositQueued ? nairaInput(b.deposit_kobo) : ""} /></label>
+                  </div>
+                  <label className="field"><span className="field-label">Reason</span>
+                    <input className="control" name="reason" required minLength={3} placeholder="e.g. Late delivery, ₦5,000 goodwill agreed on WhatsApp" /></label>
+                  <div className="actions"><Submit className="btn btn-secondary btn-sm">Queue refund</Submit></div>
+                </ActionForm>
+              </details>
             )}
             {can(staff.role, "refunds.process") && <Link className="btn btn-quiet btn-sm" href="/admin/payments/refunds">Open the refund queue</Link>}
           </Section>
@@ -377,8 +456,8 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
             )}
           </Section>
 
-          {!auditRes.error && (
-            <Section title="Timeline">
+          <Section title="Timeline">
+            {!canAudit ? <p className="hint">Not available for your role.</p> : auditRes.error ? <ErrorBox what="the timeline" error={auditRes.error.message} /> : (
               <ul className="grid gap-1 small" style={{ listStyle: "none", margin: 0, padding: 0 }}>
                 <li><span className="muted">{fmtDateTime(b.created_at)}</span> · Hold placed</li>
                 {b.confirmed_at && <li><span className="muted">{fmtDateTime(b.confirmed_at)}</span> · Payment confirmed</li>}
@@ -389,8 +468,8 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                   </li>
                 ))}
               </ul>
-            </Section>
-          )}
+            )}
+          </Section>
         </div>
       </div>
     </div>

@@ -82,7 +82,8 @@ export default async function StaffPage() {
                     <label className="field"><span className="field-label">Phone</span><input className="control" name="phone" defaultValue={r.phone} inputMode="tel" readOnly={lockedOwner} /></label>
                   </div>
                   <div className="actions">
-                    <label className="switch"><input type="checkbox" name="active" defaultChecked={r.active} disabled={lockedOwner || self} /> Active</label>
+                    <label className="switch"><input type="checkbox" name="active" defaultChecked={r.active} disabled={lockedOwner || self}
+                      data-confirm-off={`Turn off ${r.display_name || emails.get(r.user_id) || "this staff member"}? They lose access to the staff portal straight away.`} /> Active</label>
                     {(lockedOwner || self) && r.active && <input type="hidden" name="active" value="on" />}
                     <span className="spacer" />
                     {!lockedOwner && <Submit className="btn btn-secondary btn-sm">Save</Submit>}

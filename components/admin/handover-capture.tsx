@@ -1,7 +1,8 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { addHandoverMedia, createHandover } from "@/app/admin/_actions/booking";
+import { unreachable } from "@/components/admin/action-form";
 import { HANDOVER_LABEL, type HandoverKind } from "@/lib/admin/status";
 import { createClient } from "@/lib/supabase/client";
 
@@ -44,13 +45,43 @@ async function sha256(blob: Blob) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** A v4 uuid. crypto.randomUUID needs a secure context, which a phone on the dev Wi-Fi doesn't have. */
+function newId(): string {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+/**
+ * A button that opens a visually hidden file input, so it can be reached and used from the keyboard
+ * (a <label> around a hidden input can't take focus).
+ */
+export function FilePick({ label, accept, capture, multiple, disabled, className = "btn btn-secondary btn-sm", onFiles }: {
+  label: string; accept: string; capture?: "environment" | "user"; multiple?: boolean; disabled?: boolean; className?: string;
+  onFiles: (files: FileList | null) => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      <button type="button" className={className} disabled={disabled} onClick={() => ref.current?.click()}>{label}</button>
+      <input ref={ref} type="file" className="sr-only" tabIndex={-1} aria-hidden="true" accept={accept} capture={capture} multiple={multiple}
+        disabled={disabled} onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} />
+    </>
+  );
+}
+
 /**
  * Staff handover capture (A-11, A-23): kind, result, note, and photos/videos per unit. Works from a
  * phone camera. Creates the handover row, uploads each file to handover-media/<booking>/<handover>/…,
- * then records the media rows. Failed uploads can be retried without creating a second handover.
+ * then records the media rows. Failed uploads can be retried without creating a second handover: the
+ * handover id is made here, and createHandover ignores a repeat of the same id.
+ * `large`: phone-sized controls (the rider's job screen).
  */
-export function HandoverCapture({ bookingId, units, kinds, defaultKind, title = "Add handover evidence" }: {
-  bookingId: string; units: Unit[]; kinds: HandoverKind[]; defaultKind?: HandoverKind; title?: string;
+export function HandoverCapture({ bookingId, units, kinds, defaultKind, title = "Add handover evidence", large }: {
+  bookingId: string; units: Unit[]; kinds: HandoverKind[]; defaultKind?: HandoverKind; title?: string; large?: boolean;
 }) {
   const router = useRouter();
   const uid = useId();
@@ -64,6 +95,9 @@ export function HandoverCapture({ bookingId, units, kinds, defaultKind, title = 
   const [done, setDone] = useState("");
   // After a partial failure: the handover already exists, so a retry only uploads what's left.
   const [pending, setPending] = useState<{ handoverId: string; left: Picked[] } | null>(null);
+  // The id for the next handover, kept across a failed start so a retry can't make a second one.
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const sm = large ? "" : " btn-sm";
 
   const slots: Slot[] = [
     ...units.flatMap((u) => [
@@ -122,12 +156,14 @@ export function HandoverCapture({ bookingId, units, kinds, defaultKind, title = 
     if (result === "issue" && note.trim().length < 3) { setError("Describe the problem in the note."); return; }
     if (!window.confirm(`Save this ${kind} handover with ${picked.length} file${picked.length === 1 ? "" : "s"}?`)) return;
     setBusy(true);
+    let handoverId = pending?.handoverId;
+    const list = pending ? pending.left : picked;
     try {
-      let handoverId = pending?.handoverId;
-      const list = pending ? pending.left : picked;
       if (!handoverId) {
         setProgress("Starting handover…");
-        const r = await createHandover({ bookingId, kind, result, note });
+        const id = draftId ?? newId();
+        setDraftId(id);
+        const r = await createHandover({ id, bookingId, kind, result, note });
         if (r.error || !r.id) { setError(r.error ?? "Couldn’t start the handover."); return; }
         handoverId = r.id;
       }
@@ -137,10 +173,15 @@ export function HandoverCapture({ bookingId, units, kinds, defaultKind, title = 
         setPicked(failed);
         setError((e) => `${failed.length} file${failed.length === 1 ? "" : "s"} didn’t upload. ${e} Check the connection and tap Retry.`);
       } else {
-        setPending(null); setPicked([]); setNote(""); setResult("ok");
+        setPending(null); setDraftId(null); setPicked([]); setNote(""); setResult("ok");
         setDone("Handover saved.");
         router.refresh();
       }
+    } catch (e) {
+      // The connection dropped, or the page is out of date. Keep the files; Retry picks up from here.
+      console.error("[admin] handover didn’t complete:", e);
+      if (handoverId) setPending({ handoverId, left: list });
+      setError(`${unreachable()} Your files are still here.`);
     } finally {
       setBusy(false); setProgress("");
     }
@@ -148,6 +189,7 @@ export function HandoverCapture({ bookingId, units, kinds, defaultKind, title = 
 
   const covered = new Set(picked.filter((p) => p.slot.unitId && p.file.type.startsWith("image/")).map((p) => p.slot.unitId));
   const missing = units.filter((u) => !covered.has(u.unitId));
+  const locked = busy || !!pending;
 
   return (
     <div className="grid gap-3">
@@ -155,21 +197,21 @@ export function HandoverCapture({ bookingId, units, kinds, defaultKind, title = 
       <div className="cols-2">
         <label className="field">
           <span className="field-label">Kind</span>
-          <select className="control" value={kind} onChange={(e) => setKind(e.target.value as HandoverKind)} disabled={!!pending || busy}>
+          <select className="control" value={kind} onChange={(e) => { setKind(e.target.value as HandoverKind); setDraftId(null); }} disabled={locked}>
             {kinds.map((k) => <option key={k} value={k}>{HANDOVER_LABEL[k]}</option>)}
           </select>
         </label>
-        <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }} disabled={!!pending || busy}>
+        <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }} disabled={locked}>
           <legend className="field-label">Result</legend>
           <div className="actions">
-            <label className="switch"><input type="radio" name={`${uid}-result`} checked={result === "ok"} onChange={() => setResult("ok")} /> All OK</label>
-            <label className="switch"><input type="radio" name={`${uid}-result`} checked={result === "issue"} onChange={() => setResult("issue")} /> Problem</label>
+            <label className="switch" style={large ? { minHeight: 44 } : undefined}><input type="radio" name={`${uid}-result`} checked={result === "ok"} onChange={() => setResult("ok")} /> All OK</label>
+            <label className="switch" style={large ? { minHeight: 44 } : undefined}><input type="radio" name={`${uid}-result`} checked={result === "issue"} onChange={() => setResult("issue")} /> Problem</label>
           </div>
         </fieldset>
       </div>
       <label className="field">
         <span className="field-label">Note {result === "ok" && <span className="opt">optional</span>}</span>
-        <textarea className="control" rows={2} value={note} onChange={(e) => setNote(e.target.value)} disabled={!!pending || busy}
+        <textarea className="control" rows={2} value={note} onChange={(e) => setNote(e.target.value)} disabled={locked}
           placeholder={result === "issue" ? "What’s wrong? e.g. scratch on the LCD, battery missing" : "e.g. Handed to Ada, ID seen"} style={{ minHeight: 60 }} />
       </label>
 
@@ -179,16 +221,10 @@ export function HandoverCapture({ bookingId, units, kinds, defaultKind, title = 
             <span className="small">{s.label}</span>
             <span className="actions">
               <span className="muted small">{picked.filter((p) => p.slot.key === s.key).length || ""}</span>
-              <label className="btn btn-secondary btn-sm" aria-disabled={busy || !!pending}>
-                Camera
-                <input type="file" accept="image/*,video/*" capture="environment" hidden multiple={false}
-                  onChange={(e) => { add(s, e.target.files); e.target.value = ""; }} disabled={busy || !!pending} />
-              </label>
-              <label className="btn btn-quiet btn-sm" aria-disabled={busy || !!pending}>
-                Files
-                <input type="file" accept="image/*,video/*" hidden multiple
-                  onChange={(e) => { add(s, e.target.files); e.target.value = ""; }} disabled={busy || !!pending} />
-              </label>
+              <FilePick label="Camera" accept="image/*,video/*" capture="environment" className={`btn btn-secondary${sm}`}
+                disabled={locked} onFiles={(f) => add(s, f)} />
+              <FilePick label="Files" accept="image/*,video/*" multiple className={`btn btn-quiet${sm}`}
+                disabled={locked} onFiles={(f) => add(s, f)} />
             </span>
           </div>
         ))}
@@ -199,7 +235,7 @@ export function HandoverCapture({ bookingId, units, kinds, defaultKind, title = 
           {picked.map((p, i) => (
             <li key={i} className="flex items-center justify-between gap-2 small">
               <span className="min-w-0 truncate"><span className="badge">{p.file.type.startsWith("video/") ? "video" : "photo"}</span> {p.slot.label} · <span className="muted">{(p.file.size / 1024 / 1024).toFixed(1)} MB</span></span>
-              {!busy && !pending && <button type="button" className="btn btn-quiet btn-sm" onClick={() => remove(i)}>Remove</button>}
+              {!locked && <button type="button" className={`btn btn-quiet${sm}`} onClick={() => remove(i)} aria-label={`Remove ${p.slot.label}`}>Remove</button>}
             </li>
           ))}
         </ul>
@@ -208,13 +244,13 @@ export function HandoverCapture({ bookingId, units, kinds, defaultKind, title = 
         <p className="warn-box">No photo yet for: {missing.map((u) => u.label).join(", ")}. Riders can’t move the job on until every unit has one.</p>
       )}
       {error && <p className="error" role="alert">{error}</p>}
-      {done && <p className="ok-box" role="status">{done}</p>}
+      <p role="status" aria-live="polite" className={done ? "ok-box" : "sr-only"}>{done || progress}</p>
       <div className="actions">
         <button type="button" className="btn" onClick={submit} disabled={busy || !picked.length}>
           {busy ? progress || "Saving…" : pending ? "Retry failed uploads" : "Save handover"}
         </button>
         {pending && !busy && (
-          <button type="button" className="btn btn-quiet" onClick={() => { setPending(null); setPicked([]); setError(""); router.refresh(); }}>
+          <button type="button" className="btn btn-quiet" onClick={() => { setPending(null); setDraftId(null); setPicked([]); setError(""); router.refresh(); }}>
             Give up on the rest
           </button>
         )}

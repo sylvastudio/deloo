@@ -18,6 +18,12 @@ export function UnitStatusSelect({ current, futureBookings, canRetire, disabled 
       <select className="control" name="status" value={v} onChange={(e) => setV(e.target.value as UnitStatus)} disabled={disabled} aria-label="Unit status">
         {UNIT_STATUSES.map((s) => <option key={s} value={s} disabled={locked(s)}>{LABEL[s]}{locked(s) ? " (owner/admin)" : ""}</option>)}
       </select>
+      {v !== current && (v === "retired" || v === "lost") && (
+        // Asked by ActionForm before saving.
+        <input type="hidden" data-confirm={v === "lost"
+          ? "Mark this unit as lost? It can’t be booked again, and it counts as a write-off."
+          : "Retire this unit? It can’t be booked again."} />
+      )}
       {current === "active" && v !== "active" && futureBookings > 0 && (
         <p className="warn-box" role="alert">
           {futureBookings} upcoming booking{futureBookings === 1 ? " uses" : "s use"} this unit. They stay booked on it: open each booking and swap to a free unit, or call the renter.

@@ -19,24 +19,46 @@ type Job = {
 
 const SELECT = "id, ref, renter_id, status, starts_at, ends_at, delivery, address, contact_phone, delivery_slot, collection_slot, rider_name, rider_phone, booking_items(item_name, kind, units(tag, serial))";
 
-export default async function JobsPage() {
+/** Which days the list covers. Late deliveries and overdue collections are always shown on top. */
+const DAYS = {
+  two: { label: "Today and tomorrow", from: 0, to: 2 },
+  today: { label: "Today", from: 0, to: 1 },
+  tomorrow: { label: "Tomorrow", from: 1, to: 2 },
+  week: { label: "Next 7 days", from: 0, to: 7 },
+} as const;
+type DayKey = keyof typeof DAYS;
+
+type SP = Promise<Record<string, string | string[] | undefined>>;
+
+export default async function JobsPage({ searchParams }: { searchParams: SP }) {
   const staff = await pageStaff();
   if (!can(staff.role, "handover.capture") && staff.role !== "readonly") return <div className="adm-page"><p className="hint">Jobs are for ops and riders.</p></div>;
+  const sp = await searchParams;
+  const dayParam = String((Array.isArray(sp.day) ? sp.day[0] : sp.day) ?? "");
+  const dayKey: DayKey = dayParam in DAYS ? (dayParam as DayKey) : "two";
+  const range = DAYS[dayKey];
+  const when = dayKey === "week" ? "in the next 7 days" : range.label.toLowerCase();
   const db = await createClient();
   const today = lagosDay();
-  const t0 = dayStart(today), t2 = dayStart(addDays(today, 2));
+  const t0 = dayStart(today);
+  const from = dayStart(addDays(today, range.from)), to = dayStart(addDays(today, range.to));
 
-  const [outRes, inRes] = await Promise.all([
-    db.from("bookings").select(SELECT).gte("starts_at", t0).lt("starts_at", t2).in("status", ["confirmed", "preparing", "out_for_delivery", "delivered"]).order("starts_at"),
-    // Collections: last rental day is today or tomorrow ⇔ ends_at in (today 00:00, day after tomorrow 00:00].
-    db.from("bookings").select(SELECT).gt("ends_at", t0).lte("ends_at", t2).in("status", ["delivered", "collected"]).order("ends_at"),
+  const [outRes, inRes, lateRes, overdueRes] = await Promise.all([
+    db.from("bookings").select(SELECT).gte("starts_at", from).lt("starts_at", to).in("status", ["confirmed", "preparing", "out_for_delivery", "delivered"]).order("starts_at"),
+    // Collections: last rental day in the range ⇔ ends_at in (first day 00:00, day after the last 00:00].
+    db.from("bookings").select(SELECT).gt("ends_at", from).lte("ends_at", to).in("status", ["delivered", "collected"]).order("ends_at"),
+    // Should have gone out before today and still hasn't been delivered.
+    db.from("bookings").select(SELECT).lt("starts_at", t0).in("status", ["confirmed", "preparing", "out_for_delivery"]).order("starts_at"),
+    // Last rental day has passed and the gear is still with the renter.
+    db.from("bookings").select(SELECT).lte("ends_at", t0).in("status", ["delivered", "out_for_delivery"]).order("ends_at"),
   ]);
-  const error = outRes.error ?? inRes.error;
+  const error = outRes.error ?? inRes.error ?? lateRes.error ?? overdueRes.error;
   // Riders see only their own jobs; everyone else sees all.
   const mine = (rows: Job[] | null) => (rows ?? []).filter((b) => riderOwns(staff, b));
 
-  const out = mine(outRes.data as Job[] | null);
-  const back = mine(inRes.data as Job[] | null);
+  const late = new Set([...mine(lateRes.data as Job[] | null), ...mine(overdueRes.data as Job[] | null)].map((b) => b.id));
+  const out = [...mine(lateRes.data as Job[] | null), ...mine(outRes.data as Job[] | null)];
+  const back = [...mine(overdueRes.data as Job[] | null), ...mine(inRes.data as Job[] | null)];
 
   const ids = [...new Set([...out, ...back].map((b) => b.renter_id))];
   const { data: profiles } = ids.length ? await db.from("profiles").select("id, full_name, phone").in("id", ids) : { data: [] };
@@ -55,6 +77,7 @@ export default async function JobsPage() {
           <StatusChip status={b.status} />
         </div>
         <div className="meta">
+          {late.has(b.id) && <Chip tone="bad">{kind === "out" ? "Late" : "Overdue"}</Chip>}
           <span><strong>{day === today ? "Today" : fmtWeekday(day)}</strong>{(kind === "out" ? b.delivery_slot : b.collection_slot) ? ` · ${kind === "out" ? b.delivery_slot : b.collection_slot}` : ""}</span>
           <span>{kind === "out" ? (pickup ? "Pickup at base" : "Delivery") : "Collection"}</span>
           {b.rider_name ? <span>Rider: {b.rider_name}</span> : <Chip tone="warn">No rider</Chip>}
@@ -69,23 +92,29 @@ export default async function JobsPage() {
             return <li key={n}>{i.item_name}{u && <span className="muted mono"> · {[u.tag, u.serial].filter(Boolean).join(" · ")}</span>}</li>;
           })}
         </ul>
-        {!done && staff.role !== "readonly" && <Link className="btn" href={`/admin/jobs/${b.id}`}>Open job</Link>}
+        {!done && staff.role !== "readonly" && <div className="bigbtns"><Link className="btn" href={`/admin/jobs/${b.id}`}>Open job</Link></div>}
       </li>
     );
   };
 
   return (
     <div className="adm-page narrow">
-      <PageHead title={staff.role === "rider" ? "My jobs" : "Jobs"} kicker={`${fmtWeekday(today)} and tomorrow`} />
+      <PageHead title={staff.role === "rider" ? "My jobs" : "Jobs"} kicker={dayKey === "two" ? `${fmtWeekday(today)} and tomorrow` : range.label} />
+      <nav className="actions" aria-label="Days">
+        {(Object.keys(DAYS) as DayKey[]).map((k) => (
+          <Link key={k} href={k === "two" ? "/admin/jobs" : `/admin/jobs?day=${k}`} className="chip" aria-current={dayKey === k ? "page" : undefined} aria-pressed={dayKey === k}
+            style={{ minHeight: 44 }}>{DAYS[k].label}</Link>
+        ))}
+      </nav>
       {staff.role === "rider" && <p className="hint">Jobs where you’re set as the rider (by your name or phone on your staff profile).</p>}
       {error ? <ErrorBox what="jobs" error={error.message} /> : (
         <>
           <h2 className="h2">Going out <span className="muted small">({out.length})</span></h2>
           {out.length ? <ul className="grid gap-3" style={{ listStyle: "none", margin: 0, padding: 0 }}>{out.map((b) => card(b, "out"))}</ul>
-            : <Empty>No deliveries or pickups today or tomorrow.</Empty>}
+            : <Empty>No deliveries or pickups {when}.</Empty>}
           <h2 className="h2">Coming back <span className="muted small">({back.length})</span></h2>
           {back.length ? <ul className="grid gap-3" style={{ listStyle: "none", margin: 0, padding: 0 }}>{back.map((b) => card(b, "in"))}</ul>
-            : <Empty>No collections today or tomorrow.</Empty>}
+            : <Empty>No collections {when}.</Empty>}
         </>
       )}
     </div>

@@ -7,9 +7,9 @@ import { HandoverCapture } from "@/components/admin/handover-capture";
 import { Chip, ErrorBox, PageHead, Section, StatusChip } from "@/components/admin/ui";
 import { pageStaff } from "@/lib/admin/auth";
 import { evidenceCoverage, loadEvidence, riderOwns } from "@/lib/admin/data";
-import { fmtRental } from "@/lib/admin/format";
+import { fmtRental, fmtWeekday } from "@/lib/admin/format";
 import { can } from "@/lib/admin/roles";
-import { canMove, HANDOVER_LABEL, type BookingStatus, type HandoverKind } from "@/lib/admin/status";
+import { canMove, collectTooEarly, HANDOVER_KINDS, HANDOVER_LABEL, type BookingStatus, type HandoverKind } from "@/lib/admin/status";
 import { one } from "@/lib/admin/types";
 import { mapsLink, telLink, waLink } from "@/lib/admin/whatsapp";
 import { createClient } from "@/lib/supabase/server";
@@ -54,8 +54,11 @@ export default async function JobDetail({ params }: { params: Promise<{ id: stri
   const status = b.status as BookingStatus;
   const step = nextStep(status, b.delivery === "pickup");
   const allowed = step && canMove(status, step.to, staff.role);
-  const cov = step ? await evidenceCoverage(db, id, step.kind) : null;
-  const evidence = await loadEvidence(db, [id]);
+  const [cov, evidence] = await Promise.all([step ? evidenceCoverage(db, id, step.kind) : Promise.resolve(null), loadEvidence(db, [id])]);
+  // Riders collect on the last rental day or later (ops can take gear back early).
+  const tooEarly = step?.to === "collected" ? collectTooEarly(staff.role, b.ends_at as string) : null;
+  // Return inspection is done at base by ops, not by riders.
+  const kinds = [step?.kind, ...HANDOVER_KINDS].filter((k, n, a): k is HandoverKind => !!k && a.indexOf(k) === n && (k !== "inspection" || staff.role !== "rider"));
   const phone = (b.contact_phone as string) || p?.phone || "";
   const name = p?.full_name ?? "Renter";
 
@@ -93,11 +96,12 @@ export default async function JobDetail({ params }: { params: Promise<{ id: stri
               {cov.units.length === 0 ? "No units are assigned to this booking. Ask ops." : `Still needed: a photo of ${units.filter((u) => cov.missing.includes(u.unitId)).map((u) => u.label).join(", ")}.`}
             </p>
           )}
-          <HandoverCapture bookingId={id} units={units} kinds={[step.kind, "inspection", "dispatch", "delivery", "collection"].filter((k, n, a) => a.indexOf(k) === n) as HandoverKind[]} defaultKind={step.kind} title={`${HANDOVER_LABEL[step.kind]} photos`} />
+          <HandoverCapture bookingId={id} units={units} kinds={kinds} defaultKind={step.kind} title={`${HANDOVER_LABEL[step.kind]} photos`} large />
+          {tooEarly && <p className="notice">Collection opens on {fmtWeekday(tooEarly)}, the last rental day. If the renter wants to return early, ask ops.</p>}
           <ActionForm action={setBookingStatus} confirm={`${step.label}? This updates the renter’s tracker.`}>
             <input type="hidden" name="booking_id" value={id} />
             <input type="hidden" name="to" value={step.to} />
-            <div className="bigbtns"><Submit className="btn btn-generate" disabled={!cov.complete}>{step.label}</Submit></div>
+            <div className="bigbtns"><Submit className="btn btn-generate" disabled={!cov.complete || !!tooEarly}>{step.label}</Submit></div>
           </ActionForm>
         </Section>
       ) : (
@@ -113,7 +117,7 @@ export default async function JobDetail({ params }: { params: Promise<{ id: stri
           <ActionForm action={addNote} className="grid gap-2" resetOnSuccess>
             <input type="hidden" name="booking_id" value={id} />
             <textarea className="control" name="body" rows={2} required placeholder="e.g. Renter not home, rescheduled to 4pm" aria-label="Note" />
-            <Submit className="btn btn-secondary">Add note</Submit>
+            <div className="bigbtns"><Submit className="btn btn-secondary">Add note</Submit></div>
           </ActionForm>
         </Section>
       )}

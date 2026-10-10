@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { addItemPhoto } from "@/app/admin/_actions/inventory";
+import { FilePick } from "@/components/admin/handover-capture";
 import { createClient } from "@/lib/supabase/client";
 
 /** Resize to 2000px on the long edge as JPEG (the items bucket takes up to 5 MB). */
@@ -53,13 +54,11 @@ export function ItemPhotoUpload({ itemId, vendorId, disabled }: { itemId: string
   }
 
   return (
-    <div className="grid gap-1">
-      <label className="btn btn-secondary btn-sm" aria-disabled={disabled || !!busy} style={{ justifySelf: "start" }}>
-        {busy || "Upload photos"}
-        <input type="file" accept="image/jpeg,image/png,image/webp,image/*" multiple hidden disabled={disabled || !!busy}
-          onChange={(e) => { onFiles(e.target.files); e.target.value = ""; }} />
-      </label>
+    <div className="grid gap-1" style={{ justifyItems: "start" }}>
+      <FilePick label={busy || "Upload photos"} accept="image/jpeg,image/png,image/webp,image/*" multiple disabled={disabled || !!busy}
+        className="btn btn-secondary btn-sm" onFiles={onFiles} />
       {error && <p className="error" role="alert">{error}</p>}
+      <p role="status" aria-live="polite" className="sr-only">{busy}</p>
     </div>
   );
 }

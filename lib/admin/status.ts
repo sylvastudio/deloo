@@ -29,16 +29,16 @@ export const STATUS_TONE: Record<BookingStatus, Tone> = {
 type Move = { to: BookingStatus; from: BookingStatus[]; roles: StaffRole[]; label: string; note?: "required" | "optional"; danger?: boolean };
 
 /**
- * Mirrors public.staff_set_booking_status (0011): the database is the referee, this only decides which
- * buttons to show. Owner always passes.
+ * Mirrors public.staff_set_booking_status (0011, 0020): the database is the referee, this only decides
+ * which buttons to show. Owner always passes. Inspecting a collected booking (OK or problem) goes through
+ * the Inspect return panel (staff_inspect), and cancelling through staff_cancel, which queues the refund.
  */
 export const MOVES: Move[] = [
   { to: "preparing", from: ["confirmed"], roles: ["admin", "ops"], label: "Start preparing" },
   { to: "out_for_delivery", from: ["confirmed", "preparing"], roles: ["admin", "ops", "rider"], label: "Start trip" },
   { to: "delivered", from: ["preparing", "out_for_delivery"], roles: ["admin", "ops", "rider"], label: "Mark delivered" },
   { to: "collected", from: ["delivered"], roles: ["admin", "ops", "rider"], label: "Mark collected" },
-  { to: "inspected", from: ["collected"], roles: ["admin", "ops"], label: "Inspected: all OK" },
-  { to: "disputed", from: ["collected", "inspected"], roles: ["admin", "ops"], label: "Inspection issue", note: "required", danger: true },
+  { to: "disputed", from: ["inspected"], roles: ["admin", "ops"], label: "Report an issue", note: "required", danger: true },
   { to: "closed", from: ["inspected", "disputed"], roles: ["admin", "finance"], label: "Close booking", note: "optional" },
   { to: "cancelled", from: ["hold", "confirmed", "preparing"], roles: ["admin", "ops"], label: "Cancel booking", note: "required", danger: true },
   { to: "cancelled", from: ["out_for_delivery", "delivered"], roles: ["admin"], label: "Cancel booking", note: "required", danger: true },
@@ -52,11 +52,27 @@ export function canMove(status: BookingStatus, to: BookingStatus, role: StaffRol
   return movesFor(status, role).some((m) => m.to === to);
 }
 
+/** Who can inspect a return (staff_inspect, 0020). */
+export const canInspect = (role: StaffRole) => role === "owner" || role === "admin" || role === "ops";
+
+/**
+ * Riders mark a booking collected on its last rental day or later (staff_set_booking_status, 0020);
+ * ops can take gear back early. Returns the first day it's allowed ("YYYY-MM-DD", Lagos) when it's too
+ * early for this role, else null.
+ */
+export function collectTooEarly(role: StaffRole, endsAt: string, now = new Date()): string | null {
+  if (role !== "rider") return null;
+  const lastDayStart = new Date(endsAt).getTime() - 86_400_000;
+  if (now.getTime() >= lastDayStart) return null;
+  return new Date(lastDayStart + 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 /** Moves that need handover photos of every unit first, and which handover kind proves them. */
 export const EVIDENCE_FOR: Partial<Record<BookingStatus, "dispatch" | "delivery" | "collection" | "inspection">> = {
   out_for_delivery: "dispatch",
   delivered: "delivery",
   collected: "collection",
+  inspected: "inspection",
 };
 
 export const HANDOVER_KINDS = ["dispatch", "delivery", "collection", "inspection"] as const;

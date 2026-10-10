@@ -2,6 +2,7 @@
 import type { ActionResult } from "@/lib/admin/action-result";
 import { friendlyError } from "@/lib/admin/data";
 import { act, isUuid, str } from "@/lib/admin/guard";
+import { koboFromNaira, naira } from "@/lib/admin/format";
 import { REFUND_METHODS, REFUND_STATUSES } from "@/lib/admin/status";
 import { settle } from "@/lib/paystack";
 import { createClient } from "@/lib/supabase/server";
@@ -53,5 +54,30 @@ export async function updateRefund(_: ActionResult, form: FormData): Promise<Act
     }).eq("id", id);
     if (error) return { error: friendlyError(error) };
     return { ok: status === "success" ? "Refund marked as paid." : status === "failed" ? "Marked as failed." : "Marked as processing." };
+  });
+}
+
+const ADD_PURPOSES = ["goodwill", "claim_balance", "deposit"] as const;
+
+/**
+ * Finance adds a refund to the queue by hand: goodwill, the balance of a claim, or (older bookings only)
+ * the deposit. RLS refunds_staff_write lets admin, finance and owner insert.
+ */
+export async function addRefund(_: ActionResult, form: FormData): Promise<ActionResult> {
+  return act("refunds.process", async () => {
+    const id = str(form, "booking_id");
+    const purpose = str(form, "purpose") as (typeof ADD_PURPOSES)[number];
+    const amount = koboFromNaira(form.get("amount"));
+    const reason = str(form, "reason").slice(0, 500);
+    if (!isUuid(id)) return { error: "Unknown booking." };
+    if (!ADD_PURPOSES.includes(purpose)) return { error: "Choose what the refund is for." };
+    if (!amount || amount <= 0) return { error: "Enter an amount in naira." };
+    if (reason.length < 3) return { error: "Say why (the renter may ask)." };
+    const db = await createClient();
+    const { data: b } = await db.from("bookings").select("deposit_kobo").eq("id", id).maybeSingle();
+    if (!b) return { error: "Booking not found." };
+    if (purpose === "deposit" && !(Number(b.deposit_kobo) > 0)) return { error: "This booking had no deposit." };
+    const { error } = await db.from("refunds").insert({ booking_id: id, purpose, amount_kobo: amount, reason });
+    return error ? { error: friendlyError(error) } : { ok: `Refund of ${naira(amount)} queued for Finance.` };
   });
 }
