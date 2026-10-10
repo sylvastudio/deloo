@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { draftKey, getCheckout, saveCheckout, useBookingDraft, type DraftLine } from '@/lib/booking-draft';
+import { asGear, draftKey, getCheckout, loadShelf, saveCheckout, useBookingDraft, type DraftLine, type ShelfItem } from '@/lib/booking-draft';
+import { kitGaps } from '@/planner/complements';
 import {
   cachedSettings, createHold, GearTaken, getActiveHold, isOffline, itemCalendar, loadSettings, plain, quoteBooking, requestCancellation,
   setActiveHold, type ActiveHold, type Delivery, type PayMethod, type Quote, type QuoteLine, type Settings,
@@ -17,6 +18,7 @@ import { Button } from '@/ui/button';
 import { Badge, Chip } from '@/ui/chip';
 import { addDays, dayCount, DateRangeCalendar, lagosToday } from '@/ui/date-range';
 import { EmptyState, Notice, Skeleton } from '@/ui/feedback';
+import { Icon } from '@/ui/icon';
 import { Field } from '@/ui/layout';
 import { Segmented } from '@/ui/segmented';
 import { Text } from '@/ui/text';
@@ -99,7 +101,7 @@ export default function Review() {
   if (!draft || draft.lines.length === 0) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}><TopBar title="Review booking" />
-        <EmptyState icon="calendar" title="Nothing to book yet" body="Pick gear and your days first." action="Explore gear" onAction={() => router.replace('/explore')} />
+        <EmptyState icon="calendar" title="Your bag is empty" body="Add gear from the Gear tab, then pick your days." action="Browse gear" onAction={() => router.navigate('/explore')} />
       </SafeAreaView>
     );
   }
@@ -200,7 +202,7 @@ export default function Review() {
             const q = quoteLines.get(l.itemId);
             return (
               <LineRow key={l.itemId} line={l} q={q} gone={gone.includes(l)} held={held} days={n}
-                onRemove={draft.lines.length > 1 && !held ? () => setLines(draft.lines.filter((x) => x.itemId !== l.itemId)) : undefined}
+                onRemove={!held ? () => setLines(draft.lines.filter((x) => x.itemId !== l.itemId)) : undefined}
                 onFewer={q && !q.ok && q.free > 0 && !held ? () => setLines(draft.lines.map((x) => (x.itemId === l.itemId ? { ...x, qty: q.free } : x))) : undefined}
                 onDays={() => setPickDays(true)} />
             );
@@ -210,7 +212,17 @@ export default function Review() {
               <Text variant="caption">Not included: {draft.notIncluded.map((x) => `${x.label}${x.reason === 'not_stocked' ? ' (we don’t stock it yet)' : ' (booked on your dates)'}`).join(', ')}.</Text>
             </View>
           ) : null}
+          {/* Back to the Gear tab; the bag (this draft) stays as it is. */}
+          {!held ? (
+            <Pressable onPress={() => router.navigate('/explore')} hitSlop={8} accessibilityRole="link" style={styles.addMore}>
+              <Icon name="plus" size={18} color={c.lagoon} /><Text variant="label" tone="lagoon">Add more gear</Text>
+            </Pressable>
+          ) : null}
         </View>
+        {!held ? (
+          <KitGaps lines={draft.lines} first={draft.first} last={draft.last}
+            onAdd={(add, replaces) => setLines([...draft.lines.filter((x) => x.itemId !== replaces && x.itemId !== add.itemId), add])} />
+        ) : null}
 
         {/* Delivery or pickup */}
         <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
@@ -320,6 +332,49 @@ function LineRow({ line, q, gone, held, days, onRemove, onFewer, onDays }: {
   );
 }
 
+/**
+ * "Your camera needs a lens": what the bag is missing to work (planner/complements kitGaps), with a
+ * one-tap add. Options are counted on the bag's days, so only free gear is offered.
+ */
+function KitGaps({ lines, first, last, onAdd }: { lines: DraftLine[]; first?: string; last?: string; onAdd: (line: DraftLine, replaces?: string) => void }) {
+  const c = useColors();
+  const [shelf, setShelf] = useState<ShelfItem[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    // Suggestions only: if they can't load, the booking goes on without them.
+    loadShelf(first, last).then((s) => { if (live) setShelf(s); }).catch(() => {});
+    return () => { live = false; };
+  }, [first, last]);
+  const gaps = useMemo(() => (shelf ? kitGaps(lines, shelf.map(asGear)) : []), [shelf, lines]);
+  if (!shelf || !gaps.length) return null;
+  const byId = new Map(shelf.map((s) => [s.id, s]));
+
+  return <>{gaps.map((g) => (
+    <Notice key={g.key} tone="warning">
+      <View style={{ gap: space.sm }}>
+        <View style={{ gap: 2 }}>
+          <Text variant="bodyStrong">{g.title}</Text>
+          <Text variant="caption">{g.body}</Text>
+        </View>
+        {g.options.length ? g.options.map((o) => {
+          const it = byId.get(o.itemId)!;
+          return (
+            <View key={o.itemId} style={[styles.row, styles.gapOption, { borderTopColor: c.line }]}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text variant="label">{it.name} · {naira(it.day_rate_kobo)}/day</Text>
+                <Text variant="caption" tone="slate">{o.reason}</Text>
+              </View>
+              <Button kind="secondary" title={g.replaces ? 'Swap' : 'Add'} style={{ paddingHorizontal: space.lg }}
+                accessibilityLabel={`${g.replaces ? 'Swap to' : 'Add'} ${it.name}`}
+                onPress={() => onAdd({ itemId: it.id, name: it.name, qty: 1 }, g.replaces)} />
+            </View>
+          );
+        }) : <Text variant="caption" tone="slate">None free on your days. Bring your own, or change your days.</Text>}
+      </View>
+    </Notice>
+  ))}</>;
+}
+
 /** The calendar for the whole basket: a day is out if any item has fewer units free than needed. */
 function DaysPicker({ lines, first, last, onChange }: { lines: DraftLine[]; first?: string; last?: string; onChange: (a: string, b: string) => void }) {
   const [blocked, setBlocked] = useState<{ unavailable: Set<string>; limited: Set<string> } | null>(null);
@@ -369,6 +424,8 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   actions: { flexDirection: 'row', flexWrap: 'wrap', marginLeft: -space.xl },
   note: { borderRadius: radius.md, padding: space.md },
+  addMore: { flexDirection: 'row', alignItems: 'center', gap: space.xs, alignSelf: 'flex-start', paddingTop: space.xs },
+  gapOption: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: space.sm },
   divider: { height: StyleSheet.hairlineWidth, marginVertical: space.xs },
   footer: { gap: space.sm, paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: space.lg, borderTopWidth: StyleSheet.hairlineWidth },
 });
