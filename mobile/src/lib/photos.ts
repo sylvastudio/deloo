@@ -21,7 +21,8 @@ export async function takePhoto(source: 'camera' | 'library'): Promise<Photo | n
   const a = res.assets[0];
   const longest = Math.max(a.width, a.height);
   const ctx = ImageManipulator.manipulate(a.uri);
-  if (longest > 1280) ctx.resize(a.width >= a.height ? { width: 1280, height: null } : { width: null, height: 1280 });
+  // Both sides given: the web build treats a null side as 0 and throws.
+  if (longest > 1280) ctx.resize({ width: Math.round((a.width * 1280) / longest), height: Math.round((a.height * 1280) / longest) });
   const image = await ctx.renderAsync();
   const saved = await image.saveAsync({ format: SaveFormat.JPEG, compress: 0.7, base64: true });
   return { uri: saved.uri, base64: saved.base64 ?? '', width: saved.width, height: saved.height };
@@ -61,10 +62,42 @@ export async function shootEvidencePhoto(): Promise<Evidence | null> {
   const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1, allowsEditing: false, exif: false, cameraType: ImagePicker.CameraType.back });
   if (res.canceled || !res.assets?.[0]) return null;
   const a = res.assets[0];
+  if (Platform.OS === 'web') {
+    // Shrinking can fail on odd files; the original photo is still good evidence, just bigger.
+    try { return await shrinkOnWeb(a.uri); } catch { return { uri: a.uri, mediaType: 'photo', width: a.width, height: a.height }; }
+  }
   const ctx = ImageManipulator.manipulate(a.uri);
-  if (Math.max(a.width, a.height) > 1600) ctx.resize(a.width >= a.height ? { width: 1600, height: null } : { width: null, height: 1600 });
+  if (Math.max(a.width, a.height) > MAX_SIDE) ctx.resize(a.width >= a.height ? { width: MAX_SIDE, height: null } : { width: null, height: MAX_SIDE });
   const saved = await (await ctx.renderAsync()).saveAsync({ format: SaveFormat.JPEG, compress: 0.7 });
   return { uri: saved.uri, mediaType: 'photo', width: saved.width, height: saved.height };
+}
+
+const MAX_SIDE = 1600;
+
+/**
+ * Web: shrink with the browser's own canvas scaling. expo-image-manipulator's web resize treats a null
+ * side as 0 (so it threw on every photo) and resamples in JavaScript, which takes many seconds on a
+ * phone for a 12 MP photo.
+ */
+function shrinkOnWeb(uri: string): Promise<Evidence> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.naturalWidth * scale);
+      canvas.height = Math.round(img.naturalHeight * scale);
+      const g = canvas.getContext('2d');
+      if (!g) return reject(new Error('no canvas'));
+      g.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        if (!blob) return reject(new Error('no blob'));
+        resolve({ uri: URL.createObjectURL(blob), mediaType: 'photo', width: canvas.width, height: canvas.height });
+      }, 'image/jpeg', 0.7);
+    };
+    img.onerror = () => reject(new Error('unreadable photo'));
+    img.src = uri;
+  });
 }
 
 /** A short power-on video (≤15 s, medium quality). On the web the length limit isn't enforced (file input). */
