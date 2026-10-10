@@ -142,7 +142,7 @@ export default function Ask() {
       title = 'Any moving shots?';
       helper = 'Walking, following someone, smooth tracking shots.';
       body = <>
-        <Tile icon="sparkles" title="Yes, smooth moving shots" description="We’ll add a gimbal" selected={a.movement === true} onPress={() => pick({ movement: true })} />
+        <Tile icon="gimbal" title="Yes, smooth moving shots" description="We’ll add a gimbal" selected={a.movement === true} onPress={() => pick({ movement: true })} />
         <Tile icon="camera" title="No, on tripods" description="Cameras stay put" selected={a.movement === false} onPress={() => pick({ movement: false })} />
         {notSure({ movement: 'unsure' })}
       </>;
@@ -175,10 +175,10 @@ export default function Ask() {
     case 'budget':
       title = 'Any budget in mind?';
       body = <>
-        <Tile icon="sparkles" title="Show me options" description="See Good, Better and Best, then decide" selected={a.budget === 'options'} onPress={() => pick({ budget: 'options' as Budget })} />
-        <Tile icon="minus" title="Keep it lean" description="The minimum that works well" selected={a.budget === 'low'} onPress={() => pick({ budget: 'low' })} />
-        <Tile icon="check" title="Middle of the road" description="What most shoots like yours choose" selected={a.budget === 'mid'} onPress={() => pick({ budget: 'mid' })} />
-        <Tile icon="star" title="Make it cinematic" description="Full-frame cameras and the best light" selected={a.budget === 'high'} onPress={() => pick({ budget: 'high' })} />
+        <Tile title="Show me options" description="See Good, Better and Best, then decide" selected={a.budget === 'options'} onPress={() => pick({ budget: 'options' as Budget })} />
+        <Tile title="Keep it lean" description="The minimum that works well" selected={a.budget === 'low'} onPress={() => pick({ budget: 'low' })} />
+        <Tile title="Middle of the road" description="What most shoots like yours choose" selected={a.budget === 'mid'} onPress={() => pick({ budget: 'mid' })} />
+        <Tile title="Make it cinematic" description="Full-frame cameras and the best light" selected={a.budget === 'high'} onPress={() => pick({ budget: 'high' })} />
       </>;
       break;
   }

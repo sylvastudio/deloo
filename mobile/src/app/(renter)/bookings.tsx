@@ -103,7 +103,7 @@ function BookingCard({ b, waiting }: { b: Booking; waiting: number }) {
         {cover?.items?.photos[0] ? (
           <Image source={{ uri: itemPhotoUrl(cover.items.photos[0]) }} style={[styles.thumb, { backgroundColor: '#fff', borderColor: c.line }]} contentFit="contain" />
         ) : (
-          <View style={[styles.thumb, styles.art, { backgroundColor: c.lagoonTint, borderColor: c.line }]}><Icon name={categoryIcon(cover?.items?.category_key ?? '')} size={24} color={c.lagoon} /></View>
+          <View style={[styles.thumb, styles.art, { borderWidth: 0 }]}><Icon name={categoryIcon(cover?.items?.category_key ?? '')} size={24} color={c.slate} /></View>
         )}
         {b.booking_items.length > 1 ? (
           <View style={[styles.more, { backgroundColor: c.ink }]}><Text variant="caption" style={{ color: c.paper }}>+{b.booking_items.length - 1}</Text></View>

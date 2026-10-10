@@ -214,9 +214,7 @@ export default function Review() {
             );
           })}
           {draft.notIncluded?.length ? (
-            <View style={[styles.note, { backgroundColor: c.marigoldTint }]}>
-              <Text variant="caption">Not included: {draft.notIncluded.map((x) => `${x.label}${x.reason === 'not_stocked' ? ' (we don’t stock it yet)' : ' (booked on your dates)'}`).join(', ')}.</Text>
-            </View>
+            <Text variant="caption" tone="slate">Not included: {draft.notIncluded.map((x) => `${x.label}${x.reason === 'not_stocked' ? ' (we don’t stock it yet)' : ' (booked on your dates)'}`).join(', ')}.</Text>
           ) : null}
           {/* Back to the Gear tab; the bag (this draft) stays as it is. */}
           {!held ? (
@@ -429,7 +427,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   actions: { flexDirection: 'row', flexWrap: 'wrap', marginLeft: -space.xl },
-  note: { borderRadius: radius.md, padding: space.md },
   addMore: { flexDirection: 'row', alignItems: 'center', gap: space.xs, alignSelf: 'flex-start', paddingTop: space.xs },
   gapOption: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: space.sm },
   divider: { height: StyleSheet.hairlineWidth, marginVertical: space.xs },

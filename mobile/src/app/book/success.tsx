@@ -156,12 +156,14 @@ export default function Success() {
           </Text>
           <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
             <Text variant="bodyStrong">What happens next</Text>
-            {steps.map((s, i) => (
-              <View key={s} style={styles.step}>
-                <View style={[styles.num, { backgroundColor: c.lagoonTint }]}><Text variant="label" tone="lagoon">{i + 1}</Text></View>
-                <Text variant="caption" style={{ flex: 1 }}>{s}</Text>
-              </View>
-            ))}
+            <View accessibilityRole="list" style={{ gap: space.sm }}>
+              {steps.map((s, i) => (
+                <View key={s} style={styles.step}>
+                  <Text variant="caption" tone="slate" style={styles.num}>{i + 1}.</Text>
+                  <Text variant="caption" style={{ flex: 1 }}>{s}</Text>
+                </View>
+              ))}
+            </View>
             <Button kind="secondary" title="Add to calendar" icon={<Icon name="calendar" />} onPress={addToCalendar}
               accessibilityHint={isPickup ? 'Pickup day and return morning' : 'Delivery day and return morning'} />
             {calNote ? <Text variant="caption" tone="slate">{calNote}</Text> : null}
@@ -181,7 +183,7 @@ const styles = StyleSheet.create({
   body: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: space.lg, padding: space.xl },
   badge: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center' },
   card: { alignSelf: 'stretch', borderRadius: radius.lg, borderWidth: 1, padding: space.lg, gap: space.md },
-  step: { flexDirection: 'row', gap: space.md, alignItems: 'center' },
-  num: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  step: { flexDirection: 'row', gap: space.sm, alignItems: 'flex-start' },
+  num: { minWidth: 16 },
   footer: { padding: space.xl, gap: space.sm },
 });

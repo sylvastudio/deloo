@@ -14,7 +14,7 @@ export default function RenterTabs() {
     <NativeTabs backgroundColor={c.surface} tintColor={c.lagoon} indicatorColor={c.lagoonTint} labelStyle={{ color: c.slate }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Plan</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf={{ default: 'sparkles', selected: 'sparkles' }} md="auto_awesome" />
+        <NativeTabs.Trigger.Icon sf={{ default: 'list.bullet.clipboard', selected: 'list.bullet.clipboard.fill' }} md="checklist" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="explore">
         <NativeTabs.Trigger.Label>Gear</NativeTabs.Trigger.Label>

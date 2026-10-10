@@ -192,7 +192,6 @@ export default function Tracker() {
 
           {b.rider_name && (b.status === 'out_for_delivery' || stage === 'return_due') ? (
             <View style={[styles.card, styles.row, { backgroundColor: c.surface, borderColor: c.line }]}>
-              <View style={[styles.avatar, { backgroundColor: c.lagoonTint }]}><Icon name="truck" color={c.lagoon} /></View>
               <View style={{ flex: 1 }}>
                 <Text variant="bodyStrong">{b.rider_name}</Text>
                 <Text variant="caption" tone="slate">Your rider{b.rider_phone ? ` · ${b.rider_phone}` : ''}</Text>
@@ -214,7 +213,7 @@ export default function Tracker() {
             <View key={i.id} style={styles.row}>
               {i.items?.photos[0] ? (
                 <Image source={{ uri: itemPhotoUrl(i.items.photos[0]) }} style={[styles.thumb, { backgroundColor: '#fff' }]} contentFit="contain" />
-              ) : <View style={[styles.thumb, styles.center, { backgroundColor: c.lagoonTint }]}><Icon name={categoryIcon(i.items?.category_key ?? '')} color={c.lagoon} /></View>}
+              ) : <View style={[styles.thumb, styles.center]}><Icon name={categoryIcon(i.items?.category_key ?? '')} color={c.slate} /></View>}
               <View style={{ flex: 1, gap: 2 }}>
                 <Text variant="bodyStrong">{i.item_name}</Text>
                 <Text variant="caption" tone="slate">
@@ -417,7 +416,6 @@ const styles = StyleSheet.create({
   card: { borderRadius: radius.lg, borderWidth: 1, padding: space.lg, gap: space.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   center: { alignItems: 'center', justifyContent: 'center' },
-  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   iconBtn: { width: touch, height: touch, borderRadius: touch / 2, alignItems: 'center', justifyContent: 'center' },
   thumb: { width: 52, height: 52, borderRadius: radius.md },
   shot: { width: 84, height: 84, borderRadius: radius.md },

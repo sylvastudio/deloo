@@ -16,7 +16,7 @@ import { Text } from '@/ui/text';
  * shared link), only Gear shows, with a Sign in button; the other tabs go to Welcome.
  */
 const TABS: { name: string; title: string; icon: IconName }[] = [
-  { name: 'index', title: 'Plan', icon: 'sparkles' },
+  { name: 'index', title: 'Plan', icon: 'plan' },
   { name: 'explore', title: 'Gear', icon: 'camera' },
   { name: 'bookings', title: 'Bookings', icon: 'calendar' },
   { name: 'me', title: 'Account', icon: 'person' },

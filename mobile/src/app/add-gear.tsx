@@ -212,7 +212,7 @@ export default function AddGear() {
         </>}
 
         {step === 'price' && <>
-          <View style={styles.titleRow}><Icon name={category ? categoryIcon(category) : 'sparkles'} size={28} color={c.lagoon} /><Text variant="title" style={{ flex: 1 }} numberOfLines={2}>{name}</Text></View>
+          <View style={styles.titleRow}><Icon name={category ? categoryIcon(category) : 'box'} size={28} color={c.lagoon} /><Text variant="title" style={{ flex: 1 }} numberOfLines={2}>{name}</Text></View>
           <Field label="Day rate (₦)" value={rate} onChangeText={(t) => setRate(t.replace(/[^\d,]/g, ''))} keyboardType="number-pad" placeholder="25,000"
             hint={market ? `Similar gear on Deloo rents for ${naira(market.low, true)}–${naira(market.high, true)} a day.` : 'What you’d charge for one day.'} />
           <Field label="Deposit (₦)" value={deposit} onChangeText={(t) => setDeposit(t.replace(/[^\d,]/g, ''))} keyboardType="number-pad" placeholder="50,000"

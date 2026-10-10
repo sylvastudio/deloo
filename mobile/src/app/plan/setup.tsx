@@ -17,7 +17,7 @@ import {
 } from '@/lib/plan-result';
 import { fitBudget, resolveAnswers, RULES_VERSION, type Choices, type FitResult } from '@/planner';
 import type { Group, Level } from '@/planner/types';
-import { radius, space, type } from '@/theme/tokens';
+import { fonts, radius, space, type } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Button } from '@/ui/button';
 import { Badge, Chip } from '@/ui/chip';
@@ -171,7 +171,7 @@ export default function Setup() {
           {fit && fit.result.level === level ? (
             <Notice tone={fit.result.fits ? 'tip' : 'warning'} icon={fit.result.fits ? 'check' : 'warning'}>
               <View style={{ gap: 4 }}>
-                <Text variant="caption" style={{ fontWeight: '600' }}>
+                <Text variant="caption" style={{ fontFamily: fonts.bodyBold }}>
                   {!fit.result.changes.length && fit.result.fits ? `Already within ${naira(fit.result.budgetKobo, true)}. Nothing to change.`
                     : fit.result.fits ? `Rental is now ${naira(fit.result.rentalKobo, true)}, within your ${naira(fit.result.budgetKobo, true)}.`
                     : `The leanest we can do is ${naira(fit.result.rentalKobo, true)} rental, ${naira(fit.result.rentalKobo - fit.result.budgetKobo, true)} over your ${naira(fit.result.budgetKobo, true)}.`}
@@ -267,7 +267,7 @@ function LineCard({ l, open, onToggle, onRemove }: { l: ChosenLine; open: boolea
           <Image source={{ uri: itemPhotoUrl(l.chosen[0].photo) }} style={[styles.lineIcon, { backgroundColor: '#fff', borderWidth: StyleSheet.hairlineWidth, borderColor: c.line }]}
             contentFit="contain" transition={150} accessibilityIgnoresInvertColors />
         ) : (
-          <View style={[styles.lineIcon, { backgroundColor: c.lagoonTint }]}><Icon name={categoryIcon(l.line.category)} color={c.lagoon} /></View>
+          <View style={styles.lineIcon}><Icon name={categoryIcon(l.line.category)} color={c.slate} /></View>
         )}
         <View style={{ flex: 1, gap: 2 }}>
           <Text variant="bodyStrong">{l.removed ? `Removed: ${needLabel(l.line)}` : lineTitle(l.line, l.chosen)}</Text>
@@ -282,7 +282,7 @@ function LineCard({ l, open, onToggle, onRemove }: { l: ChosenLine; open: boolea
         </View>
         {price ? <Text variant="bodyStrong">{naira(price, true)}</Text> : null}
       </View>
-      {open ? <Text variant="caption" style={[styles.why, { backgroundColor: c.lagoonTint }]}>{l.line.reason}</Text> : null}
+      {open ? <Text variant="caption" tone="slate" style={styles.why}>{l.line.reason}</Text> : null}
       {l.removed && l.line.essential ? (
         <Text variant="caption" tone="red">
           {l.line.category === 'camera' ? 'Without a camera, the lenses and gimbal have nothing to go on. Remove those too, or add it back.'
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   lineTop: { flexDirection: 'row', gap: space.md, alignItems: 'flex-start' },
   lineIcon: { width: 44, height: 44, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
-  why: { padding: space.md, borderRadius: radius.md },
+  why: { paddingLeft: 56 },
   lineActions: { flexDirection: 'row', gap: space.xl, paddingLeft: 56 },
   footer: { gap: space.sm, paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: space.lg, borderTopWidth: StyleSheet.hairlineWidth },
   footerRow: { flexDirection: 'row', gap: space.md },

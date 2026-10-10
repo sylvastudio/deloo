@@ -8,7 +8,7 @@ export default function Earnings() {
     <Screen title="Earnings">
       <Card>
         <Text variant="label" tone="slate">Paid out this month</Text>
-        <Text variant="number">{naira(0)}</Text>
+        <Text variant="heading">{naira(0)}</Text>
         <Text variant="caption" tone="slate">You’re paid after each return is checked. Deloo’s commission is shown on every booking.</Text>
       </Card>
     </Screen>

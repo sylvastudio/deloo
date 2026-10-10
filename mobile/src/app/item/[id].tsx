@@ -225,7 +225,7 @@ export default function ItemDetail() {
           {item.photos[0] ? (
             <Image source={{ uri: itemPhotoUrl(item.photos[0]) }} style={[styles.photo, { backgroundColor: '#fff' }]} contentFit="contain" transition={150} accessibilityLabel={displayName(item.name)} />
           ) : (
-            <View style={[styles.photo, styles.art, { backgroundColor: c.lagoonTint }]}><Icon name={categoryIcon(item.category_key)} size={72} color={c.lagoon} /></View>
+            <View style={[styles.photo, styles.art, { backgroundColor: c.raised }]}><Icon name={categoryIcon(item.category_key)} size={72} color={c.slate} /></View>
           )}
           {item.photos.length > 1 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }}>
@@ -394,7 +394,7 @@ function PairCard({ item, reason, action, href, onAdd }: { item: ShelfItem; reas
             <Image source={{ uri: itemPhotoUrl(item.photos[0]) }} style={[StyleSheet.absoluteFill, { backgroundColor: '#fff' }]} contentFit="contain" transition={150} />
           </View>
         ) : (
-          <View style={[styles.pairArt, styles.art, { backgroundColor: c.lagoonTint }]}><Icon name={categoryIcon(item.category_key)} size={32} color={c.lagoon} /></View>
+          <View style={[styles.pairArt, styles.art, { backgroundColor: c.raised }]}><Icon name={categoryIcon(item.category_key)} size={32} color={c.slate} /></View>
         )}
         <Text variant="label" numberOfLines={2}>{item.name}</Text>
         <Text variant="bodyStrong">{naira(item.day_rate_kobo)}<Text variant="caption" tone="slate"> /day</Text></Text>

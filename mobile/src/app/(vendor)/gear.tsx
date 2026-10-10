@@ -56,7 +56,7 @@ export default function Gear() {
             const units = item.units[0]?.count ?? 0;
             return (
               <View style={[styles.row, { backgroundColor: c.surface, borderColor: c.line }]}>
-                <View style={[styles.icon, { backgroundColor: c.lagoonTint }]}><Icon name={categoryIcon(item.category_key)} size={24} color={c.lagoon} /></View>
+                <Icon name={categoryIcon(item.category_key)} size={24} color={c.slate} />
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text variant="bodyStrong" numberOfLines={1}>{displayName(item.name)}</Text>
                   <Text variant="caption" tone="slate">{units} {units === 1 ? 'unit' : 'units'} · {naira(item.day_rate_kobo)}/day</Text>
@@ -75,5 +75,4 @@ const styles = StyleSheet.create({
   list: { padding: space.xl, gap: space.sm },
   header: { gap: space.xs, marginBottom: space.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth },
-  icon: { width: 48, height: 48, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
 });
