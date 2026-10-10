@@ -10,7 +10,7 @@ const SHOT: Record<string, string> = {
 
 /**
  * Every handover with its photos and videos (signed URLs, valid an hour), capture/upload times, who
- * did it and any problem note. Used for insurance and claims, so nothing is hidden or summarised away.
+ * did it and any problem note. Used for damage claims, so nothing is hidden or summarised away.
  */
 export function EvidenceGallery({ evidence, unitLabels, bookingRefs }: {
   evidence: Evidence[]; unitLabels: Map<string, string>; bookingRefs?: Map<string, { ref: string; id: string }>;

@@ -138,7 +138,7 @@ export interface CatalogueItem {
 export interface MatchOptions {
   area?: Maybe<string>;
   days: number;
-  /** Deloo Protection fee as a share of rental (PRD §4.7: 5–10%). Default 0.07. */
+  /** A flat Protection rate for every item (tests). Default: by gear, see planner/protection.ts. */
   protectionRate?: number;
   /** Gear the renter named (Answers.pinnedNames): a matching free listing fills its category's line first. */
   pinned?: string[];

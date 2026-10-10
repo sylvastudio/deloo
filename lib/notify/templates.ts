@@ -65,7 +65,8 @@ export function compose(r: NotifyRow): Message {
         pickup
           ? `Pick it up on ${day}${slot ? `, ${slot}` : ""}${r.pickup_address ? ` at ${r.pickup_address}` : ""}. Bring a valid ID.`
           : `We deliver on ${day}${slot ? `, ${slot}` : ""}.`,
-        `Your ${naira(r.deposit_kobo)} deposit comes back within 48 hours after we check the gear.`,
+        // No deposit since 0019; a booking made before then still mentions its own.
+        ...(r.deposit_kobo > 0 ? [`Your ${naira(r.deposit_kobo)} deposit comes back within 48 hours after we check the gear.`] : []),
         `Questions? Reply on ${support}.`,
       ];
       break;

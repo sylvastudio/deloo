@@ -14,10 +14,10 @@ const SECTIONS: { title: string; icon: IconName; tone: 'green' | 'red' | 'ink'; 
     title: 'Not covered', icon: 'close', tone: 'red',
     lines: ['Careless loss, like leaving it in a taxi', 'Theft without a police report', 'Water damage', 'Missing accessories: batteries, chargers, caps, cables'],
   },
-  { title: 'What you pay', icon: 'money', tone: 'ink', lines: ['Your deposit is used first.', 'Deloo Protection pays most of the rest, up to a limit.'] },
+  { title: 'What you pay', icon: 'money', tone: 'ink', lines: ['Protection pays most of the repair or replacement cost of accidental damage, up to a limit.', 'We show you before-and-after photos and you can reply before anything is charged.'] },
   {
     title: 'How claims work', icon: 'camera', tone: 'ink',
-    lines: ['We show you the before-and-after photos.', 'You can reply before anything is charged.'],
+    lines: ['If gear is stolen, report it to the police and send us the report.', 'Careless loss, or theft without a police report, is charged at the gear’s replacement value.'],
   },
 ];
 
@@ -35,7 +35,7 @@ export function CoverageSheet({ visible, onClose }: { visible: boolean; onClose:
           <ScrollView contentContainerStyle={{ gap: space.lg }}>
             <View style={{ gap: space.xs }}>
               <Text variant="heading" accessibilityRole="header">What’s covered</Text>
-              <Text variant="caption" tone="slate">Deloo Protection is part of every booking.</Text>
+              <Text variant="caption" tone="slate">Deloo Protection (damage cover) is part of every booking: 10–20% of the rental, depending on the gear (cameras 20%, lenses and lights 15%, audio and stands 10%).</Text>
             </View>
             {SECTIONS.map((s) => (
               <View key={s.title} style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>

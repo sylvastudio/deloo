@@ -18,6 +18,7 @@ import type {
   SpecNeed,
   Unmet,
 } from './types';
+import { protectionRateFor } from './protection';
 
 const HOUR_MS = 3600_000;
 const MAX_ALTERNATIVES = 6;
@@ -363,7 +364,6 @@ function words(parts: string[]): string {
 
 export function matchSetup(setup: Setup, catalogue: CatalogueItem[], opts: MatchOptions): SetupMatch {
   const days = Math.max(1, Math.ceil(opts.days || 1));
-  const rate = opts.protectionRate ?? 0.07;
   const area = opts.area && opts.area !== 'unsure' && opts.area.trim() ? opts.area.trim() : null;
   const ctx: Ctx = {
     catalogue,
@@ -419,7 +419,8 @@ export function matchSetup(setup: Setup, catalogue: CatalogueItem[], opts: Match
 
   const rentalKobo = lines.reduce((s, m) => s + m.rentalKobo, 0);
   const depositKobo = lines.reduce((s, m) => s + m.depositKobo, 0);
-  const protectionKobo = Math.round(rentalKobo * rate);
+  // Per item by gear (cameras cost more to cover); a flat opts.protectionRate overrides it (tests).
+  const protectionKobo = lines.reduce((s, m) => s + m.offers.reduce((t, o) => t + Math.round(o.rentalKobo * (opts.protectionRate ?? protectionRateFor(o.category))), 0), 0);
 
   // Technician: on and locked for listings marked technician-required.
   const forced: string[] = [];

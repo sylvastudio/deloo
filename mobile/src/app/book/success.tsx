@@ -112,9 +112,11 @@ export default function Success() {
   const isPickup = b?.delivery === 'pickup';
   const day1 = days ? dayLabel(days.first) : 'your first day';
   const slot = slotPhrase(b?.delivery_slot);
+  // Bookings made before 0019 still carry a refundable deposit; new ones don't.
+  const hasDeposit = (b?.deposit_kobo ?? 0) > 0;
   const steps = isPickup
-    ? [`Pick it up on ${day1}${slot ? `, ${slot}` : ''}${pickup ? ` at ${pickup}` : ''}. Bring a valid ID.`, 'We’ll WhatsApp you the evening before.', 'Return it the morning after your last day. Your deposit comes back within 48 hours after we check the gear.']
-    : [`We deliver on ${day1}${slot ? `, ${slot}` : ''}. Someone needs to be at the address with their phone on. The rider calls before coming.`, 'We’ll WhatsApp you the evening before.', 'Handover photos take about 3 minutes. We collect the gear the morning after your last day; your deposit comes back within 48 hours after we check it.'];
+    ? [`Pick it up on ${day1}${slot ? `, ${slot}` : ''}${pickup ? ` at ${pickup}` : ''}. Bring a valid ID.`, 'We’ll WhatsApp you the evening before.', `Return it the morning after your last day.${hasDeposit ? ' Your deposit comes back within 48 hours after we check the gear.' : ''}`]
+    : [`We deliver on ${day1}${slot ? `, ${slot}` : ''}. Someone needs to be at the address with their phone on. The rider calls before coming.`, 'We’ll WhatsApp you the evening before.', `Handover photos take about 3 minutes. We collect the gear the morning after your last day${hasDeposit ? '; your deposit comes back within 48 hours after we check it.' : '.'}`];
 
   async function addToCalendar() {
     if (!b || !days) return;
@@ -150,7 +152,7 @@ export default function Success() {
         <Text variant="title" style={{ textAlign: 'center' }}>You’re booked</Text>
         {!b || !days ? <Skeleton style={{ height: 80, alignSelf: 'stretch' }} /> : <>
           <Text tone="slate" style={{ textAlign: 'center' }}>
-            {b.ref} · {rangeLabel(days.first, days.last)} · {daysText(b.days)}{'\n'}Paid {naira(paid)}, including a {naira(b.deposit_kobo)} refundable deposit.
+            {b.ref} · {rangeLabel(days.first, days.last)} · {daysText(b.days)}{'\n'}Paid {naira(paid)}{b.deposit_kobo > 0 ? `, including a ${naira(b.deposit_kobo)} refundable deposit` : ', including Deloo Protection (damage cover)'}.
           </Text>
           <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
             <Text variant="bodyStrong">What happens next</Text>

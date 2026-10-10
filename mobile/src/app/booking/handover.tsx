@@ -109,7 +109,7 @@ export default function Handover() {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}><TopBar title="Handover photos" />
         <EmptyState icon="check" title="Saved, thank you"
-          body={`${kind === 'delivery' ? 'The rider can go now. Your photos are on your booking.' : 'We’ll check the gear and send your deposit within 48 hours.'}\n\n${left ? `${waitingText(left)}. We’ll keep trying, even if you close the app.` : 'All uploaded.'}`}
+          body={`${kind === 'delivery' ? 'The rider can go now. Your photos are on your booking.' : (b?.deposit_kobo ?? 0) > 0 ? 'We’ll check the gear and send your deposit within 48 hours.' : 'We’ll check the gear and let you know when it’s all done.'}\n\n${left ? `${waitingText(left)}. We’ll keep trying, even if you close the app.` : 'All uploaded.'}`}
           action="Back to booking" onAction={() => router.back()} />
       </SafeAreaView>
     );

@@ -13,17 +13,18 @@ import { TopBar } from '@/ui/top-bar';
 /** Answers to what renters ask most. Keep in step with deloo.space/terms and the cancellation RPC (0011). */
 const FAQ: { q: string; a: string[] }[] = [
   {
-    q: 'When do I get my deposit back?',
+    q: 'Is there a deposit?',
     a: [
-      'Within 48 hours of the gear coming back and passing our check.',
-      'If you paid by card, your bank may take a few working days to show the refund.',
+      'No. You pay the rental, Deloo Protection (damage cover) and delivery if you choose it. Nothing is held back, and there’s nothing to wait for after your rental.',
+      'Booked before we stopped taking deposits? Yours comes back within 48 hours of the gear passing its check. Card refunds can take a few working days to show.',
     ],
   },
   {
     q: 'What does Deloo Protection cover?',
     a: [
-      'Protection is a damage waiver. If something gets damaged during your rental, your deposit is used first, then Protection pays most of the rest, up to a limit.',
-      'It doesn’t cover loss or damage from carelessness, or theft without a police report.',
+      'Protection is part of every booking. It costs 10–20% of the rental, depending on the gear (cameras 20%, lenses and lights 15%, audio and stands 10%).',
+      'It covers accidental damage during your rental, up to a limit: Protection pays most of the repair or replacement cost.',
+      'It doesn’t cover careless loss, theft without a police report, water damage or missing accessories. Those are charged at the gear’s replacement value.',
     ],
   },
   {
@@ -37,8 +38,8 @@ const FAQ: { q: string; a: string[] }[] = [
     q: 'Can I cancel?',
     a: [
       'More than 72 hours before your first day: you get everything back.',
-      'Between 24 and 72 hours before: half the rental back, plus your deposit, delivery and Protection.',
-      'Less than 24 hours before: your deposit, delivery and Protection back.',
+      'Between 24 and 72 hours before: half the rental back, plus delivery and Protection.',
+      'Less than 24 hours before: delivery and Protection back.',
       'Changed your mind straight away? Cancel within 1 hour of paying and get a full refund, as long as your first day is more than a day away.',
     ],
   },

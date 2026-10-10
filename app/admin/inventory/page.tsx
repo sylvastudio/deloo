@@ -4,14 +4,14 @@ import { ActionForm, Submit } from "@/components/admin/action-form";
 import { Chip, Empty, ErrorBox, PageHead } from "@/components/admin/ui";
 import { pageStaff } from "@/lib/admin/auth";
 import { itemPhotoUrl, safeSearch } from "@/lib/admin/data";
-import { naira } from "@/lib/admin/format";
+import { itemProtectionPct, naira } from "@/lib/admin/format";
 import { can } from "@/lib/admin/roles";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Inventory" };
 
 type Row = {
-  id: string; name: string; brand: string; model: string; category_key: string; day_rate_kobo: number; deposit_kobo: number;
+  id: string; name: string; brand: string; model: string; category_key: string; day_rate_kobo: number; protection_rate: number | null;
   replacement_value_kobo: number; photos: string[]; active: boolean; units: { id: string; status: string }[];
 };
 
@@ -22,7 +22,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
   const cat = String(sp.cat ?? "");
   const db = await createClient();
   let query = db.from("items")
-    .select("id, name, brand, model, category_key, day_rate_kobo, deposit_kobo, replacement_value_kobo, photos, active, units(id, status)")
+    .select("id, name, brand, model, category_key, day_rate_kobo, protection_rate, replacement_value_kobo, photos, active, units(id, status)")
     .order("category_key").order("name");
   if (q) query = query.or(`name.ilike.%${q}%,brand.ilike.%${q}%,model.ilike.%${q}%`);
   if (cat) query = query.eq("category_key", cat);
@@ -56,7 +56,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
       ) : (
         <div className="tbl-wrap">
           <table className="tbl">
-            <thead><tr><th></th><th>Item</th><th>Category</th><th className="num">Day rate</th><th className="num">Deposit</th><th className="num">Replacement</th><th className="num">Units</th><th>Listed</th></tr></thead>
+            <thead><tr><th></th><th>Item</th><th>Category</th><th className="num">Day rate</th><th className="num">Protection</th><th className="num">Replacement</th><th className="num">Units</th><th>Listed</th></tr></thead>
             <tbody>
               {rows.map((i) => {
                 const active = i.units.filter((u) => u.status === "active").length;
@@ -71,7 +71,7 @@ export default async function InventoryPage({ searchParams }: { searchParams: Pr
                     <td><Link className="rowlink" href={`/admin/inventory/${i.id}`}>{i.name}</Link><div className="muted small">{[i.brand, i.model].filter(Boolean).join(" ")}</div></td>
                     <td className="small">{label.get(i.category_key) ?? i.category_key}</td>
                     <td className="num">{naira(i.day_rate_kobo)}</td>
-                    <td className="num">{naira(i.deposit_kobo)}</td>
+                    <td className="num">{itemProtectionPct(i.protection_rate, i.category_key)}%</td>
                     <td className="num">{naira(i.replacement_value_kobo)}</td>
                     <td className="num">{active}/{i.units.length}{active === 0 && <div><Chip tone="bad">none free</Chip></div>}</td>
                     <td>

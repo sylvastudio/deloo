@@ -65,7 +65,7 @@ export default function Cancel() {
       ) : !q.can_cancel ? (
         <Notice tone="warning">Your gear is already on its way or with you, so this can’t be cancelled in the app. Message us on WhatsApp.</Notice>
       ) : <>
-        {/* A paid booking always gets at least the deposit back, so ₦0 means nothing was paid yet. */}
+        {/* A paid booking always gets at least Protection (and any old deposit) back, so ₦0 means nothing was paid yet. */}
         {q.refund_kobo === 0 ? (
           <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
             <Text variant="bodyStrong">Nothing paid yet</Text>
@@ -78,8 +78,8 @@ export default function Cancel() {
             <Text variant="caption" tone="slate">
               {q.hours_to_start > 72
                 ? 'Everything, because it’s more than 72 hours before your first day.'
-                : q.hours_to_start > 24 ? 'Your deposit, delivery and protection in full, plus half the rental (24–72 hours before your first day).'
-                : 'Your deposit, delivery and protection. The rental isn’t refunded within 24 hours of your first day.'}
+                : q.hours_to_start > 24 ? 'Delivery and Protection in full (and your deposit, if your booking had one), plus half the rental (24–72 hours before your first day).'
+                : 'Delivery and Protection (and your deposit, if your booking had one). The rental isn’t refunded within 24 hours of your first day.'}
             </Text>
           </View>
         )}

@@ -13,6 +13,7 @@ export {
   fmt,
 } from './rules';
 export type { ResolvedAnswers } from './rules';
+export { protectionRateFor } from './protection';
 export { matchSetup, rentalDays, meetsSpec, pinnedItems } from './match';
 export { fitBudget, swapTarget, swapId, chosenFor, rentalOf } from './fit';
 export type { Choices, FitResult } from './fit';

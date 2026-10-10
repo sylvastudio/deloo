@@ -57,7 +57,7 @@ function stageDetail(b: BookingDetail, stage: Stage, pickup: boolean): string {
     case 'in_use': return `Enjoy your shoot. Return due ${dayLabel(last)}${b.collection_slot ? `, ${b.collection_slot}` : ''}.`;
     case 'return_due': return pickup ? 'Bring it back to our base tomorrow morning.' : `We collect it the morning after ${dayLabel(last)}.`;
     case 'collected': return 'Back with us. We’re checking it over.';
-    case 'inspected': return 'All checked. We’re sending your deposit within 48 hours.';
+    case 'inspected': return b.deposit_kobo > 0 ? 'All checked. We’re sending your deposit within 48 hours.' : 'All checked. Thanks for looking after it.';
     case 'closed': return 'All done. Thanks for renting with Deloo.';
     case 'disputed': return 'We found something during the check. We’ll call you to go through it with photos.';
     default: return '';
@@ -218,7 +218,7 @@ export default function Tracker() {
               <View style={{ flex: 1, gap: 2 }}>
                 <Text variant="bodyStrong">{i.item_name}</Text>
                 <Text variant="caption" tone="slate">
-                  {naira(i.rental_kobo)} · deposit {naira(i.deposit_kobo)}
+                  {naira(i.rental_kobo)}{i.deposit_kobo > 0 ? ` · deposit ${naira(i.deposit_kobo)}` : ''}
                   {['delivered', 'collected', 'inspected', 'closed', 'disputed'].includes(b.status) && i.units && (i.units.tag || i.units.serial)
                     ? ` · ${[i.units.tag, i.units.serial && `S/N ${i.units.serial}`].filter(Boolean).join(' · ')}` : ''}
                 </Text>
@@ -251,9 +251,9 @@ export default function Tracker() {
         <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
           <Text variant="label" tone="slate">PAYMENT</Text>
           <Money label="Rental" value={naira(b.rental_kobo)} />
-          <Money label="Deloo Protection" value={naira(b.protection_kobo)} />
+          <Money label="Deloo Protection (damage cover)" value={naira(b.protection_kobo)} />
           {b.delivery_kobo ? <Money label="Delivery and collection" value={naira(b.delivery_kobo)} /> : null}
-          <Money label="Refundable deposit" value={naira(b.deposit_kobo)} />
+          {b.deposit_kobo > 0 ? <Money label="Refundable deposit" value={naira(b.deposit_kobo)} /> : null}
           <View style={[styles.divider, { backgroundColor: c.line }]} />
           <Money label="Total" value={naira(b.total_kobo)} strong />
           {paid.map((p) => (
@@ -272,7 +272,7 @@ export default function Tracker() {
               ) : null}
             </View>
           ))}
-          {!b.refunds.some((r) => r.purpose === 'deposit') && PAIDISH.includes(b.status) ? (
+          {b.deposit_kobo > 0 && !b.refunds.some((r) => r.purpose === 'deposit') && PAIDISH.includes(b.status) ? (
             <Text variant="caption" tone="slate">Your deposit comes back within 48 hours after we check the gear, to the card or account you paid from.</Text>
           ) : null}
         </View>

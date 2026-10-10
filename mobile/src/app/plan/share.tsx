@@ -34,7 +34,7 @@ export default function ShareSetup() {
       items,
       '',
       `Total: ${naira(r.totalKobo)}`,
-      `(${naira(r.rentalKobo)} rental + ${naira(r.depositKobo)} refundable deposit + ${naira(r.protectionKobo)} protection)`,
+      `(${naira(r.rentalKobo)} rental + ${naira(r.protectionKobo)} Deloo Protection (damage cover)${r.depositKobo ? ` + ${naira(r.depositKobo)} refundable deposit` : ''})`,
       r.match.totals.technicianNote ?? '',
     ].filter((x, i, all) => x !== '' || all[i - 1] !== '').join('\n').trim();
   }, [matches, draft]);

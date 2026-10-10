@@ -9,7 +9,7 @@ const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["lati
 
 export const metadata: Metadata = {
   title: "Deloo",
-  description: "Camera, light and sound gear for your shoot, delivered across Lagos. Rent by the day, refundable deposit, pay with Paystack.",
+  description: "Camera, light and sound gear for your shoot, delivered across Lagos. Rent by the day, no deposit, pay with Paystack.",
   appleWebApp: { capable: true, title: "Deloo", statusBarStyle: "default" },
   icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
 };

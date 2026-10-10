@@ -15,6 +15,7 @@ import { usePlan } from '@/lib/plan';
 import { rememberReturn } from '@/lib/return-to';
 import { useSession } from '@/lib/session';
 import { supabase } from '@/lib/supabase';
+import { protectionRateFor } from '@/planner';
 import { oftenBookedWith } from '@/planner/complements';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
@@ -23,6 +24,7 @@ import { Button } from '@/ui/button';
 import { Badge } from '@/ui/chip';
 import { addDays, dayCount, DateRangeCalendar, lagosToday } from '@/ui/date-range';
 import { EmptyState, Notice, Skeleton } from '@/ui/feedback';
+import { WhatsCovered } from '@/ui/coverage-sheet';
 import { categoryIcon, Icon } from '@/ui/icon';
 import { Stepper } from '@/ui/stepper';
 import { Text } from '@/ui/text';
@@ -240,7 +242,10 @@ export default function ItemDetail() {
           <View style={styles.priceRow}>
             <Text variant="number">{naira(item.day_rate_kobo)}</Text><Text tone="slate"> a day</Text>
           </View>
-          <Text variant="caption" tone="slate">Refundable deposit {naira(item.deposit_kobo)}{total > 1 ? ` each · ${total} in stock` : ''}. Back after we check the gear.</Text>
+          <Text variant="caption" tone="slate">
+            Deloo Protection: {Math.round(protectionRateFor(item.category_key) * 100)}% of the rental (damage cover){item.deposit_kobo > 0 ? ` · refundable deposit ${naira(item.deposit_kobo)}${total > 1 ? ' each' : ''}` : ''}{total > 1 ? ` · ${total} in stock` : ''}.
+          </Text>
+          <WhatsCovered />
 
           {figures(item.specs).length ? (
             <View style={styles.figures}>
@@ -345,7 +350,7 @@ export default function ItemDetail() {
           <View style={{ gap: 2 }}>
             <Text variant="bodyStrong">{rangeLabel(first!, last!)} · {daysText(n)}{qty > 1 ? ` · ${qty} units` : ''}</Text>
             <Text variant="caption" tone="slate">
-              {daysText(n)} × {naira(item.day_rate_kobo)}{qty > 1 ? ` × ${qty}` : ''} = {naira(item.day_rate_kobo * n * qty)} rental. Fees and deposit on the next step.
+              {daysText(n)} × {naira(item.day_rate_kobo)}{qty > 1 ? ` × ${qty}` : ''} = {naira(item.day_rate_kobo * n * qty)} rental. Protection and delivery on the next step.
             </Text>
             {fewest !== undefined && fewest <= qty && total > 1 ? <Badge label={fewest === 1 ? 'Last one on these days' : `Only ${fewest} free on these days`} status="limited" /> : null}
           </View>

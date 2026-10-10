@@ -21,7 +21,7 @@ export type Capability =
   | "notes.write"
   | "inventory.view"
   | "inventory.edit"     // items/units fields, photos, availability blocks
-  | "inventory.price"    // day rate, deposit, replacement value, retire/lose a unit, add items
+  | "inventory.price"    // day rate, protection rate, replacement value, retire/lose a unit, add items
   | "payments.view"
   | "payments.verify"    // re-check with Paystack
   | "refunds.process"

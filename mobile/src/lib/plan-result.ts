@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { matchSetup, rentalDays, sizeSetups, swapId, swapTarget } from '@/planner';
+import { matchSetup, protectionRateFor, rentalDays, sizeSetups, swapId, swapTarget } from '@/planner';
 import type { Alternative, Answers, CatalogueItem, CategoryKey, Level, LineMatch, Offer, SetupMatch } from '@/planner/types';
 import { addDays, lagosToday } from '@/ui/date-range';
 import { shootWindow } from './intake';
@@ -60,7 +60,8 @@ export function completeAnswers(a: Partial<Answers>): Answers {
 export type ChosenLine = LineMatch & { chosen: Offer[]; swappedTo?: Alternative; removed: boolean };
 export type Result = { match: SetupMatch; lines: ChosenLine[]; rentalKobo: number; depositKobo: number; protectionKobo: number; totalKobo: number };
 
-export const PROTECTION_RATE = 0.07;
+/** Shown before Review; the server's quote (supabase 0019) is what's charged. */
+export { protectionRateFor };
 
 
 /** Applies swaps (line key → alternative's item id) and removals, and recomputes the totals. */
@@ -72,7 +73,7 @@ export function applyChoices(match: SetupMatch, draft: Pick<Draft, 'swaps' | 're
   });
   const rentalKobo = lines.reduce((s, l) => s + l.chosen.reduce((t, o) => t + o.rentalKobo, 0), 0);
   const depositKobo = lines.reduce((s, l) => s + l.chosen.reduce((t, o) => t + o.depositKobo, 0), 0);
-  const protectionKobo = Math.round(rentalKobo * PROTECTION_RATE);
+  const protectionKobo = lines.reduce((s, l) => s + l.chosen.reduce((t, o) => t + Math.round(o.rentalKobo * protectionRateFor(o.category)), 0), 0);
   return { match, lines, rentalKobo, depositKobo, protectionKobo, totalKobo: rentalKobo + depositKobo + protectionKobo };
 }
 
@@ -94,7 +95,7 @@ export function usePlanResult(draft: Draft) {
   const matches = useMemo(() => {
     if (!catalogue) return null;
     const days = rentalDays(startsAt, endsAt);
-    return Object.fromEntries(setups.map((s) => [s.level, matchSetup(s, catalogue, { area: answers.area, days, protectionRate: PROTECTION_RATE, pinned: answers.pinnedNames })])) as Record<Level, SetupMatch>;
+    return Object.fromEntries(setups.map((s) => [s.level, matchSetup(s, catalogue, { area: answers.area, days, pinned: answers.pinnedNames })])) as Record<Level, SetupMatch>;
   }, [catalogue, setups, answers.area, answers.pinnedNames, startsAt, endsAt]);
 
   return { answers, setups, matches, datesKnown: !!(startsAt && endsAt), error, retry: () => { cache.clear(); setCatalogue(null); loadCatalogue(startsAt, endsAt).then(setCatalogue).catch((e: Error) => setError(e.message)); } };

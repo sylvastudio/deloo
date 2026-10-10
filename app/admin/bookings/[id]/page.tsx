@@ -44,6 +44,8 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
   ]);
 
   const items = (itemsRes.data ?? []) as (BookingItemRow & { units: { tag: string; serial: string } | { tag: string; serial: string }[] | null })[];
+  // No deposits since 0019; older bookings still show theirs.
+  const hasDeposit = Number(b.deposit_kobo) > 0 || items.some((i) => Number(i.deposit_kobo) > 0);
   const profile = profileRes.data as { full_name: string; phone: string; blocked: boolean } | null;
   const payments = (paymentsRes.data ?? []) as PaymentRow[];
   const refunds = (refundsRes.data ?? []) as RefundRow[];
@@ -184,7 +186,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
             {itemsRes.error ? <ErrorBox what="items" error={itemsRes.error.message} /> : !items.length ? <Empty>No items on this booking.</Empty> : (
               <div className="tbl-wrap">
                 <table className="tbl">
-                  <thead><tr><th>Item</th><th>Unit (tag · serial)</th><th className="num">Rate</th><th className="num">Rental</th><th className="num">Deposit</th>{canSwap && <th>Swap</th>}</tr></thead>
+                  <thead><tr><th>Item</th><th>Unit (tag · serial)</th><th className="num">Rate</th><th className="num">Rental</th>{hasDeposit && <th className="num">Deposit</th>}{canSwap && <th>Swap</th>}</tr></thead>
                   <tbody>
                     {items.map((i) => {
                       const u = one(i.units);
@@ -195,7 +197,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                           <td className="mono">{u ? [u.tag, u.serial].filter(Boolean).join(" · ") || "—" : <span className="muted">Not assigned</span>}</td>
                           <td className="num">{naira(i.day_rate_kobo)}×{i.days}</td>
                           <td className="num">{naira(i.rental_kobo)}</td>
-                          <td className="num">{naira(i.deposit_kobo)}</td>
+                          {hasDeposit && <td className="num">{naira(i.deposit_kobo)}</td>}
                           {canSwap && (
                             <td>
                               {i.kind === "rental" && (opts.length ? (
@@ -236,9 +238,9 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           <Section title="Money">
             <dl className="dl">
               <dt>Rental</dt><dd className="mono">{naira(b.rental_kobo)}</dd>
-              <dt>Protection ({Math.round(Number(b.protection_rate) * 1000) / 10}%)</dt><dd className="mono">{naira(b.protection_kobo)}</dd>
+              <dt>Deloo Protection (damage cover)</dt><dd className="mono">{naira(b.protection_kobo)}</dd>
               <dt>Delivery</dt><dd className="mono">{naira(b.delivery_kobo)}</dd>
-              <dt>Deposit (refundable)</dt><dd className="mono">{naira(b.deposit_kobo)}</dd>
+              {hasDeposit && <><dt>Deposit (refundable, older booking)</dt><dd className="mono">{naira(b.deposit_kobo)}</dd></>}
               <dt><strong>Total</strong></dt><dd className="mono"><strong>{naira(b.total_kobo)}</strong></dd>
             </dl>
             <h3 className="kicker">Payments</h3>

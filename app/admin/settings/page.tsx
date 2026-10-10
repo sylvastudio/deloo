@@ -54,7 +54,7 @@ export default async function SettingsPage() {
         {sRes.error ? <ErrorBox what="settings" error={sRes.error.message} /> : !s ? <Empty>No settings row. Run migration 0011.</Empty> : (
           <ActionForm action={saveSettings} className="grid gap-3" confirm="Save settings? They apply to new bookings straight away.">
             <div className="cols-3">
-              <label className="field"><span className="field-label">Protection (% of rental)</span>
+              <label className="field"><span className="field-label">Flat Protection (%) <span className="opt">not used since per-gear rates; set them per item in Inventory</span></span>
                 <input className="control" name="protection_pct" type="number" step="0.1" min={0} max={50} defaultValue={Math.round(Number(s.protection_rate) * 1000) / 10} readOnly={!edit} /></label>
               <label className="field"><span className="field-label">Hold time (minutes)</span>
                 <input className="control" name="hold_minutes" type="number" min={5} max={240} defaultValue={s.hold_minutes} readOnly={!edit} /></label>

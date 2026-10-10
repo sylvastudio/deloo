@@ -209,7 +209,7 @@ export type Verify = { paid: boolean; booking_status?: BookingStatus; needs_refu
 export function verifyPayment(reference: string) {
   return apiGet<Verify>(`/api/paystack/verify?reference=${encodeURIComponent(reference)}`);
 }
-/** Paystack statuses that mean money may still be on its way (bank transfer, USSD). */
+/** Paystack statuses that mean money may still be on its way (bank transfer). */
 export const IN_FLIGHT = ['pending', 'ongoing', 'processing', 'queued'];
 
 // ---------------------------------------------------------------------------
@@ -326,7 +326,7 @@ export function stageOf(b: Pick<Booking, 'status' | 'starts_at' | 'ends_at'>, no
 export const STAGE_LABEL: Record<Stage, string> = {
   hold: 'Awaiting payment', confirmed: 'Confirmed', preparing: 'Being prepared', out_for_delivery: 'Out for delivery',
   delivered: 'Delivered', in_use: 'In use', return_due: 'Return due', collected: 'Collected', inspected: 'Checked',
-  closed: 'Deposit refunded', expired: 'Hold ended', cancelled: 'Cancelled', disputed: 'Being reviewed', returned: 'Returned', out: 'Out',
+  closed: 'Done', expired: 'Hold ended', cancelled: 'Cancelled', disputed: 'Being reviewed', returned: 'Returned', out: 'Out',
 };
 
 /** The happy path, in order, for the tracker. */

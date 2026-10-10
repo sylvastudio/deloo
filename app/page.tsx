@@ -14,7 +14,7 @@ export const revalidate = 3600;
 const TITLE = "Deloo: Camera, light and sound gear rental in Lagos";
 const OG_IMAGE = { url: `${SITE_URL}/og-image.png`, width: 1200, height: 630, alt: "Deloo: camera, light and sound gear rental in Lagos" };
 const DESCRIPTION =
-  "Rent Sony FX3, lenses, gimbals, lights and podcast mics by the day in Lagos. Delivery across the Mainland and Island, refundable deposit, pay with Paystack.";
+  "Rent Sony FX3, lenses, gimbals, lights and podcast mics by the day in Lagos. Delivery across the Mainland and Island, no deposit, pay with Paystack.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

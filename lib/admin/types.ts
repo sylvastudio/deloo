@@ -56,7 +56,10 @@ export type ItemRow = {
   description: string;
   specs: Record<string, unknown>;
   day_rate_kobo: number;
+  /** Legacy: 0 since 0019 (no deposits). */
   deposit_kobo: number;
+  /** Deloo Protection share of rental (0–0.5); null means the category default (0019). */
+  protection_rate: number | null;
   replacement_value_kobo: number;
   photos: string[];
   in_the_box: string[];

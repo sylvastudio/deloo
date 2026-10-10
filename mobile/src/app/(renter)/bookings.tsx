@@ -64,7 +64,7 @@ export default function Bookings() {
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} colors={[c.lagoon]} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
           ListEmptyComponent={tab === 'active' ? (
-            <EmptyState icon="calendar" title="No bookings yet" body="Book a camera, lens, light or mic and follow it here: on the way, delivered, collected, deposit back."
+            <EmptyState icon="calendar" title="No bookings yet" body="Book a camera, lens, light or mic and follow it here: on the way, delivered, collected, checked."
               action="Explore gear" onAction={() => router.navigate('/explore')} />
           ) : <EmptyState icon="calendar" title="Nothing here yet" body="Finished and cancelled bookings show here." />}
           renderItem={({ item }) => <BookingCard b={item} waiting={pendingUploads(jobs, item.id)} />}
@@ -84,7 +84,7 @@ function nextAction(b: Booking): string | undefined {
   if (stage === 'in_use' || stage === 'delivered') return `Return due ${rangeLabel(last, last)}`;
   if (stage === 'return_due') return 'Return due. Take photos before it goes';
   if (stage === 'collected') return 'We’re checking the gear';
-  if (stage === 'inspected') return 'Deposit on its way back';
+  if (stage === 'inspected' && b.deposit_kobo > 0) return 'Deposit on its way back';
   return undefined;
 }
 

@@ -4,7 +4,7 @@ import {
 } from "@/lib/landing/config";
 import type { LandingData } from "@/lib/landing/data";
 import { CtaPair } from "./chrome";
-import { faqItems, pct } from "./faq";
+import { faqItems } from "./faq";
 import s from "./landing.module.css";
 
 export function Hero({ d }: { d: LandingData }) {
@@ -12,12 +12,12 @@ export function Hero({ d }: { d: LandingData }) {
     <section className={`${s.wrap} ${s.hero}`} aria-labelledby="hero-title">
       <h1 id="hero-title" className={s.h1}>Camera, light and sound gear for your shoot, delivered across Lagos.</h1>
       <p className={s.sub}>
-        Tell us what you&apos;re shooting and we&apos;ll suggest a kit, or pick gear yourself. Pay online, get it delivered or pick it up, and get your deposit back after.
+        Tell us what you&apos;re shooting and we&apos;ll suggest a kit, or pick gear yourself. Pay online, get it delivered or pick it up. No deposit.
       </p>
       <CtaPair className={s.heroCtas} />
       <p className={s.trust}>
         {d.minDayRateKobo != null && <><strong>From {naira(d.minDayRateKobo)} a day</strong> · </>}
-        Deposit refunded within 48 hours · Pay with Paystack
+        No deposit · Deloo Protection (damage cover) on every booking · Pay with Paystack
       </p>
     </section>
   );
@@ -102,8 +102,8 @@ export function ShootTypes() {
 const STEPS = [
   ["Plan or pick", "Describe your shoot or browse the gear."],
   ["Choose your days", "See what's free on a calendar. Rent from tomorrow."],
-  ["Pay securely", "Card, bank transfer or USSD on Paystack. You see rental, protection, delivery and deposit before you pay."],
-  ["Receive and return", "We deliver or you pick up. We both take photos of the gear at handover and return, and your deposit comes back within 48 hours."],
+  ["Pay securely", "Card or bank transfer on Paystack. You see the rental, Deloo Protection (damage cover) and delivery before you pay. No deposit."],
+  ["Receive and return", "We deliver or you pick up. We both take photos of the gear at handover and return, so there are no arguments later."],
 ] as const;
 
 export function HowItWorks() {
@@ -127,20 +127,19 @@ export function HowItWorks() {
 }
 
 export function Trust({ d }: { d: LandingData }) {
-  const rate = d.protectionRate != null ? pct(d.protectionRate) : null;
   return (
     <section className={s.section} aria-labelledby="trust-title">
       <div className={s.wrap}>
         <h2 id="trust-title" className={s.h2}>Your money and our gear, both protected</h2>
         <div className={s.points}>
           <div className={s.point}>
-            <h3>Deposit refunded</h3>
-            <p>You pay it with your rental and get it back within 48 hours after we check the gear.</p>
+            <h3>No deposit</h3>
+            <p>You pay the rental, Protection and delivery. Nothing is held back, so there&apos;s nothing to wait for after your shoot.</p>
           </div>
           <div className={s.point}>
-            {/* TODO(founder): confirm the protection rate and cap. */}
-            <h3>Deloo Protection</h3>
-            <p>For {rate ?? "a small share"} of the rental, accidental damage is covered up to a limit, so one mistake won&apos;t cost you the full price of a camera.</p>
+            {/* TODO(founder): confirm the cap. Rates mirror private.item_protection_rate (0019). */}
+            <h3>Deloo Protection (damage cover)</h3>
+            <p>For 10–20% of the rental, depending on the gear (cameras 20%, lenses and lights 15%, audio and stands 10%), accidental damage is covered up to a limit, so one mistake won&apos;t cost you the full price of a camera.</p>
           </div>
           <div className={s.point}>
             <h3>Handover photos</h3>

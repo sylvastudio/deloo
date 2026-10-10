@@ -18,7 +18,7 @@ export default function Privacy() {
       <p>Your name, email, WhatsApp number, delivery address and booking details, plus the handover photos and videos taken at delivery and return.</p>
 
       <h2>How we use it</h2>
-      <p>To run your rental: confirm bookings, deliver and collect gear, refund deposits and help you on WhatsApp. We don&apos;t sell your data.</p>
+      <p>To run your rental: confirm bookings, deliver and collect gear, send refunds and help you on WhatsApp. We don&apos;t sell your data.</p>
 
       <h2>Payments</h2>
       <p>Payments go through Paystack. We never see or store your card details.</p>

@@ -36,7 +36,7 @@ export default async function RefundsPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="adm-page">
-      <PageHead crumbs={[{ href: "/admin/payments", label: "Payments" }]} title="Refunds and deposits" />
+      <PageHead crumbs={[{ href: "/admin/payments", label: "Payments" }]} title="Refunds" />
       <div className="tabs" role="tablist" aria-label="Refund status">
         {[["open", "To do"], ["queued", "Queued"], ["processing", "Processing"], ["success", "Done"], ["failed", "Failed"], ["all", "All"]].map(([k, l]) => (
           <Link key={k} href={`/admin/payments/refunds?status=${k}`} className="tab" role="tab" aria-selected={status === k}>{l}</Link>

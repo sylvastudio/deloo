@@ -158,7 +158,7 @@ export function AccountScreen() {
       <Section title="Help">
         {support.number ? <Row icon="whatsapp" label="Chat on WhatsApp" detail="Usually the fastest way to reach us" onPress={() => support.chat()} /> : null}
         {support.number ? <Row icon="phone" label="Call us" onPress={support.call} /> : null}
-        <Row icon="info" label="Common questions" detail="Deposits, protection, late returns, cancelling" onPress={go('/account/help')} last />
+        <Row icon="info" label="Common questions" detail="Protection, late returns, cancelling" onPress={go('/account/help')} last />
       </Section>
 
       <Section title="About">

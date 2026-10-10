@@ -244,13 +244,20 @@ export default function Pay() {
           <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
             {b.booking_items.map((i) => <Text key={i.id} variant="caption" tone="slate">• {i.item_name}</Text>)}
             <Text variant="caption" tone="slate">
-              {naira(b.rental_kobo)} rental · {naira(b.protection_kobo)} Deloo Protection{b.delivery_kobo ? ` · ${naira(b.delivery_kobo)} delivery and collection` : ''}
+              {naira(b.rental_kobo)} rental · {naira(b.protection_kobo)} Deloo Protection (damage cover){b.deposit_kobo > 0 ? ` · ${naira(b.deposit_kobo)} refundable deposit` : ''}{b.delivery_kobo ? ` · ${naira(b.delivery_kobo)} delivery and collection` : ''}
             </Text>
           </View>
-          <View style={[styles.card, { backgroundColor: c.greenTint, borderColor: c.greenTint }]}>
-            <View style={styles.row}><Icon name="shield" size={18} color={c.greenInk} /><Text variant="bodyStrong" style={{ color: c.greenInk }}>Deposit {naira(b.deposit_kobo)}</Text></View>
-            <Text variant="caption">Refundable. We send it back within 48 hours after we check the gear, to the card or account you paid from.</Text>
-          </View>
+          {b.deposit_kobo > 0 ? (
+            <View style={[styles.card, { backgroundColor: c.greenTint, borderColor: c.greenTint }]}>
+              <View style={styles.row}><Icon name="shield" size={18} color={c.greenInk} /><Text variant="bodyStrong" style={{ color: c.greenInk }}>Deposit {naira(b.deposit_kobo)}</Text></View>
+              <Text variant="caption">Refundable. We send it back within 48 hours after we check the gear, to the card or account you paid from.</Text>
+            </View>
+          ) : (
+            <View style={[styles.card, { backgroundColor: c.greenTint, borderColor: c.greenTint }]}>
+              <View style={styles.row}><Icon name="shield" size={18} color={c.greenInk} /><Text variant="bodyStrong" style={{ color: c.greenInk }}>Deloo Protection (damage cover)</Text></View>
+              <Text variant="caption">Covers accidental damage during your rental, up to a limit. Not careless loss, theft without a police report, water damage or missing accessories.</Text>
+            </View>
+          )}
           {phase === 'ready' || phase === 'unfinished' ? <PayMethods value={method} onChange={chooseMethod} /> : null}
         </>}
       </ScrollView>

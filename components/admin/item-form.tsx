@@ -1,5 +1,5 @@
 import type { ActionResult } from "@/lib/admin/action-result";
-import { nairaInput } from "@/lib/admin/format";
+import { defaultProtectionPct, nairaInput } from "@/lib/admin/format";
 import type { ItemRow } from "@/lib/admin/types";
 import { ActionForm, Submit } from "./action-form";
 import { SpecsEditor } from "./specs-editor";
@@ -37,11 +37,14 @@ export function ItemForm({ item, categories, action, canEdit, canPrice, submitLa
         <div className="cols-3">
           <label className="field"><span className="field-label">Day rate (₦)</span>
             <input className="control" name="day_rate" inputMode="decimal" defaultValue={nairaInput(item.day_rate_kobo)} disabled={!canPrice} required={canPrice} /></label>
-          <label className="field"><span className="field-label">Deposit (₦)</span>
-            <input className="control" name="deposit" inputMode="decimal" defaultValue={nairaInput(item.deposit_kobo ?? 0)} disabled={!canPrice} /></label>
+          <label className="field"><span className="field-label">Protection rate (%) <span className="opt">blank = category default</span></span>
+            <input className="control" name="protection_pct" type="number" step="0.5" min={0} max={50} inputMode="decimal"
+              defaultValue={item.protection_rate == null ? "" : Math.round(Number(item.protection_rate) * 1000) / 10}
+              placeholder={String(defaultProtectionPct(item.category_key))} disabled={!canPrice} /></label>
           <label className="field"><span className="field-label">Replacement value (₦)</span>
             <input className="control" name="replacement_value" inputMode="decimal" defaultValue={nairaInput(item.replacement_value_kobo)} disabled={!canPrice} required={canPrice} /></label>
         </div>
+        <p className="hint">Deloo Protection (damage cover) is charged on the rental: cameras 20%, lenses, lights and gimbals 15%, audio, grip and backdrops 10%. There is no deposit.</p>
         {item.id && <p className="hint">Bookings keep the price they were made at; changes apply to new bookings.</p>}
       </fieldset>
 

@@ -81,3 +81,11 @@ export function parseRange(r: string | null | undefined): { from: string; to: st
 
 /** Current time in ms. Server Components render once per request, so reading the clock is fine there. */
 export const nowMs = () => Date.now();
+
+/** Deloo Protection default by category, as a percent. Mirrors private.item_protection_rate (0019). */
+export const defaultProtectionPct = (category?: string | null) =>
+  category === "camera" ? 20 : category === "lens" || category === "light" || category === "gimbal" ? 15 : 10;
+
+/** An item's Protection percent: its own rate, else the category default. */
+export const itemProtectionPct = (rate: number | string | null | undefined, category?: string | null) =>
+  rate == null || rate === "" ? defaultProtectionPct(category) : Math.round(Number(rate) * 1000) / 10;

@@ -18,12 +18,12 @@ const WHAT_HAPPENS = [
   'You’re signed out on this phone straight away.',
   'We delete your name, phone, email, plans and handover photos within 30 days, and message you when it’s done.',
   'Payment and booking records we must keep by law (for tax and refunds) are kept, without your contact details, for as long as the law requires.',
-  'If you have a booking that’s still going, we finish it and return your deposit first.',
+  'If you have a booking that’s still going, we finish it and settle any refund first.',
 ];
 
 /**
  * Delete account (required by Google Play). Records a request through request_account_deletion
- * (0015) for Deloo to process by hand, because bookings, deposits and refunds may still be open;
+ * (0015) for Deloo to process by hand, because bookings and refunds may still be open;
  * then signs out. Typing DELETE stops it happening by accident.
  */
 export default function DeleteAccount() {

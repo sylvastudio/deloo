@@ -44,12 +44,16 @@ function itemFields(form: FormData, withPrices: boolean): { patch: Record<string
   if (cat) patch.category_key = cat;
   if (withPrices) {
     const rate = koboFromNaira(form.get("day_rate"));
-    const deposit = koboFromNaira(form.get("deposit"));
+    const pctRaw = str(form, "protection_pct");
+    const protection = pctRaw === "" ? null : Number(pctRaw) / 100;
     const replacement = koboFromNaira(form.get("replacement_value"));
     if (rate == null) return { patch, error: "Add the day rate." };
     if (replacement == null || replacement <= 0) return { patch, error: "Add the replacement value (more than ₦0)." };
     patch.day_rate_kobo = rate;
-    patch.deposit_kobo = deposit ?? 0;
+    if (protection != null && (!Number.isFinite(protection) || protection < 0 || protection > 0.5)) return { patch, error: "Protection must be between 0% and 50%." };
+    // No deposits since 0019; blank Protection falls back to the category rate on the server.
+    patch.deposit_kobo = 0;
+    patch.protection_rate = protection == null ? null : Math.round(protection * 10000) / 10000;
     patch.replacement_value_kobo = replacement;
   }
   return { patch };

@@ -13,7 +13,7 @@ import { lineTitle, needLabel } from '@/lib/line-text';
 import { itemPhotoUrl } from '@/lib/photos';
 import { usePlan } from '@/lib/plan';
 import {
-  applyChoices, completeAnswers, PROTECTION_RATE, saveEvent, useNearestFree, usePlanResult, wantedItems, windowAnswers, windowLabel, type ChosenLine,
+  applyChoices, completeAnswers, saveEvent, useNearestFree, usePlanResult, wantedItems, windowAnswers, windowLabel, type ChosenLine,
 } from '@/lib/plan-result';
 import { fitBudget, resolveAnswers, RULES_VERSION, type Choices, type FitResult } from '@/planner';
 import type { Group, Level } from '@/planner/types';
@@ -143,7 +143,7 @@ export default function Setup() {
           <View style={{ gap: 2 }} accessible accessibilityLabel={`Total ${naira(result.totalKobo)}`}>
             <Text variant="hero">{naira(result.totalKobo)}</Text>
             <Text variant="caption" tone="slate">
-              {naira(result.rentalKobo)} rental{result.match.days > 1 ? ` for ${result.match.days} days` : ''} · {naira(result.depositKobo)} refundable deposit · {naira(result.protectionKobo)} Deloo Protection ({Math.round(PROTECTION_RATE * 100)}%)
+              {naira(result.rentalKobo)} rental{result.match.days > 1 ? ` for ${result.match.days} days` : ''} · {naira(result.protectionKobo)} Deloo Protection (damage cover){result.depositKobo ? ` · ${naira(result.depositKobo)} refundable deposit` : ''}
             </Text>
             <Text variant="caption" tone="slate">
               {deliveryFrom ? `Plus delivery and collection ${zone ? `to ${zone.name}` : 'from'} ${naira(deliveryFrom)}, or free pickup.` : 'Plus delivery, or free pickup.'}

@@ -26,7 +26,7 @@ export function MoneyHero({
 
 /**
  * A label-and-amount line in a price breakdown. `total` makes it the bold closing line;
- * `hint` explains the line underneath (deposit refunds, protection rate).
+ * `hint` explains the line underneath (what Protection covers, refunds).
  */
 export function PriceRow({
   label, kobo, value, hint, total, tone = 'ink',

@@ -10,7 +10,7 @@ import { Button } from '@/ui/button';
 import { Text } from '@/ui/text';
 
 const WORDS = ['Cameras', 'Lenses', 'Lights', 'Mics', 'Gimbals'];
-const TRUST = 'Deloo’s own gear · Checked and charged before it leaves · Deposit back within 48 hours · Pay securely with Paystack';
+const TRUST = 'Deloo’s own gear · Checked and charged before it leaves · No deposit · Pay securely with Paystack';
 // Signed-out browsing exists only on the web (the root layout lets /explore through there); on a
 // phone the gear tabs need an account, so the link would bounce straight back here.
 const BROWSE = Platform.OS === 'web';

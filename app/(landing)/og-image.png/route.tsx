@@ -16,7 +16,7 @@ export function GET() {
         <div style={{ display: "flex", fontSize: 64, fontWeight: 700, lineHeight: 1.1, maxWidth: 1000 }}>
           Camera, light and sound gear for your shoot, delivered across Lagos.
         </div>
-        <div style={{ display: "flex", fontSize: 30, color: "#E0EFEF" }}>Rent by the day · Refundable deposit · Pay with Paystack</div>
+        <div style={{ display: "flex", fontSize: 30, color: "#E0EFEF" }}>Rent by the day · No deposit · Pay with Paystack</div>
       </div>
     ),
     size,

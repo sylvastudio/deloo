@@ -276,16 +276,14 @@ export default function Review() {
         ) : (
           <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
             <Money label={`Rental · ${daysText(quote.days)}`} value={naira(quote.rental_kobo)} />
-            <Money label={`Deloo Protection (${Math.round(quote.protection_rate * 100)}%)`} value={naira(quote.protection_kobo)}
-              hint="Damage cover for accidents during your rental. Your deposit is used first." />
+            <Money label="Deloo Protection (damage cover)" value={naira(quote.protection_kobo)} />
             <WhatsCovered />
             <Money label={delivery === 'delivery' ? 'Delivery and collection' : 'Pickup'} value={delivery === 'delivery' ? naira(quote.delivery_kobo) : 'Free'} />
-            <View style={[styles.divider, { backgroundColor: c.line }]} />
-            <Money label="Refundable deposit" value={naira(quote.deposit_kobo)} hint="We send it back within 48 hours after we check the gear. Card refunds can take a few more working days to show." />
+            {quote.deposit_kobo > 0 ? <Money label="Refundable deposit" value={naira(quote.deposit_kobo)} /> : null}
             <View style={[styles.divider, { backgroundColor: c.line }]} />
             <Money label="Total today" value={naira(quote.total_kobo)} strong />
             <Text variant="caption" tone="slate">
-              Free cancellation up to 72 hours before your first day. Deloo Protection covers accidental damage, not careless loss or theft without a police report. By paying you agree to{' '}
+              Free cancellation up to 72 hours before your first day. Protection covers accidental damage during your rental, up to a limit. It doesn’t cover careless loss, theft without a police report, water damage or missing accessories. By paying you agree to{' '}
               <Text variant="caption" tone="lagoon" accessibilityRole="link" onPress={() => Linking.openURL('https://deloo.space/terms').catch(() => {})}>Deloo’s rental terms</Text>.
             </Text>
           </View>
@@ -322,7 +320,7 @@ function LineRow({ line, q, gone, held, days, onRemove, onFewer, onDays }: {
         <Text variant="bodyStrong" style={{ flex: 1 }}>{line.qty} × {q?.name ?? line.name}</Text>
         {q ? <Text variant="bodyStrong">{naira(q.rental_kobo)}</Text> : null}
       </View>
-      {q ? <Text variant="caption" tone="slate">{naira(q.day_rate_kobo)} a day{line.qty > 1 ? ' each' : ''}{days ? ` × ${daysText(days)}` : ''} · deposit {naira(q.deposit_kobo)}</Text> : null}
+      {q ? <Text variant="caption" tone="slate">{naira(q.day_rate_kobo)} a day{line.qty > 1 ? ' each' : ''}{days ? ` × ${daysText(days)}` : ''}{q.deposit_kobo > 0 ? ` · deposit ${naira(q.deposit_kobo)}` : ''}</Text> : null}
       {gone ? <Badge label="No longer available" status="unavailable" />
         : q && !q.ok && !held ? <Badge label={q.free === 0 ? 'Not free on these days' : `Only ${q.free} free on these days`} status="unavailable" /> : null}
       {(gone || (q && !q.ok && !held)) ? (
