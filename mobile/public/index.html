@@ -9,6 +9,9 @@
     <title>%WEB_TITLE%</title>
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <!-- Just the boot wordmark's letters in the brand display face; the app loads its own fonts. -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700&text=deloo.&display=swap" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <!-- react-native-web's recommended reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
@@ -18,11 +21,13 @@
       #root { display: flex; height: 100%; flex: 1; }
       @media (prefers-color-scheme: dark) { body { background: #0E1215; } }
       /* Shown until the app's JavaScript renders (replaced by React). */
-      .boot { margin: auto; font: 700 28px/1 system-ui, sans-serif; letter-spacing: -0.5px; color: #0F6B73; }
+      .boot { margin: auto; font: 700 28px/1 'Bricolage Grotesque', system-ui, sans-serif; letter-spacing: -0.5px; color: #0F6B73; }
+      .boot span { color: #F2A900; }
+      @media (prefers-color-scheme: dark) { .boot { color: #3AAAB2; } .boot span { color: #F5B82E; } }
     </style>
   </head>
   <body>
     <noscript>Deloo needs JavaScript to run. Turn it on, or use the Android app.</noscript>
-    <div id="root"><div class="boot">deloo</div></div>
+    <div id="root"><div class="boot">deloo<span>.</span></div></div>
   </body>
 </html>

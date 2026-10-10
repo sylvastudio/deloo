@@ -58,7 +58,6 @@ export function NextBookingCard({ b }: { b: Booking }) {
       accessibilityRole="button" accessibilityLabel={`Your next booking, ${rangeLabel(first, last)}, ${label}`}
       android_ripple={{ color: c.lagoonTint }}
       style={[styles.next, { backgroundColor: c.surface, borderColor: c.lagoon }]}>
-      <View style={[styles.nextIcon, { backgroundColor: c.lagoonTint }]}><Icon name="calendar" color={c.lagoon} /></View>
       <View style={{ flex: 1, gap: 2 }}>
         <Text variant="label" tone="slate">Your next booking</Text>
         <Text variant="bodyStrong" numberOfLines={1}>{rangeLabel(first, last)}</Text>
@@ -162,7 +161,7 @@ export function AccountScreen() {
       </Section>
 
       <Section title="About">
-        <Row icon="sparkles" label="About Deloo" onPress={go('/account/about')} />
+        <Row icon="info" label="About Deloo" onPress={go('/account/about')} />
         <Row icon="shield" label="Rental terms" onPress={open('https://deloo.space/terms')} />
         <Row icon="info" label="Privacy" onPress={open('https://deloo.space/privacy')} last />
       </Section>
@@ -201,7 +200,6 @@ const styles = StyleSheet.create({
   edit: { minHeight: touch, justifyContent: 'center', paddingHorizontal: space.sm },
   verify: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: -space.sm },
   next: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg, borderRadius: radius.lg, borderWidth: 1.5, overflow: 'hidden' },
-  nextIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   group: { borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.lg, paddingVertical: space.md, minHeight: touch + 8 },
   confirmRow: { flexDirection: 'row', gap: space.sm, marginTop: space.sm },

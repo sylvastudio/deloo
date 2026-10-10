@@ -193,8 +193,8 @@ function GearCard({ item, days, free }: { item: Item; days: Days; free?: number 
           <Image source={{ uri: itemPhotoUrl(item.photos[0]) }} style={[StyleSheet.absoluteFill, { backgroundColor: '#fff' }]} contentFit="contain" transition={200} />
         </View>
       ) : (
-        <View style={[styles.art, { backgroundColor: c.lagoonTint }]}>
-          <Icon name={categoryIcon(item.category_key)} size={40} color={c.lagoon} />
+        <View style={[styles.art, { backgroundColor: c.raised }]}>
+          <Icon name={categoryIcon(item.category_key)} size={40} color={c.slate} />
         </View>
       )}
       <View style={{ gap: 2, padding: space.md }}>

@@ -258,7 +258,7 @@ function gripLines(c: ResolvedAnswers, level: Level, lights: Line[]): Line[] {
   }
   if (c.shootType === 'photo' && level !== 'good') {
     out.push(
-      line('grip.backdrop', 'backdrop', 'grip', 1, { kinds: ['paper'] }, false, 'grip.backdrop', 'A seamless paper backdrop for clean studio portraits.'),
+      line('grip.backdrop', 'backdrop', 'grip', 1, { kinds: ['paper'] }, false, 'grip.backdrop', 'A paper backdrop roll for clean studio portraits.'),
       line('grip.backdrop_stand', 'grip', 'grip', 1, { kinds: ['backdrop_stand'] }, false, 'grip.backdrop_stand', 'A backdrop stand to hang the paper.'),
     );
   }

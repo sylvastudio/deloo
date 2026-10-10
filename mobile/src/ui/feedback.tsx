@@ -15,7 +15,7 @@ export function EmptyState({
   const c = useColors();
   return (
     <View style={styles.empty}>
-      <View style={[styles.emptyIcon, { backgroundColor: c.lagoonTint }]}><Icon name={icon} size={28} color={c.lagoon} /></View>
+      <View style={styles.emptyIcon}><Icon name={icon} size={32} color={c.slate} /></View>
       <Text variant="heading" style={{ textAlign: 'center' }}>{title}</Text>
       {body ? <Text tone="slate" style={{ textAlign: 'center' }}>{body}</Text> : null}
       {action && onAction ? <Button kind="secondary" title={action} onPress={onAction} style={{ alignSelf: 'stretch', marginTop: space.sm }} /> : null}
@@ -62,6 +62,6 @@ export function Notice({ tone = 'tip', icon, children }: { tone?: 'tip' | 'warni
 
 const styles = StyleSheet.create({
   empty: { alignItems: 'center', gap: space.sm, paddingVertical: space.xxl, paddingHorizontal: space.lg },
-  emptyIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: space.sm },
+  emptyIcon: { marginBottom: space.xs },
   notice: { flexDirection: 'row', gap: space.sm, padding: space.md, borderRadius: radius.md, alignItems: 'flex-start' },
 });

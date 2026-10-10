@@ -33,7 +33,8 @@ const ICONS = {
   star: { ios: 'star.fill', android: 'star' },
   truck: { ios: 'truck.box.fill', android: 'local_shipping' },
   phone: { ios: 'phone.fill', android: 'call' },
-  sparkles: { ios: 'sparkles', android: 'auto_awesome' },
+  plan: { ios: 'list.bullet.clipboard', android: 'checklist' },
+  box: { ios: 'shippingbox', android: 'inventory_2' },
   // Tab bar (web build; native tabs name their own symbols)
   search: { ios: 'magnifyingglass', android: 'search' },
   person: { ios: 'person.crop.circle', android: 'account_circle' },
@@ -68,7 +69,7 @@ export type IconName = keyof typeof ICONS;
 export function categoryIcon(category: string): IconName {
   if (category === 'mic') return 'mic_cat';
   if (category === 'camera') return 'camera_cat';
-  return (category in ICONS ? category : 'sparkles') as IconName;
+  return (category in ICONS ? category : 'box') as IconName;
 }
 
 export function Icon({ name, size = 22, color }: { name: IconName; size?: number; color?: string }) {

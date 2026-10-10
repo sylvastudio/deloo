@@ -22,7 +22,7 @@ export function Tile({
         { backgroundColor: selected ? c.lagoonTint : c.surface, borderColor: selected ? c.lagoon : c.line },
         pressed && !selected && { backgroundColor: c.raised },
       ]}>
-      {icon ? <View style={[styles.iconWrap, { backgroundColor: selected ? c.surface : c.lagoonTint }]}><Icon name={icon} color={c.lagoon} /></View>
+      {icon ? <Icon name={icon} size={24} color={selected ? c.lagoon : c.slate} />
         : emoji ? <Text style={styles.emoji} accessibilityElementsHidden importantForAccessibility="no">{emoji}</Text> : null}
       <View style={styles.copy}>
         <Text variant="bodyStrong">{title}</Text>
@@ -38,7 +38,6 @@ export function Tile({
 const styles = StyleSheet.create({
   tile: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg, borderRadius: radius.lg, borderWidth: 1.5, overflow: 'hidden', minHeight: 72 },
   emoji: { fontSize: 28, lineHeight: 34 },
-  iconWrap: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   copy: { flex: 1, gap: 2 },
   mark: { width: 24, height: 24, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
 });

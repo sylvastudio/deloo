@@ -8,15 +8,15 @@ import { Button } from './button';
 import { Icon, type IconName } from './icon';
 import { Text } from './text';
 
-const SECTIONS: { title: string; icon: IconName; tone: 'green' | 'red' | 'ink'; lines: string[] }[] = [
+const SECTIONS: { title: string; icon?: IconName; tone: 'green' | 'red' | 'ink'; lines: string[] }[] = [
   { title: 'Covered', icon: 'check', tone: 'green', lines: ['Accidental damage during your rental: a drop, a knock, a fault that isn’t from misuse.'] },
   {
     title: 'Not covered', icon: 'close', tone: 'red',
     lines: ['Careless loss, like leaving it in a taxi', 'Theft without a police report', 'Water damage', 'Missing accessories: batteries, chargers, caps, cables'],
   },
-  { title: 'What you pay', icon: 'money', tone: 'ink', lines: ['Protection pays most of the repair or replacement cost of accidental damage, up to a limit.', 'We show you before-and-after photos and you can reply before anything is charged.'] },
+  { title: 'What you pay', tone: 'ink', lines: ['Protection pays most of the repair or replacement cost of accidental damage, up to a limit.', 'We show you before-and-after photos and you can reply before anything is charged.'] },
   {
-    title: 'How claims work', icon: 'camera', tone: 'ink',
+    title: 'How claims work', tone: 'ink',
     lines: ['If gear is stolen, report it to the police and send us the report.', 'Careless loss, or theft without a police report, is charged at the gear’s replacement value.'],
   },
 ];
@@ -37,10 +37,10 @@ export function CoverageSheet({ visible, onClose }: { visible: boolean; onClose:
               <Text variant="heading" accessibilityRole="header">What’s covered</Text>
               <Text variant="caption" tone="slate">Deloo Protection (damage cover) is part of every booking: 10–20% of the rental, depending on the gear (cameras 20%, lenses and lights 15%, audio and stands 10%).</Text>
             </View>
-            {SECTIONS.map((s) => (
-              <View key={s.title} style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
+            {SECTIONS.map((s, i) => (
+              <View key={s.title} style={[styles.section, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line, paddingTop: space.lg }]}>
                 <View style={styles.row}>
-                  <Icon name={s.icon} size={18} color={colour[s.tone]} />
+                  {s.icon ? <Icon name={s.icon} size={18} color={colour[s.tone]} /> : null}
                   <Text variant="bodyStrong" style={{ color: colour[s.tone] }}>{s.title}</Text>
                 </View>
                 {s.lines.map((l) => <Text key={l} variant="caption">{s.lines.length > 1 && s.title === 'Not covered' ? `• ${l}` : l}</Text>)}
@@ -72,6 +72,6 @@ const styles = StyleSheet.create({
   scrim: { backgroundColor: '#00000066' },
   sheet: { maxHeight: '88%', borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, paddingHorizontal: space.xl, paddingTop: space.sm, gap: space.lg },
   grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, marginBottom: space.xs },
-  card: { borderRadius: radius.lg, borderWidth: 1, padding: space.lg, gap: space.xs },
+  section: { gap: space.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
 });

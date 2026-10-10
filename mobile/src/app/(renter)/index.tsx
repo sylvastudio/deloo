@@ -10,13 +10,14 @@ import { NextBookingCard, useNextBooking } from '@/screens/account';
 import { radius, space, type } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Button } from '@/ui/button';
-import { categoryIcon, Icon } from '@/ui/icon';
+import { Chip } from '@/ui/chip';
+import { Icon } from '@/ui/icon';
 import { Screen } from '@/ui/layout';
 import { Text } from '@/ui/text';
 
 // Every example has days, so tapping one goes straight to a priced, checked setup.
 const EXAMPLES = ['3-person podcast in Lekki this Saturday, two cameras', 'Music video Fri to Sun in VI, under 100k', 'Wedding next sat, need delivery to Ajah'];
-const BROWSE = [['camera', 'camera', 'Cameras'], ['lens', 'lens', 'Lenses'], ['light', 'light', 'Lighting'], ['audio', 'mic', 'Audio'], ['grip', 'gimbal', 'Grip']] as const;
+const BROWSE = [['camera', 'Cameras'], ['lens', 'Lenses'], ['light', 'Lighting'], ['audio', 'Audio'], ['grip', 'Grip']] as const;
 
 /**
  * R1 Plan home: your next booking (if any) on top, then describe the shoot (type or voice), answer
@@ -100,12 +101,8 @@ export default function Plan() {
       <View style={{ gap: space.sm }}>
         <Text variant="label" tone="slate">Browse gear</Text>
         <View style={styles.browse}>
-          {BROWSE.map(([group, k, label]) => (
-            <Pressable key={group} onPress={() => router.navigate(`/explore?group=${group}`)} accessibilityRole="button"
-              style={[styles.browseItem, { backgroundColor: c.surface, borderColor: c.line }]}>
-              <Icon name={categoryIcon(k)} color={c.lagoon} />
-              <Text variant="caption">{label}</Text>
-            </Pressable>
+          {BROWSE.map(([group, label]) => (
+            <Chip key={group} label={label} onPress={() => router.navigate(`/explore?group=${group}`)} />
           ))}
         </View>
       </View>
@@ -121,6 +118,5 @@ const styles = StyleSheet.create({
   examples: { gap: space.sm },
   example: { borderWidth: 1, borderColor: '#ffffff55', borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: 6, alignSelf: 'flex-start' },
   resume: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
-  browse: { flexDirection: 'row', gap: space.sm },
-  browseItem: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: space.md, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth },
+  browse: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
 });
