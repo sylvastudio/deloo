@@ -116,12 +116,12 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                   return (
                     <tr key={p.id}>
                       <td className="nowrap">{fmtDateTime(p.created_at)}{p.paid_at && <span className="sub">Paid {fmtDateTime(p.paid_at)}</span>}</td>
-                      <td className="nowrap">{b ? <Link className="rowlink mono" href={`/admin/bookings/${b.id}`}>{b.ref}</Link> : <span className="subtle">—</span>}</td>
+                      <td className="nowrap">{b ? <Link className="rowlink mono" href={`/admin/bookings/${b.id}`}>{b.ref}</Link> : <span className="subtle">None</span>}</td>
                       <td><span className="mono">{p.reference}</span>{p.paystack_id && <span className="sub mono">#{p.paystack_id}</span>}</td>
                       <td>{PAYMENT_PURPOSE_LABEL[p.purpose] ?? humanize(p.purpose)}</td>
                       <td className="num money">{naira(p.amount_kobo)}</td>
-                      <td className="num muted">{p.fees_kobo ? naira(p.fees_kobo) : "—"}</td>
-                      <td>{p.channel ? PAYMENT_CHANNEL_LABEL[p.channel] ?? humanize(p.channel) : <span className="subtle">—</span>}</td>
+                      <td className="num muted">{p.fees_kobo ? naira(p.fees_kobo) : "None"}</td>
+                      <td>{p.channel ? PAYMENT_CHANNEL_LABEL[p.channel] ?? humanize(p.channel) : <span className="subtle">Not set</span>}</td>
                       <td>
                         <div className="flex flex-wrap gap-1">
                           <PaymentStatusChip status={p.status} />

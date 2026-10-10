@@ -104,7 +104,7 @@ export function AvailabilityGrid({ days, rows, canEdit, today }: { days: string[
               {!rangeFree && <p className="error">That range crosses a booking or block.</p>}
             </ActionForm>
           ) : (
-            <p className="hint">Drag across free days in a row (or click the first day, then the last) to block them. Click a hatched block to remove it.</p>
+            <p className="hint">Drag across free days in a row (or click the first day, then the last) to block them. Click a grey block to remove it.</p>
           )}
         </div>
       )}

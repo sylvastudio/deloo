@@ -70,14 +70,14 @@ export function Kpi({ label, value, detail, href, alert }: { label: string; valu
     : <div className="kpi" data-alert={alert ? "true" : undefined}>{inner}</div>;
 }
 
-/** Label/value pairs. Pass [label, value] rows; falsy values show a dash. */
+/** Label/value pairs. Pass [label, value] rows; empty values show "Not set". */
 export function DescriptionList({ items, className }: { items: [ReactNode, ReactNode][]; className?: string }) {
   return (
     <dl className={cx("dl", className)}>
       {items.map(([k, v], n) => (
         <Fragment key={n}>
           <dt>{k}</dt>
-          <dd>{v === null || v === undefined || v === "" ? <span className="subtle">—</span> : v}</dd>
+          <dd>{v === null || v === undefined || v === "" ? <span className="subtle">Not set</span> : v}</dd>
         </Fragment>
       ))}
     </dl>

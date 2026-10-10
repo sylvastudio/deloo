@@ -107,7 +107,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
                       <tr key={b.id}>
                         <td className="nowrap"><Link className="rowlink mono" href={`/admin/bookings/${b.id}`}>{b.ref ?? b.id.slice(0, 8)}</Link></td>
                         <td className="nowrap">{fmtRental(b.starts_at, b.ends_at)}</td>
-                        <td className="wrap">{b.booking_items[0]?.item_name ?? "—"}{b.booking_items.length > 1 && <span className="sub">+{b.booking_items.length - 1} more</span>}</td>
+                        <td className="wrap">{b.booking_items[0]?.item_name ?? <span className="subtle">No items</span>}{b.booking_items.length > 1 && <span className="sub">+{b.booking_items.length - 1} more</span>}</td>
                         <td className="num money">{naira(b.total_kobo)}</td>
                         <td><StatusChip status={b.status} /></td>
                       </tr>

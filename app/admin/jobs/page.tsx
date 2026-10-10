@@ -119,7 +119,7 @@ export default async function JobsPage({ searchParams }: { searchParams: SP }) {
           <span><User aria-hidden="true" />{people.get(b.renter_id) ?? "Renter"}</span>
           <span><Package aria-hidden="true" />{gear} item{gear === 1 ? "" : "s"}</span>
           {!rider && (b.rider_name ? <span><Bike aria-hidden="true" />{b.rider_name}</span> : <span className="st warn">No rider</span>)}
-          <span className="mono">{b.ref ?? "—"}</span>
+          <span className="mono">{b.ref ?? "No ref"}</span>
         </div>
       </li>
     );

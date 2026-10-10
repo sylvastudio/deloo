@@ -118,11 +118,11 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
             return (
               <tr key={`${x.dir}-${x.b.id}`}>
                 {bulkId && <td><input type="checkbox" name="booking_id" value={x.b.id} form={bulkId} aria-label={`Tick ${x.b.ref ?? "booking"}`} /></td>}
-                <td className="small">{showDir && <span className={`${s.dir} ${x.dir === "out" ? s.dirOut : s.dirIn}`}>{x.dir === "out" ? "Out" : "In"}</span>} {x.slot || <span className="muted">—</span>}</td>
-                <td><Link className="rowlink mono" href={`/admin/bookings/${x.b.id}`}>{x.b.ref ?? "—"}</Link></td>
+                <td className="small">{showDir && <span className={`${s.dir} ${x.dir === "out" ? s.dirOut : s.dirIn}`}>{x.dir === "out" ? "Out" : "In"}</span>} {x.slot || <span className="muted">Any time</span>}</td>
+                <td><Link className="rowlink mono" href={`/admin/bookings/${x.b.id}`}>{x.b.ref ?? "No ref"}</Link></td>
                 <td className="small">{x.info.renter.name}<div className="muted mono">{maskPhone(staff.role, x.info.renter.phone)}</div></td>
                 <td className="small">{x.b.delivery === "pickup" ? <span className="muted">At base</span> : maskText(staff.role, x.b.address) || <span className="muted">No address</span>}</td>
-                <td className="small">{x.info.items.map((it) => it.tag ? `${it.name} · ${it.tag}` : it.name).join(", ") || "—"}</td>
+                <td className="small">{x.info.items.map((it) => it.tag ? `${it.name} · ${it.tag}` : it.name).join(", ") || <span className="muted">No gear</span>}</td>
                 {!showDir && (
                   <td className="small">
                     {canEdit && riders.length

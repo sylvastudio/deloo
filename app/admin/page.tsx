@@ -192,10 +192,10 @@ export default async function TodayInbox() {
                         <span className={`${s.dir} ${t.dir === "out" ? s.dirOut : s.dirIn}`}>{t.dir === "out" ? "Out" : "In"}</span>{" "}
                         {t.day === today ? <strong>Today</strong> : "Tomorrow"} {t.slot || <span className="muted">any time</span>}
                       </td>
-                      <td><Link className="rowlink mono" href={`/admin/bookings/${t.b.id}`}>{t.b.ref ?? "—"}</Link></td>
+                      <td><Link className="rowlink mono" href={`/admin/bookings/${t.b.id}`}>{t.b.ref ?? "No ref"}</Link></td>
                       <td className="small">{t.info.renter.name}</td>
-                      <td className="small">{t.b.delivery === "pickup" ? <span className="muted">At base</span> : [t.info.zone, maskText(staff.role, area(t.b.address))].filter(Boolean).join(" · ") || "—"}</td>
-                      <td className="small">{t.b.delivery === "pickup" ? <span className="muted">—</span> : t.b.rider_name || <Chip tone={t.day === today ? "bad" : "warn"}>No rider</Chip>}</td>
+                      <td className="small">{t.b.delivery === "pickup" ? <span className="muted">At base</span> : [t.info.zone, maskText(staff.role, area(t.b.address))].filter(Boolean).join(" · ") || <span className="muted">Not set</span>}</td>
+                      <td className="small">{t.b.delivery === "pickup" ? <span className="muted">None (pickup)</span> : t.b.rider_name || <Chip tone={t.day === today ? "bad" : "warn"}>No rider</Chip>}</td>
                       <td className="small">
                         {a.anchor ? <Link href={`/admin/bookings/${t.b.id}${a.anchor}`}><Chip tone={a.severity}>{a.label}</Chip></Link> : <Chip tone={a.severity}>{a.label}</Chip>}
                       </td>

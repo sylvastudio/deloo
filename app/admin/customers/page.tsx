@@ -76,10 +76,10 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                   return (
                     <tr key={p.id}>
                       <td><Link className="rowlink" href={`/admin/customers/${p.id}`}>{p.full_name || "No name"}</Link></td>
-                      <td className="mono nowrap">{maskPhone(staff.role, p.phone) || <span className="subtle">—</span>}</td>
+                      <td className="mono nowrap">{maskPhone(staff.role, p.phone) || <span className="subtle">No phone</span>}</td>
                       <td className="num">{s?.n ?? 0}</td>
                       <td className="num money">{naira(s?.spent ?? 0)}</td>
-                      <td className="nowrap">{s?.last ? fmtDateTime(s.last) : <span className="subtle">—</span>}</td>
+                      <td className="nowrap">{s?.last ? fmtDateTime(s.last) : <span className="subtle">None</span>}</td>
                       <td className="nowrap">{fmtDateTime(p.created_at)}</td>
                       <td>
                         <div className="flex gap-1 flex-wrap">

@@ -55,7 +55,7 @@ export default async function DemandPage({ searchParams }: { searchParams: Promi
             <Kpi label="Requests" value={rows.length} detail={`last ${days} days`} />
             <Kpi label="Renters asking" value={people} />
             <Kpi label="Booked on their dates" value={booked} detail="we stock it, every unit was out" />
-            <Kpi label="Top category" value={sorted[0] ? cat(sorted[0].cat) : "—"} detail={sorted[0] ? `${sorted[0].requests} requests` : undefined} />
+            <Kpi label="Top category" value={sorted[0] ? cat(sorted[0].cat) : "None"} detail={sorted[0] ? `${sorted[0].requests} requests` : undefined} />
           </div>
           <Section title="By category and reason" description="“Booked on their dates” means we stock it but every unit was out: a sign to buy another unit.">
             <div className="tbl-wrap">
@@ -87,12 +87,12 @@ export default async function DemandPage({ searchParams }: { searchParams: Promi
                       <tr key={r.id}>
                         <td className="nowrap">{fmtDateTime(r.created_at)}</td>
                         <td>{cat(r.category_key)}</td>
-                        <td className="wrap">{spec(r.spec) || <span className="subtle">—</span>}</td>
+                        <td className="wrap">{spec(r.spec) || <span className="subtle">Not given</span>}</td>
                         <td className="num">{r.quantity}</td>
-                        <td className="nowrap">{p ? fmtRental(p.from, p.to) : <span className="subtle">—</span>}</td>
-                        <td>{r.area || <span className="subtle">—</span>}</td>
+                        <td className="nowrap">{p ? fmtRental(p.from, p.to) : <span className="subtle">Not given</span>}</td>
+                        <td>{r.area || <span className="subtle">Not given</span>}</td>
                         <td>{REASON[r.reason] ?? humanize(r.reason)}</td>
-                        <td>{r.profile_id ? <Link className="link" href={`/admin/customers/${r.profile_id}`}>{names.get(r.profile_id) ?? "Renter"}</Link> : <span className="subtle">—</span>}</td>
+                        <td>{r.profile_id ? <Link className="link" href={`/admin/customers/${r.profile_id}`}>{names.get(r.profile_id) ?? "Renter"}</Link> : <span className="subtle">Not signed in</span>}</td>
                       </tr>
                     );
                   })}

@@ -44,8 +44,8 @@ export const fmtDay = (day: string) => D_SHORT.format(new Date(`${day}T00:00:00Z
 /** "Mon 12 Oct" for a "YYYY-MM-DD" day. */
 export const fmtWeekday = (day: string) => D_WEEK.format(new Date(`${day}T00:00:00Z`));
 /** "12 Oct, 14:05" (Lagos) for an instant. */
-export const fmtDateTime = (at: string | null | undefined) => (at ? DT.format(new Date(at)) : "—");
-export const fmtTime = (at: string | null | undefined) => (at ? T.format(new Date(at)) : "—");
+export const fmtDateTime = (at: string | null | undefined) => (at ? DT.format(new Date(at)) : "Not set");
+export const fmtTime = (at: string | null | undefined) => (at ? T.format(new Date(at)) : "Not set");
 
 /** "12–14 Oct" / "30 Oct – 2 Nov" / "12 Oct" for a booking's rental days. */
 export function fmtRental(startsAt: string, endsAt: string): string {

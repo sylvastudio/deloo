@@ -269,7 +269,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
         <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 small">
           <span><span className="muted">Days </span>{fmtRental(b.starts_at, b.ends_at)} ({b.days})</span>
           <span><span className="muted">{b.delivery === "pickup" ? "Pickup at base" : "Delivery"} </span>{b.delivery_slot || ""}</span>
-          {seeMoney && <span><span className="muted">Total </span><strong className="mono">{naira(b.total_kobo)}</strong></span>}
+          {seeMoney && <span><span className="muted">Total </span><strong className="num">{naira(b.total_kobo)}</strong></span>}
           {b.status === "hold" && b.hold_expires_at && <span className="muted">Hold until {fmtDateTime(b.hold_expires_at)}</span>}
           {b.cancel_reason && <span className="muted">Cancel reason: {b.cancel_reason}</span>}
         </div>
@@ -353,7 +353,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                       return (
                         <tr key={i.id}>
                           <td>{i.item_name}{i.kind === "extension" && <> <Chip tone="info">Extension</Chip></>}</td>
-                          <td className="mono">{u ? [u.tag, u.serial].filter(Boolean).join(" · ") || "—" : i.kind === "rental" ? <Chip tone="bad">Not assigned</Chip> : <span className="muted">—</span>}</td>
+                          <td className="mono">{u ? [u.tag, u.serial].filter(Boolean).join(" · ") || "No tag" : i.kind === "rental" ? <Chip tone="bad">Not assigned</Chip> : <span className="muted">None</span>}</td>
                           {seeMoney && <><td className="num">{naira(i.day_rate_kobo)}×{i.days}</td><td className="num">{naira(i.rental_kobo)}</td></>}
                           {seeMoney && hasDeposit && <td className="num">{naira(i.deposit_kobo)}</td>}
                           {canSwap && (
@@ -456,12 +456,12 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           <Section title="Delivery" id="delivery">
             {b.delivery === "pickup" && <p className="notice">Renter picks up at base.</p>}
             <dl className="dl">
-              <dt>Address</dt><dd>{maskText(staff.role, b.address) || "—"}{pii && b.address && <> · <a href={mapsLink(b.address)} target="_blank" rel="noreferrer">Maps</a></>}</dd>
-              <dt>Zone</dt><dd>{zone?.name ?? "—"}</dd>
-              <dt>Contact</dt><dd className="mono">{maskPhone(staff.role, b.contact_phone) || "—"}</dd>
-              <dt>Delivery slot</dt><dd>{b.delivery_slot || "—"}</dd>
-              <dt>Collection slot</dt><dd>{b.collection_slot || "—"}</dd>
-              <dt>Rider</dt><dd>{b.rider_name || (b.delivery === "pickup" ? "—" : <Chip tone="warn">Not assigned</Chip>)} {b.rider_phone && <span className="mono">{maskPhone(staff.role, b.rider_phone)}</span>}</dd>
+              <dt>Address</dt><dd>{maskText(staff.role, b.address) || <span className="subtle">Not set</span>}{pii && b.address && <> · <a href={mapsLink(b.address)} target="_blank" rel="noreferrer">Maps</a></>}</dd>
+              <dt>Zone</dt><dd>{zone?.name ?? <span className="subtle">None</span>}</dd>
+              <dt>Contact</dt><dd>{b.contact_phone ? <span className="mono">{maskPhone(staff.role, b.contact_phone)}</span> : <span className="subtle">Not set</span>}</dd>
+              <dt>Delivery slot</dt><dd>{b.delivery_slot || <span className="subtle">Not set</span>}</dd>
+              <dt>Collection slot</dt><dd>{b.collection_slot || <span className="subtle">Not set</span>}</dd>
+              <dt>Rider</dt><dd>{b.rider_name || (b.delivery === "pickup" ? <span className="subtle">None (pickup)</span> : <Chip tone="warn">Not assigned</Chip>)} {b.rider_phone && <span className="mono">{maskPhone(staff.role, b.rider_phone)}</span>}</dd>
             </dl>
             {editDelivery && (
               <details className="inline" open={na.anchor === "#delivery" || undefined}>
@@ -505,11 +505,11 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           {seeMoney && (
             <Section title="Money" id="money">
               <dl className="dl">
-                <dt>Rental</dt><dd className="mono">{naira(b.rental_kobo)}</dd>
-                <dt>Deloo Protection (damage cover)</dt><dd className="mono">{naira(b.protection_kobo)}</dd>
-                <dt>Delivery</dt><dd className="mono">{naira(b.delivery_kobo)}</dd>
-                {hasDeposit && <><dt>Deposit (refundable, older booking)</dt><dd className="mono">{naira(b.deposit_kobo)}</dd></>}
-                <dt><strong>Total</strong></dt><dd className="mono"><strong>{naira(b.total_kobo)}</strong></dd>
+                <dt>Rental</dt><dd className="num">{naira(b.rental_kobo)}</dd>
+                <dt>Deloo Protection (damage cover)</dt><dd className="num">{naira(b.protection_kobo)}</dd>
+                <dt>Delivery</dt><dd className="num">{naira(b.delivery_kobo)}</dd>
+                {hasDeposit && <><dt>Deposit (refundable, older booking)</dt><dd className="num">{naira(b.deposit_kobo)}</dd></>}
+                <dt><strong>Total</strong></dt><dd className="num"><strong>{naira(b.total_kobo)}</strong></dd>
               </dl>
               <h3 className="kicker">Payments</h3>
               {paymentsRes.error ? <ErrorBox what="payments" error={paymentsRes.error.message} /> : !payments.length ? <p className="hint">No payment started.</p> : (
@@ -518,7 +518,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                     <li key={p.id} className="small">
                       <Chip tone={p.status === "success" ? "good" : p.status === "mismatch" ? "bad" : p.status === "initialized" ? "warn" : "neutral"}>{p.status}</Chip>
                       {p.flags.map((f) => <Chip key={f} tone="bad">{f}</Chip>)}{" "}
-                      <strong className="mono">{naira(p.amount_kobo)}</strong>{p.channel ? ` · ${p.channel}` : ""} · {fmtDateTime(p.paid_at ?? p.created_at)}
+                      <strong className="num">{naira(p.amount_kobo)}</strong>{p.channel ? ` · ${p.channel}` : ""} · {fmtDateTime(p.paid_at ?? p.created_at)}
                       <div><Link className="mono muted" href={`/admin/payments?q=${encodeURIComponent(p.reference)}`}>{p.reference}</Link></div>
                     </li>
                   ))}
@@ -530,7 +530,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
                   {refunds.map((r) => (
                     <li key={r.id} className="small">
                       <Chip tone={r.status === "success" ? "good" : r.status === "failed" ? "bad" : "warn"}>{r.status}</Chip>{" "}
-                      <strong className="mono">{naira(r.amount_kobo)}</strong> · {REFUND_PURPOSE_LABEL[r.purpose] ?? r.purpose} · {r.method}
+                      <strong className="num">{naira(r.amount_kobo)}</strong> · {REFUND_PURPOSE_LABEL[r.purpose] ?? r.purpose} · {r.method}
                       {r.reason && <div className="muted">{r.reason}</div>}
                       {r.provider_ref && <div className="mono muted">{r.provider_ref}</div>}
                       {r.processed_at && <div className="muted">{fmtDateTime(r.processed_at)} · {names.get(r.processed_by ?? "") ?? ""}</div>}

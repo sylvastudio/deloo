@@ -175,10 +175,10 @@ export default async function BookingsPage({ searchParams }: { searchParams: Pro
                       <td className="nowrap"><Link className="rowlink mono" href={`/admin/bookings/${b.id}`}>{b.ref ?? b.id.slice(0, 8)}</Link></td>
                       <td>
                         {p?.full_name ?? <span className="muted">Unknown</span>}
-                        <span className="sub mono">{maskPhone(staff.role, b.contact_phone || p?.phone || "") || "—"}</span>
+                        <span className="sub mono">{maskPhone(staff.role, b.contact_phone || p?.phone || "") || "No phone"}</span>
                       </td>
                       <td className="wrap">
-                        {items.length ? <>{items[0].item_name}{u?.tag && <span className="mono muted"> · {u.tag}</span>}</> : <span className="muted">—</span>}
+                        {items.length ? <>{items[0].item_name}{u?.tag && <span className="mono muted"> · {u.tag}</span>}</> : <span className="muted">No gear</span>}
                         {items.length > 1 && <span className="sub">+{items.length - 1} more</span>}
                       </td>
                       <td className="nowrap">{fmtRental(b.starts_at, b.ends_at)}<span className="sub">{b.days} day{b.days === 1 ? "" : "s"}</span></td>
@@ -191,7 +191,7 @@ export default async function BookingsPage({ searchParams }: { searchParams: Pro
                         </div>
                       </td>
                       <td className="nowrap">{b.delivery === "pickup" ? "Pickup" : "Delivery"}{b.delivery_slot && <span className="sub">{b.delivery_slot}</span>}</td>
-                      <td>{b.rider_name || <span className="subtle">—</span>}</td>
+                      <td>{b.rider_name || <span className="subtle">None</span>}</td>
                     </tr>
                   );
                 })}

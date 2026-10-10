@@ -34,7 +34,7 @@
   /* motion */
   --dur-1: 150ms; --dur-2: 220ms; --dur-3: 300ms; --ease: cubic-bezier(.2, .7, .2, 1);
   /* type */
-  --t-kpi: 600 32px/1.1 var(--font-display);
+  --t-kpi: 600 28px/1.15 var(--font-display);
   --t-title: 600 24px/1.2 var(--font-display);
   --t-heading: 700 15px/1.35 var(--font-body);
   --t-body: 400 14px/1.5 var(--font-body);
@@ -139,7 +139,6 @@
 }
 .adm-nav a:hover { background: var(--hover); color: var(--fg); }
 .adm-nav a[aria-current="page"] { background: var(--selected); color: var(--fg); font-weight: 700; }
-.adm-nav a[aria-current="page"]::before { content: ""; position: absolute; left: -10px; top: 7px; bottom: 7px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }
 .adm-nav a svg { width: 18px; height: 18px; flex: none; }
 .adm-nav a[aria-current="page"] svg { color: var(--accent); }
 .adm-nav .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -160,7 +159,7 @@
 
 .adm-top {
   grid-area: top; position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 16px; height: var(--top-h);
-  padding: 0 var(--pad); background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: saturate(1.4) blur(10px);
+  padding: 0 var(--pad); background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
 .adm-top .top-crumbs { display: flex; align-items: center; gap: 6px; min-width: 0; font: var(--t-small); color: var(--fg-2); }
@@ -175,7 +174,7 @@
 .adm-search input::placeholder { color: var(--fg-3); }
 .adm-search input:hover { border-color: var(--border-strong); }
 .adm-search input:focus { outline: 2px solid var(--focus); outline-offset: 0; border-color: transparent; }
-.adm-search kbd { position: absolute; right: 8px; font: 500 12px/1 var(--font-code); color: var(--fg-3); border: 1px solid var(--border); border-radius: var(--r-1); padding: 3px 6px; background: var(--bg); }
+.adm-search kbd { position: absolute; right: 8px; font: 600 12px/1 var(--font-body); color: var(--fg-3); border: 1px solid var(--border); border-radius: var(--r-1); padding: 3px 6px; background: var(--bg); }
 .adm-top .phone-only { display: none; }
 
 .adm-main { grid-area: main; min-width: 0; outline: none; }
@@ -194,7 +193,6 @@
   .adm-group-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .adm-group + .adm-group { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
   .adm-nav a { justify-content: center; padding: 0; min-height: 40px; }
-  .adm-nav a[aria-current="page"]::before { left: -8px; }
   .adm-nav .label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .adm-nav .adm-count { position: absolute; top: 2px; right: 2px; min-width: 16px; height: 16px; padding: 0 4px; font-size: 12px; }
   .adm-nav a:hover .label, .adm-nav a:focus-visible .label {
@@ -322,7 +320,7 @@
 .adm .control:disabled, .adm .control:read-only:not(select) { background: var(--sunken); color: var(--fg-2); border-color: var(--border); }
 .adm .control.mono { font: var(--t-id); }
 .adm .ro-value { min-height: 24px; font: var(--t-body); color: var(--fg); overflow-wrap: anywhere; }
-.adm .ro-value:empty::before { content: "—"; color: var(--fg-3); }
+.adm .ro-value:empty::before { content: "Not set"; color: var(--fg-3); }
 .adm fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 
 /* Switch: a checkbox with role="switch" */
@@ -533,9 +531,10 @@ a.tile:hover, a.kpi:hover { border-color: var(--border-strong); background: var(
 
 /* ---------- Empty / error states ---------- */
 .empty-state { display: grid; justify-items: center; gap: 8px; padding: 40px 16px; text-align: center; }
-.empty-state .es-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--sunken); color: var(--fg-2); margin-bottom: 4px; }
-.empty-state .es-icon svg { width: 22px; height: 22px; }
-.empty-state.bad .es-icon { background: var(--bad-bg); color: var(--bad-fg); }
+/* A plain glyph above the title: no tinted tile behind it. */
+.empty-state .es-icon { display: block; color: var(--fg-3); line-height: 0; }
+.empty-state .es-icon svg { width: 24px; height: 24px; }
+.empty-state.bad .es-icon { color: var(--bad-fg); }
 .empty-state h2, .empty-state h3 { font: var(--t-heading); margin: 0; }
 .empty-state p { font: var(--t-small); color: var(--fg-2); max-width: 48ch; }
 .empty-state .actions { justify-content: center; margin-top: 6px; }
@@ -544,8 +543,9 @@ a.tile:hover, a.kpi:hover { border-color: var(--border-strong); background: var(
 .empty { padding: 28px 16px; text-align: center; color: var(--fg-2); font: var(--t-small); border: 1px dashed var(--border-strong); border-radius: var(--r-3); }
 
 /* ---------- Skeleton ---------- */
-.skel { display: block; border-radius: var(--r-1); background: linear-gradient(90deg, var(--sunken) 0%, var(--hover) 50%, var(--sunken) 100%); background-size: 200% 100%; animation: adm-shimmer 1.4s ease-in-out infinite; }
-@keyframes adm-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+/* Flat placeholder with a slow, low-contrast fade; the reduced-motion rule above stops it. */
+.skel { display: block; border-radius: var(--r-1); background: var(--sunken); animation: adm-skel 1.6s ease-in-out infinite alternate; }
+@keyframes adm-skel { from { opacity: 1; } to { opacity: .6; } }
 
 /* ---------- Timeline ---------- */
 .timeline { list-style: none; margin: 0; padding: 0; display: grid; }
@@ -593,9 +593,9 @@ a.tile:hover, a.kpi:hover { border-color: var(--border-strong); background: var(
 .adm-dialog::backdrop, .adm-drawer::backdrop { background: rgb(8 12 14 / .45); }
 .adm-dialog[open] { animation: adm-pop-in var(--dur-2) var(--ease); }
 .adm-dialog .dlg-body { display: grid; gap: 10px; padding: 20px 20px 4px; }
-.adm-dialog .dlg-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--info-bg); color: var(--info-fg); }
-.adm-dialog.danger .dlg-icon { background: var(--bad-bg); color: var(--bad-fg); }
-.adm-dialog .dlg-icon svg { width: 20px; height: 20px; }
+.adm-dialog .dlg-icon { display: block; color: var(--info-fg); line-height: 0; }
+.adm-dialog.danger .dlg-icon { color: var(--bad-fg); }
+.adm-dialog .dlg-icon svg { width: 22px; height: 22px; }
 .adm-dialog h2 { font: 600 18px/1.3 var(--font-display); margin: 0; }
 .adm-dialog p { font: var(--t-body); color: var(--fg-2); }
 .adm-dialog .dlg-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 16px 20px 20px; }
@@ -648,12 +648,12 @@ a.tile:hover, a.kpi:hover { border-color: var(--border-strong); background: var(
 .agrid td.sel button { background: color-mix(in srgb, var(--mari) 35%, transparent); color: var(--fg); }
 .agrid td.booked a { background: var(--field-bg); color: var(--field-fg); }
 .agrid td.hold a { background: var(--warn-bg); color: var(--warn-fg); }
-.agrid td.blocked button { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--fg-2) 22%, transparent) 0 4px, transparent 4px 8px); color: var(--fg); }
+.agrid td.blocked button { background: var(--neutral-bg); color: var(--fg); }
 .agrid td.off button { background: var(--bad-bg); cursor: default; }
 
 /* ---------- Jobs (rider) ---------- */
-.jobs-bar { position: sticky; top: calc(var(--top-h) + env(safe-area-inset-top)); z-index: 10; margin: -24px calc(var(--pad) * -1) 0; padding: 10px var(--pad); background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); display: grid; gap: 8px; }
-@media (min-width: 900px) { .adm:not([data-mode="rider"]) .jobs-bar { position: static; margin: 0; padding: 0; background: none; border: 0; backdrop-filter: none; } }
+.jobs-bar { position: sticky; top: calc(var(--top-h) + env(safe-area-inset-top)); z-index: 10; margin: -24px calc(var(--pad) * -1) 0; padding: 10px var(--pad); background: var(--bg); border-bottom: 1px solid var(--border); display: grid; gap: 8px; }
+@media (min-width: 900px) { .adm:not([data-mode="rider"]) .jobs-bar { position: static; margin: 0; padding: 0; background: none; border: 0; } }
 .job-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .job-card {
   position: relative; display: grid; gap: 10px; padding: 14px 16px 16px; border-radius: var(--r-3); background: var(--surface); border: 1px solid var(--border);
@@ -686,9 +686,10 @@ a.tile:hover, a.kpi:hover { border-color: var(--border-strong); background: var(
 .addr-block .who { display: flex; flex-wrap: wrap; gap: 4px 12px; font: var(--t-body); color: var(--fg-2); }
 .addr-block .who b { color: var(--fg); }
 .contact-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; }
-.contact-row a { display: grid; justify-items: center; align-content: center; gap: 4px; min-height: 64px; border-radius: var(--r-3); background: var(--accent-soft); color: var(--info-fg); text-decoration: none; font: 700 13px/1 var(--font-body); }
-.contact-row a:hover { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); }
-.contact-row a svg { width: 22px; height: 22px; }
+/* Call / WhatsApp / Maps: plain outlined buttons, icon beside the label (no tinted icon tiles). */
+.contact-row a { display: flex; justify-content: center; align-items: center; gap: 8px; min-height: 48px; padding: 0 12px; border-radius: var(--r-2); border: 1px solid var(--border-strong); background: var(--surface); color: var(--fg); text-decoration: none; font: 600 14px/1 var(--font-body); }
+.contact-row a:hover { background: var(--hover); }
+.contact-row a svg { width: 18px; height: 18px; color: var(--accent); }
 .gear-list { list-style: none; margin: 0; padding: 0; display: grid; }
 .gear-list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 44px; padding: 8px 0; border-bottom: 1px solid var(--border); }
 .gear-list li:last-child { border-bottom: 0; }

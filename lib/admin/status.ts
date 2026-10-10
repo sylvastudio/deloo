@@ -118,7 +118,7 @@ export const REFUND_METHOD_LABEL: Record<string, string> = { manual: "Manual", t
 /** Last resort for a value with no label: "out_for_delivery" → "Out for delivery". Never shows a raw enum. */
 export function humanize(v: string | null | undefined): string {
   const s = String(v ?? "").replace(/[_-]+/g, " ").trim();
-  return s ? s[0].toUpperCase() + s.slice(1) : "—";
+  return s ? s[0].toUpperCase() + s.slice(1) : "Unknown";
 }
 export const REFUND_PURPOSE_LABEL: Record<string, string> = {
   deposit: "Deposit release", cancellation: "Cancellation", duplicate: "Duplicate payment", gear_gone: "Paid after hold (gear gone)",

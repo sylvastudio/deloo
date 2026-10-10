@@ -146,7 +146,7 @@ export function nextAction(b: NextActionBooking, ctx: NextActionCtx = {}): NextA
       const exp = Date.parse(b.hold_expires_at);
       if (exp <= now.getTime()) return { label: "Hold lapsed: nothing to do", role: "ops", severity: "info", anchor: "" };
       return {
-        label: `Hold expires ${fmtTime(b.hold_expires_at)} — nudge renter`, role: "ops",
+        label: `Hold expires ${fmtTime(b.hold_expires_at)}, nudge renter`, role: "ops",
         severity: exp - now.getTime() <= 15 * 60_000 ? "warn" : "info", anchor: "#renter", due: b.hold_expires_at,
       };
     }

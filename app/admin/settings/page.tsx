@@ -94,7 +94,7 @@ export default async function SettingsPage() {
                 {zones.map((z) => (
                   <tr key={z.id}>
                     <td className="nowrap"><b>{z.name}</b></td>
-                    <td className="wrap">{z.areas.length ? z.areas.join(", ") : <span className="subtle">—</span>}</td>
+                    <td className="wrap">{z.areas.length ? z.areas.join(", ") : <span className="subtle">None listed</span>}</td>
                     <td className="num money">{naira(z.price_kobo)}</td>
                     <td className="num">{naira(z.price_kobo * 2)}</td>
                     <td><Chip tone={z.active ? "good" : "hollow"}>{z.active ? "On" : "Off"}</Chip></td>

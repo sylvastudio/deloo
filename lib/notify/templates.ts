@@ -148,7 +148,9 @@ function richText(s: string): string {
 
 /** Same frame as the Supabase auth emails (supabase/templates): white card on paper, lagoon button. */
 function html(subject: string, lines: string[], link: string | null, support: string, rich = false): string {
-  const font = "font-family:Arial,Helvetica,sans-serif;";
+  // Brand faces first for clients that have them installed; most mail apps fall back to Arial.
+  const font = "font-family:'Atkinson Hyperlegible Next','Atkinson Hyperlegible',Arial,Helvetica,sans-serif;";
+  const display = "font-family:'Bricolage Grotesque',Arial,Helvetica,sans-serif;";
   const para = lines.map((l) => `<p style="margin:0 0 12px;font-size:15px;line-height:1.55;color:#12161C;">${rich ? richText(l) : esc(l)}</p>`).join("\n");
   const wa = waDigits(support);
   return `<!doctype html>
@@ -158,9 +160,9 @@ function html(subject: string, lines: string[], link: string | null, support: st
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3F5F4;padding:24px 12px;">
 <tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#FFFFFF;border:1px solid #D3DADB;border-radius:10px;">
-<tr><td style="padding:28px 28px 8px;${font}font-size:24px;font-weight:bold;color:#12161C;letter-spacing:-0.5px;">deloo<span style="color:#F2A900;">.</span></td></tr>
+<tr><td style="padding:28px 28px 8px;${display}font-size:24px;font-weight:bold;color:#12161C;letter-spacing:-0.5px;">deloo<span style="color:#F2A900;">.</span></td></tr>
 <tr><td style="padding:8px 28px 0;${font}">
-<h1 style="margin:0 0 12px;font-size:20px;line-height:1.25;color:#12161C;font-weight:bold;">${esc(subject)}</h1>
+<h1 style="margin:0 0 12px;${display}font-size:20px;line-height:1.25;color:#12161C;font-weight:bold;">${esc(subject)}</h1>
 ${para}
 ${link ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:8px;"><tr><td style="border-radius:6px;background:#0F6B73;">
 <a href="${esc(link)}" style="display:inline-block;padding:13px 22px;${font}font-size:15px;font-weight:bold;color:#FFFFFF;text-decoration:none;border-radius:6px;">See your booking</a>

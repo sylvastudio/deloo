@@ -5,13 +5,14 @@
  */
 
 /* Stage stepper: Paid → Prepared → Out → Delivered → Collected → Inspected → Closed */
-.stepper { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
-.step { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--slate); padding: 4px 10px 4px 6px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); }
-.step::before { counter-increment: step; content: counter(step); display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; font-size: 11px; background: color-mix(in srgb, var(--slate) 14%, transparent); color: var(--slate); }
+/* No step numbers: a tick for done, a filled dot for the current stage, a hollow dot for what's ahead. */
+.stepper { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.step { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--slate); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); }
+.step::before { content: ""; width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid currentColor; flex: none; }
 .done { color: var(--ink); }
-.done::before { content: "✓"; background: var(--approve); color: var(--surface); }
-.now { color: var(--ink); border-color: var(--lagoon); background: var(--lagoon-tint); font-weight: 500; }
-.now::before { background: var(--lagoon); color: var(--surface); }
+.done::before { content: "✓"; width: auto; height: auto; border: 0; border-radius: 0; font-weight: 700; line-height: 1; color: var(--approve); }
+.now { color: var(--ink); border-color: var(--lagoon); background: var(--lagoon-tint); font-weight: 600; }
+.now::before { background: var(--lagoon); border-color: var(--lagoon); }
 .stepBad { color: var(--proof-red); border-color: color-mix(in srgb, var(--proof-red) 50%, var(--line)); background: var(--proof-red-tint); }
 .stepOff { opacity: .55; }
 
@@ -21,7 +22,10 @@
 .more > summary { list-style: none; cursor: pointer; }
 .more > summary::-webkit-details-marker { display: none; }
 .moreBody { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; margin-top: 8px; }
-.moveCard { padding: 10px; min-width: 260px; flex: 1 1 260px; border: 1px solid var(--line); border-radius: var(--radius, 8px); background: var(--surface); }
+/* Sits inside the booking summary card, so it gets no border or surface of its own (no card in a card). */
+.moveCard { min-width: 260px; flex: 1 1 260px; }
+.moveCard[open] { flex-basis: 100%; }
+.moveCard[open] > form { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 .moveCard > summary { list-style: none; }
 .moveCard > summary::-webkit-details-marker { display: none; }
 
@@ -33,25 +37,28 @@
 
 /* Today: alert list */
 .alerts { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.alert { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border: 1px solid var(--line); border-left-width: 3px; border-radius: var(--radius, 8px); background: var(--surface); }
-.alert[data-tone="bad"] { border-left-color: var(--proof-red); }
-.alert[data-tone="warn"] { border-left-color: var(--marigold); }
-.alert[data-tone="info"] { border-left-color: var(--lagoon); }
-.alertN { font: 500 18px/1 var(--font-display, inherit); min-width: 28px; text-align: right; }
+/* Plain rows split by hairlines; tone is a small dot before the count, not a coloured side bar. */
+.alerts { gap: 0; border-top: 1px solid var(--line); }
+.alert { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.alert::before { content: ""; width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--neutral-dot, var(--slate)); }
+.alert[data-tone="bad"]::before { background: var(--bad-dot, var(--proof-red)); }
+.alert[data-tone="warn"]::before { background: var(--warn-dot, var(--marigold)); }
+.alert[data-tone="info"]::before { background: var(--info-dot, var(--lagoon)); }
+.alertN { font: 700 15px/1 var(--font-body, inherit); font-variant-numeric: tabular-nums; min-width: 24px; text-align: right; }
 .alert[data-tone="bad"] .alertN { color: var(--proof-red); }
 .alertText { flex: 1; min-width: 0; font-size: 14px; }
 .sub { font-size: 12px; color: var(--slate); }
 .subBad { font-size: 12px; color: var(--proof-red); }
 
 /* Run sheet / dispatch rows */
-.dir { display: inline-block; font: 500 11px/1.4 var(--font-code, monospace); letter-spacing: .04em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: color-mix(in srgb, var(--slate) 12%, transparent); color: var(--slate); }
+.dir { display: inline-block; font: 600 12px/1.4 var(--font-body, inherit); padding: 1px 6px; border-radius: 4px; background: color-mix(in srgb, var(--slate) 12%, transparent); color: var(--slate); }
 .dirOut { background: var(--lagoon-tint); color: var(--lagoon); }
 .dirIn { background: color-mix(in srgb, var(--approve) 14%, transparent); color: var(--approve); }
 .dayTabs { display: flex; flex-wrap: wrap; gap: 6px; }
 .dayTab { display: inline-flex; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); font-size: 13px; color: var(--ink); text-decoration: none; background: var(--surface); }
 .dayTab[aria-current="page"] { border-color: var(--lagoon); background: var(--lagoon-tint); color: var(--lagoon); font-weight: 500; }
 .dayTab .count { margin-left: 6px; color: var(--slate); }
-.groupHead { font: 500 12px/1.3 var(--font-code, monospace); color: var(--slate); text-transform: uppercase; letter-spacing: .05em; padding: 8px 0 2px; }
+.groupHead { font: 600 13px/1.3 var(--font-body, inherit); color: var(--slate); padding: 8px 0 2px; }
 .rowForm { display: flex; gap: 4px; align-items: center; }
 .rowForm select { min-height: 30px; padding: 2px 6px; min-width: 120px; }
 .runs { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
@@ -74,7 +81,7 @@
 /* Availability grid: continuous bars */
 .agrid { border-collapse: separate; border-spacing: 0; font-size: 11px; user-select: none; -webkit-user-select: none; }
 .agrid th, .agrid td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 0; height: 34px; }
-.agrid thead th { position: sticky; top: 0; z-index: 2; background: var(--surface); font: 400 11px/1.2 var(--font-code, monospace); color: var(--slate); padding: 6px 2px; min-width: 38px; text-align: center; }
+.agrid thead th { position: sticky; top: 0; z-index: 2; background: var(--surface); font: 600 12px/1.2 var(--font-body, inherit); color: var(--slate); padding: 6px 2px; min-width: 38px; text-align: center; }
 .wk { color: var(--ink) !important; }
 .unitCol { position: sticky; left: 0; z-index: 1; background: var(--surface); text-align: left; padding: 6px 10px !important; min-width: 180px; max-width: 220px; font: 400 12px/1.3 var(--font-body, inherit); box-shadow: 1px 0 0 var(--line); }
 .agrid thead .unitCol { z-index: 3; }
@@ -87,10 +94,11 @@
 .sel .cellBtn { background: color-mix(in srgb, var(--marigold) 40%, transparent); }
 .barCell { padding: 3px 1px !important; }
 .bar { display: flex; align-items: center; height: 26px; padding: 0 8px; border-radius: 6px; font: 500 11px/26px var(--font-code, monospace); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; color: var(--ink); border: 0; width: 100%; cursor: pointer; text-align: left; }
-.barBooked { background: color-mix(in srgb, var(--lagoon) 26%, var(--surface)); border-left: 3px solid var(--lagoon); }
-.barHold { background: color-mix(in srgb, var(--marigold) 26%, var(--surface)); border-left: 3px dashed var(--marigold-strong, var(--marigold)); }
-.barBlock { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--slate) 26%, transparent) 0 5px, transparent 5px 10px); border: 1px solid color-mix(in srgb, var(--slate) 30%, transparent); }
-.contL { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 0; }
-.contR { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+/* Flat fills told apart by colour and border style: booked solid, hold dashed, blocked grey. No side bars, no hatching. */
+.barBooked { background: color-mix(in srgb, var(--lagoon) 22%, var(--surface)); border: 1px solid color-mix(in srgb, var(--lagoon) 55%, transparent); }
+.barHold { background: color-mix(in srgb, var(--marigold) 22%, var(--surface)); border: 1px dashed var(--marigold-strong, var(--marigold)); }
+.barBlock { background: color-mix(in srgb, var(--slate) 18%, var(--surface)); border: 1px solid color-mix(in srgb, var(--slate) 35%, transparent); font-family: var(--font-body, inherit); }
+.contL { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left-width: 0; }
+.contR { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right-width: 0; }
 .legend { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; font-size: 12px; color: var(--slate); }
 .swatch { display: inline-block; width: 22px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; }

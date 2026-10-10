@@ -63,7 +63,7 @@ export function EvidenceCompare({ evidence, units }: { evidence: Evidence[]; uni
                             .sort((a, b) => b.uploaded_at.localeCompare(a.uploaded_at));
                           return (
                             <td key={st.label}>
-                              {cell.length === 0 ? <div className={s.cmpMissing}>—</div> : (
+                              {cell.length === 0 ? <div className={s.cmpMissing}>No photo</div> : (
                                 <div className={s.cmpCell}>
                                   <div className={s.cmpThumbs}>
                                     {cell.slice(0, 2).map((p) => p.url ? (

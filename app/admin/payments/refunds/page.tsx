@@ -81,11 +81,11 @@ export default async function RefundsPage({ searchParams }: { searchParams: Prom
                   return (
                     <tr key={r.id}>
                       <td className="nowrap">{fmtDateTime(r.created_at)}</td>
-                      <td className="nowrap">{b ? <Link className="rowlink mono" href={`/admin/bookings/${b.id}`}>{b.ref}</Link> : "—"}</td>
-                      <td>{b ? names.get(b.renter_id) ?? "—" : "—"}</td>
+                      <td className="nowrap">{b ? <Link className="rowlink mono" href={`/admin/bookings/${b.id}`}>{b.ref}</Link> : <span className="subtle">None</span>}</td>
+                      <td>{b ? names.get(b.renter_id) ?? "Renter" : <span className="subtle">Unknown</span>}</td>
                       <td className="wrap">{REFUND_PURPOSE_LABEL[r.purpose] ?? humanize(r.purpose)}{r.reason && <span className="sub">{r.reason}</span>}</td>
                       <td className="num money">{naira(r.amount_kobo)}</td>
-                      <td>{p ? <><span className="mono">{p.reference}</span>{p.channel && <span className="sub">{PAYMENT_CHANNEL_LABEL[p.channel] ?? humanize(p.channel)}</span>}</> : <span className="subtle">—</span>}</td>
+                      <td>{p ? <><span className="mono">{p.reference}</span>{p.channel && <span className="sub">{PAYMENT_CHANNEL_LABEL[p.channel] ?? humanize(p.channel)}</span>}</> : <span className="subtle">None</span>}</td>
                       <td><RefundStatusChip status={r.status} /></td>
                       <td className="shrink above">
                         {process && open ? (

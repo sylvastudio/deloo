@@ -157,9 +157,9 @@ export default async function ItemPage({ params, searchParams }: { params: Promi
                       const up = future.get(u.id) ?? [];
                       return (
                         <tr key={u.id}>
-                          <td className="mono nowrap">{u.tag || <span className="subtle">—</span>}</td>
-                          <td className="mono">{u.serial || <span className="subtle">—</span>}</td>
-                          <td>{u.condition || <span className="subtle">—</span>}</td>
+                          <td className="mono nowrap">{u.tag || <span className="subtle">No tag</span>}</td>
+                          <td className="mono">{u.serial || <span className="subtle">Not set</span>}</td>
+                          <td>{u.condition || <span className="subtle">Not set</span>}</td>
                           <td><UnitStatusChip status={u.status} /></td>
                           <td>
                             {up.length ? up.slice(0, 2).map((b) => (

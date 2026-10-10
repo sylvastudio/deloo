@@ -79,7 +79,7 @@ export default async function StaffPage() {
                     <tr key={r.user_id} className={r.active ? undefined : "muted-row"}>
                       <td><b>{name}</b>{self && <> <Chip tone="info">You</Chip></>}{emails.get(r.user_id) && <span className="sub">{emails.get(r.user_id)}</span>}</td>
                       <td>{ROLE_LABEL[r.role]}</td>
-                      <td className="mono nowrap">{r.phone || <span className="subtle">—</span>}</td>
+                      <td className="mono nowrap">{r.phone || <span className="subtle">No phone</span>}</td>
                       <td><Chip tone={r.active ? "good" : "hollow"}>{r.active ? "Active" : "Off"}</Chip></td>
                       <td className="nowrap">{fmtDateTime(r.created_at)}</td>
                       <td className="shrink">

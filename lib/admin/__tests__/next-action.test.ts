@@ -126,7 +126,7 @@ test("refund queued more than a day", () => {
 
 test("hold expiring", () => {
   const a = nextAction(booking({ status: "hold", hold_expires_at: "2026-10-10T09:10:00Z" }), { now });
-  assert.equal(a.label, "Hold expires 10:10 — nudge renter");
+  assert.equal(a.label, "Hold expires 10:10, nudge renter");
   assert.equal(a.severity, "warn");
 });
 
