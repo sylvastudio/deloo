@@ -11,7 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { PlanProvider } from '@/lib/plan';
 import { takeReturn } from '@/lib/return-to';
-import { SessionProvider, useSession } from '@/lib/session';
+import { SessionProvider, useSession, VENDOR_MODE } from '@/lib/session';
 import { palette } from '@/theme/tokens';
 import { useIsDark } from '@/theme/use-colors';
 import { WebFrame } from '@/ui/web-frame';
@@ -44,7 +44,8 @@ export default function Root() {
 /**
  * Who sees what (Stack.Protected, docs.expo.dev/router/advanced/authentication):
  * signed out → welcome and sign-in; signed in without a profile → onboarding;
- * otherwise renter or vendor tabs, by mode. On the web, signed-out visitors can also browse gear.
+ * otherwise the renter tabs (vendor tabs only in builds with EXPO_PUBLIC_VENDOR_MODE=on).
+ * On the web, signed-out visitors can also browse gear.
  */
 function Navigator() {
   const { loading, session, profile, mode } = useSession();
@@ -75,7 +76,6 @@ function Navigator() {
       <Stack.Protected guard={ready && mode === 'renter'}>
         <Stack.Screen name="plan/details" />
         <Stack.Screen name="plan/ask/[q]" />
-        <Stack.Screen name="plan/sizing" options={{ animation: 'fade' }} />
         <Stack.Screen name="plan/setup" />
         <Stack.Screen name="plan/swap" options={{ presentation: 'formSheet', sheetAllowedDetents: [0.6, 1], sheetCornerRadius: 24, sheetGrabberVisible: true }} />
         <Stack.Screen name="plan/share" options={{ presentation: 'formSheet', sheetAllowedDetents: [0.7], sheetCornerRadius: 24, sheetGrabberVisible: true }} />
@@ -90,12 +90,15 @@ function Navigator() {
       </Stack.Protected>
       <Stack.Protected guard={ready}>
         <Stack.Screen name="coming-soon" />
+        <Stack.Screen name="account/edit" />
+        <Stack.Screen name="account/help" />
+        <Stack.Screen name="account/about" />
+        <Stack.Screen name="account/delete" />
       </Stack.Protected>
       <Stack.Protected guard={ready || browse}>
         <Stack.Screen name="item/[id]" />
-        <Stack.Screen name="vendor/[id]" />
       </Stack.Protected>
-      <Stack.Protected guard={ready && mode === 'vendor'}>
+      <Stack.Protected guard={VENDOR_MODE && ready && mode === 'vendor'}>
         <Stack.Screen name="(vendor)" options={{ animation: 'fade' }} />
         <Stack.Screen name="add-gear" />
       </Stack.Protected>

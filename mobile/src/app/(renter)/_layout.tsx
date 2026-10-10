@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { startHandoverSync } from '@/lib/handover';
 import { useColors } from '@/theme/use-colors';
 
+// Plan · Gear · Bookings · Account (route names explore/me kept so old links still open).
 // SDK 57 import path (docs.expo.dev/router/advanced/native-tabs). Android: Material 3 navigation bar.
 export default function RenterTabs() {
   const c = useColors();
@@ -16,15 +17,15 @@ export default function RenterTabs() {
         <NativeTabs.Trigger.Icon sf={{ default: 'sparkles', selected: 'sparkles' }} md="auto_awesome" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="explore">
-        <NativeTabs.Trigger.Label>Explore</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="magnifyingglass" md="search" />
+        <NativeTabs.Trigger.Label>Gear</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'camera', selected: 'camera.fill' }} md="photo_camera" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="bookings">
         <NativeTabs.Trigger.Label>Bookings</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'calendar', selected: 'calendar' }} md="event" />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="me">
-        <NativeTabs.Trigger.Label>Me</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Account</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }} md="account_circle" />
       </NativeTabs.Trigger>
     </NativeTabs>
