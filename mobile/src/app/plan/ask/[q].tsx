@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LAGOS_AREAS } from '@/lib/format';
 import { usePlan } from '@/lib/plan';
+import { DEFAULT_PEOPLE } from '@/planner';
 import type { Answers, Budget, Location, ShootType, SoundMode, TimeOfDay } from '@/planner/types';
 import { space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
@@ -15,9 +16,13 @@ import { Text } from '@/ui/text';
 import { Tile } from '@/ui/tile';
 import { TopBar } from '@/ui/top-bar';
 
-/** R3a–R3i, in order. Each is its own route so Android back steps back one question. */
-export const QUESTIONS = ['type', 'people', 'angles', 'where', 'sound', 'movement', 'when', 'area', 'budget'] as const;
-type Q = (typeof QUESTIONS)[number];
+/**
+ * The question flow: only what the plan can't guess. Each is its own route so Android back steps back
+ * one question. People, angles, sound, movement and area get per-shoot defaults (shown as "assumed"
+ * chips on the setup, one tap to change) and stay reachable here as edit-only screens (?edit=1).
+ */
+export const QUESTIONS = ['type', 'where', 'when'] as const;
+type Q = (typeof QUESTIONS)[number] | 'people' | 'angles' | 'sound' | 'movement' | 'area' | 'budget';
 
 const SHOOT_TYPES: [ShootType, string, string, string][] = [
   ['podcast', 'Podcast', 'People talking at a desk', '🎙️'],
@@ -37,7 +42,7 @@ export default function Ask() {
   const { q, edit } = useLocalSearchParams<{ q: Q; edit?: string }>();
   const { draft, answer } = usePlan();
   const a = draft.answers;
-  const index = Math.max(0, QUESTIONS.indexOf(q));
+  const index = Math.max(0, (QUESTIONS as readonly string[]).indexOf(q));
   const advancing = useRef(false);
 
   function next() {
@@ -45,7 +50,7 @@ export default function Ask() {
     if (edit) { router.back(); return; }
     const following = QUESTIONS[index + 1];
     if (following) router.push(`/plan/ask/${following}`);
-    else router.push('/plan/sizing');
+    else router.push('/plan/setup');
   }
   /** Single-choice answers auto-advance after a beat so the selection is seen (user-flows §2 rule 1). */
   function pick(patch: Partial<Answers>) {
@@ -84,11 +89,16 @@ export default function Ask() {
         <Tile key={n} icon="camera" title={n === 1 ? '1 camera' : `${label} cameras`} selected={a.angles === n} onPress={() => pick({ angles: n })} />
       ))}{notSure({ angles: 'unsure' })}</>;
       break;
-    case 'where':
-      title = 'Where and when in the day?';
+    case 'where': {
+      const people = typeof a.people === 'number' ? a.people : DEFAULT_PEOPLE[(a.shootType && a.shootType !== 'unsure' ? a.shootType : 'other') as ShootType];
+      title = 'Where, and who’s on camera?';
       helper = 'Indoors and at night you need your own light; outdoors by day the sun does most of it.';
       body = <>
-        <Text variant="label">Location</Text>
+        <Text variant="label">People on camera</Text>
+        <View style={styles.wrap}>
+          {COUNTS.map(([n, label]) => <Chip key={n} label={label} selected={people === n} onPress={() => answer({ people: n })} />)}
+        </View>
+        <Text variant="label" style={{ marginTop: space.sm }}>Location</Text>
         <View style={styles.wrap}>
           {([['indoor', 'Indoors'], ['outdoor', 'Outdoors'], ['both', 'Both']] as [Location, string][]).map(([k, l]) => (
             <Chip key={k} label={l} selected={a.location === k} onPress={() => answer({ location: k })} />
@@ -105,6 +115,7 @@ export default function Ask() {
       </>;
       footer = <Button title="Continue" disabled={a.location === undefined} onPress={() => { if (a.timeOfDay === undefined) answer({ timeOfDay: 'unsure' }); next(); }} />;
       break;
+    }
     case 'sound':
       title = 'How will you record voices?';
       body = <>

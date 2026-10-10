@@ -38,7 +38,11 @@ export type PaystackTransaction = {
   metadata?: Record<string, unknown> | string | null;
 };
 
-export function initialize(input: { email: string; amountKobo: number; reference: string; callbackUrl: string; metadata: Record<string, unknown> }) {
+/** Payment methods the renter can pick; each opens Paystack on just that method. Empty = all of them. */
+export const PAY_CHANNELS = ["card", "bank_transfer", "ussd"] as const;
+export type PayChannel = (typeof PAY_CHANNELS)[number];
+
+export function initialize(input: { email: string; amountKobo: number; reference: string; callbackUrl: string; metadata: Record<string, unknown>; channel?: PayChannel }) {
   return call<{ authorization_url: string; access_code: string; reference: string }>("/transaction/initialize", {
     method: "POST",
     body: JSON.stringify({
@@ -47,7 +51,7 @@ export function initialize(input: { email: string; amountKobo: number; reference
       currency: "NGN",
       reference: input.reference,
       callback_url: input.callbackUrl,
-      channels: ["card", "bank_transfer", "ussd", "bank"],
+      channels: input.channel ? [input.channel] : ["card", "bank_transfer", "ussd", "bank"],
       metadata: input.metadata,
     }),
   });

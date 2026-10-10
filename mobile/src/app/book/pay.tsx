@@ -6,8 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   bookingDays, bookingStatus, cachedSettings, clockOffset, getActiveHold, getBooking, IN_FLIGHT, isOffline, loadSettings, PAID, PAY_RETURN, plain,
-  setActiveHold, startPayment, verifyPayment, type BookingDetail,
+  setActiveHold, startPayment, verifyPayment, type BookingDetail, type PayMethod,
 } from '@/lib/bookings';
+import { getCheckout, saveCheckout } from '@/lib/booking-draft';
+import { payInline, preloadPaystack } from '@/lib/paystack-inline';
+import { PayMethods } from '@/ui/pay-methods';
 import { daysText, naira, rangeLabel, whatsappUrl } from '@/lib/format';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
@@ -26,13 +29,16 @@ const POLL_FOR_MS = 10 * 60_000;
 
 /**
  * R-31 Pay and R-32 Payment pending. The hold is already made (Review); this opens Paystack in an
- * in-app browser (on the web: this tab, coming back via /pay), then asks the server (verify) what
- * happened. Success is only shown once the booking row says 'confirmed' (the webhook or verify
+ * in-app browser (on the web: as an overlay on this page), then asks the server (verify) what
+ * happened. Review's Pay button lands here with go=1 and Paystack opens straight away. Success is only shown once the booking row says 'confirmed' (the webhook or verify
  * confirms it, never the app).
  */
 export default function Pay() {
   const c = useColors();
-  const params = useLocalSearchParams<{ booking?: string; reference?: string }>();
+  const params = useLocalSearchParams<{ booking?: string; reference?: string; go?: string; method?: PayMethod }>();
+  const [method, setMethod] = useState<PayMethod>(() => params.method ?? getCheckout()?.method ?? 'card');
+  const autoStarted = useRef(false);
+  useEffect(() => { if (Platform.OS === 'web') preloadPaystack(); }, []);
   const bookingId = params.booking ?? getActiveHold()?.booking_id;
   const [b, setB] = useState<BookingDetail | null>(null);
   const [phase, setPhase] = useState<Phase>('loading');
@@ -150,15 +156,18 @@ export default function Pay() {
     if (!bookingId) return;
     setPhase('opening'); setMessage('');
     try {
-      const { authorization_url, reference: ref } = await startPayment(bookingId);
+      if (method === 'usdt') { setMessage('Paying in USDT is coming soon. Pick card, transfer or USSD.'); setPhase('ready'); return; }
+      const { authorization_url, reference: ref } = await startPayment(bookingId, method);
       reference.current = ref;
       const active = getActiveHold();
       if (active?.booking_id === bookingId) setActiveHold({ ...active, reference: ref });
       if (Platform.OS === 'web') {
-        // Web: leave for Paystack in this tab (pop-ups get blocked or lost on phones). Paystack sends
-        // the page back to /pay?reference=…, which reopens this screen and checks with the server.
-        // The active hold, with this reference, is in localStorage, so nothing is lost on the way.
-        window.location.assign(authorization_url);
+        // Web: Paystack's checkout as an overlay on this page, so the renter never leaves the app and
+        // lands on our success screen when it closes. If the overlay can't load, fall back to leaving
+        // for Paystack in this tab: it sends the page back to /pay?reference=…, which checks with the
+        // server (the active hold, with this reference, is in localStorage).
+        try { await payInline(authorization_url); } catch { window.location.assign(authorization_url); return; }
+        await check();
         return;
       }
       await WebBrowser.openAuthSessionAsync(authorization_url, PAY_RETURN);
@@ -171,6 +180,22 @@ export default function Pay() {
     } finally {
       setAttempt((n) => n + 1);
     }
+  }
+
+  // From Review's Pay button: open Paystack once, as soon as the booking is ready. The flag is cleared
+  // so a reload or browser Back never reopens checkout by itself.
+  useEffect(() => {
+    if (!params.go || autoStarted.current || phase !== 'ready' || !b) return;
+    autoStarted.current = true;
+    router.setParams({ go: undefined });
+    pay();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.go, phase, b]);
+
+  function chooseMethod(m: PayMethod) {
+    setMethod(m); setMessage('');
+    const saved = getCheckout();
+    if (saved) saveCheckout({ ...saved, method: m });
   }
 
   function startOver() {
@@ -220,21 +245,19 @@ export default function Pay() {
             <View style={styles.row}><Icon name="shield" size={18} color={c.greenInk} /><Text variant="bodyStrong" style={{ color: c.greenInk }}>Deposit {naira(b.deposit_kobo)}</Text></View>
             <Text variant="caption">Refundable. Comes back within 48 hours after we check the gear.</Text>
           </View>
-          {phase === 'ready' || phase === 'opening' ? (
-            <Text variant="caption" tone="slate">Pay by card, bank transfer or USSD on Paystack’s secure page. Card is quickest.</Text>
-          ) : null}
+          {phase === 'ready' || phase === 'unfinished' ? <PayMethods value={method} onChange={chooseMethod} /> : null}
         </>}
       </ScrollView>
       <View style={[styles.footer, { borderTopColor: c.line }]}>
         {/* Web (often WhatsApp's in-app browser): a drag fights page scrolling, and Paystack is the confirm step anyway. */}
         {phase === 'ready' && b ? (Platform.OS === 'web'
-          ? <Button title={`Pay ${naira(b.total_kobo)}`} disabled={left <= 0} onPress={pay} />
-          : <SlideToConfirm key={attempt} label={`Slide to pay ${naira(b.total_kobo)}`} disabled={left <= 0} onConfirm={pay} />
+          ? <Button title={`Pay ${naira(b.total_kobo)}`} disabled={left <= 0 || method === 'usdt'} onPress={pay} />
+          : <SlideToConfirm key={attempt} label={`Slide to pay ${naira(b.total_kobo)}`} disabled={left <= 0 || method === 'usdt'} onConfirm={pay} />
         ) : phase === 'opening' || phase === 'checking' || phase === 'loading' ? (
           <Button title={phase === 'checking' ? 'Checking your payment…' : 'Opening Paystack…'} loading disabled />
         ) : phase === 'unfinished' ? (
           <>
-            <Button title="Resume payment" onPress={pay} disabled={left <= 0} />
+            <Button title="Resume payment" onPress={pay} disabled={left <= 0 || method === 'usdt'} />
             {reference.current ? <Button kind="quiet" title="I’ve paid. Check again" onPress={() => check()} /> : null}
           </>
         ) : phase === 'pending' ? (

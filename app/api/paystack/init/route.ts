@@ -1,5 +1,5 @@
 import { userFromBearer } from "@/lib/api-auth";
-import { initialize } from "@/lib/paystack";
+import { initialize, PAY_CHANNELS, type PayChannel } from "@/lib/paystack";
 import { createServiceClient } from "@/lib/supabase/server";
 
 export const maxDuration = 20;
@@ -9,7 +9,7 @@ const WEB_ORIGINS = ["https://app.deloo.space", "http://localhost:8081", ...(pro
 
 /**
  * The app has a booking on hold and wants to pay: creates a payment row and a Paystack checkout.
- * Body: { booking_id, return_to?: "web" }. Returns { authorization_url, reference }. Reuses a checkout
+ * Body: { booking_id, return_to?: "web", channel?: "card" | "bank_transfer" | "ussd" }. Returns { authorization_url, reference }. Reuses a checkout
  * made in the last 20 minutes for the same amount and return target, so tapping Pay twice doesn't make
  * two transactions. Paystack adds ?reference=… to the callback URL.
  *   Native app: callback deloo.space/pay/return, which hands over to deloo://pay.
@@ -18,7 +18,9 @@ const WEB_ORIGINS = ["https://app.deloo.space", "http://localhost:8081", ...(pro
 export async function POST(request: Request) {
   const auth = await userFromBearer(request);
   if (auth instanceof Response) return auth;
-  const body = (await request.json().catch(() => null)) as { booking_id?: unknown; return_to?: unknown } | null;
+  const body = (await request.json().catch(() => null)) as { booking_id?: unknown; return_to?: unknown; channel?: unknown } | null;
+  // The method the renter picked in the app (stored on the payment until Paystack reports the real one).
+  const channel = PAY_CHANNELS.includes(body?.channel as PayChannel) ? (body!.channel as PayChannel) : undefined;
   const bookingId = typeof body?.booking_id === "string" ? body.booking_id : "";
   const origin = request.headers.get("origin") ?? "";
   const webOrigin = body?.return_to === "web" ? (WEB_ORIGINS.includes(origin) ? origin : WEB_ORIGINS[0]) : null;
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
     // As the renter (RLS): only their own booking is visible.
     auth.supabase.from("bookings").select("id, ref, status, total_kobo, hold_expires_at").eq("id", bookingId).maybeSingle(),
     db.from("payments")
-      .select("reference, authorization_url, amount_kobo, created_at, callback_url").eq("booking_id", bookingId).eq("status", "initialized")
+      .select("reference, authorization_url, amount_kobo, created_at, callback_url, channel").eq("booking_id", bookingId).eq("status", "initialized")
       .order("created_at", { ascending: false }).limit(1).maybeSingle(),
     db.from("payments").select("id", { count: "exact", head: true }).eq("booking_id", bookingId),
   ]);
@@ -41,13 +43,13 @@ export async function POST(request: Request) {
   if (booking.status !== "hold" || !booking.hold_expires_at || Date.parse(booking.hold_expires_at) < Date.now()) {
     return Response.json({ error: "Your hold has ended. Go back and check the gear is still free." }, { status: 409 });
   }
-  if (recent?.authorization_url && recent.amount_kobo === booking.total_kobo && recent.callback_url === callbackUrl && Date.now() - Date.parse(recent.created_at) < 20 * 60_000) {
+  if (recent?.authorization_url && recent.amount_kobo === booking.total_kobo && recent.callback_url === callbackUrl && recent.channel === (channel ?? "") && Date.now() - Date.parse(recent.created_at) < 20 * 60_000) {
     return Response.json({ authorization_url: recent.authorization_url, reference: recent.reference });
   }
 
   const reference = `${booking.ref}-${(count ?? 0) + 1}`;
   const { data: payment, error } = await db.from("payments")
-    .insert({ booking_id: booking.id, reference, amount_kobo: booking.total_kobo, callback_url: callbackUrl }).select("id").single();
+    .insert({ booking_id: booking.id, reference, amount_kobo: booking.total_kobo, callback_url: callbackUrl, channel: channel ?? "" }).select("id").single();
   if (error || !payment) return Response.json({ error: "Couldn’t start the payment. Try again." }, { status: 500 });
 
   try {
@@ -56,6 +58,7 @@ export async function POST(request: Request) {
       amountKobo: booking.total_kobo,
       reference,
       callbackUrl,
+      channel,
       metadata: { booking_id: booking.id, payment_id: payment.id, booking_ref: booking.ref },
     });
     await db.from("payments").update({ authorization_url: checkout.authorization_url }).eq("id", payment.id);

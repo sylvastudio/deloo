@@ -8,6 +8,7 @@ export {
   sizeSetups,
   sizeSetup,
   resolveAnswers,
+  DEFAULT_PEOPLE,
   defaultLevel,
   fmt,
 } from './rules';

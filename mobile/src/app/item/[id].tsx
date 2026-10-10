@@ -112,9 +112,15 @@ export default function ItemDetail() {
 
   async function book() {
     if (!item || !first || !last) return;
-    // Web, signed out (browsing from a shared link): sign in first, then come back to this item.
-    if (!session) { rememberReturn(`/item/${item.id}?first=${first}&last=${last}`); router.push('/welcome'); return; }
     const lines = [{ itemId: item.id, name: displayName(item.name), qty }];
+    // Web, signed out (browsing from a shared link): straight to sign-in, then straight to Review with
+    // these days and this quantity (Review checks availability live when it opens).
+    if (!session) {
+      setBookingDraft({ lines, first, last, from: { kind: 'item', itemId: item.id } });
+      rememberReturn('/book/review');
+      router.push('/sign-in');
+      return;
+    }
     // The calendar may be minutes old: ask the server again so Review never opens on gear that's gone.
     setChecking(true); setBookError(''); setResumeId(undefined);
     try {

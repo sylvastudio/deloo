@@ -6,8 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { draftKey, getCheckout, saveCheckout, useBookingDraft, type DraftLine } from '@/lib/booking-draft';
 import {
   cachedSettings, createHold, GearTaken, getActiveHold, isOffline, itemCalendar, loadSettings, plain, quoteBooking, requestCancellation,
-  setActiveHold, type ActiveHold, type Delivery, type Quote, type QuoteLine, type Settings,
+  setActiveHold, type ActiveHold, type Delivery, type PayMethod, type Quote, type QuoteLine, type Settings,
 } from '@/lib/bookings';
+import { PayMethods } from '@/ui/pay-methods';
 import { daysText, lagosTime, naira, rangeLabel, whatsappUrl } from '@/lib/format';
 import { useSession } from '@/lib/session';
 import { radius, space } from '@/theme/tokens';
@@ -37,6 +38,9 @@ export default function Review() {
   const [zoneId, setZoneId] = useState<string | undefined>(saved?.zoneId);
   const [address, setAddress] = useState(saved?.address ?? '');
   const [phone, setPhone] = useState(saved?.phone || profile?.phone || '');
+  // A phone we already have is shown as one line with "Change", not an open field.
+  const [editPhone, setEditPhone] = useState(!(saved?.phone || profile?.phone));
+  const [method, setMethod] = useState<PayMethod>(saved?.method ?? 'card');
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState('');
   const [offline, setOffline] = useState(false);
@@ -127,10 +131,13 @@ export default function Review() {
 
   async function pay() {
     setTouched(true);
-    if (held && hold) { router.push(`/book/pay?booking=${hold.booking_id}`); return; }
+    // Straight to Paystack: the pay screen opens checkout as soon as it loads (go=1).
+    const toPay = (id: string) => router.push({ pathname: '/book/pay', params: { booking: id, go: '1', method } });
+    if (method === 'usdt') { setPayError('Paying in USDT is coming soon. Pick card, transfer or USSD for now.'); return; }
+    saveCheckout({ delivery, zoneId, address: address.trim(), phone: phone.trim(), method });
+    if (held && hold) { toPay(hold.booking_id); return; }
     if (!ready || !draft?.first || !draft.last) return;
     setPaying(true); setPayError(''); setTaken(false);
-    saveCheckout({ delivery, zoneId, address: address.trim(), phone: phone.trim() });
     try {
       const h = await createHold({
         lines: draft.lines, first: draft.first, last: draft.last, delivery, zoneId, address: address.trim(), phone: phone.trim(),
@@ -138,7 +145,7 @@ export default function Review() {
       });
       const active = { ...h, draftKey: key };
       setActiveHold(active); setHold(active);
-      router.push(`/book/pay?booking=${h.booking_id}`);
+      toPay(h.booking_id);
     } catch (e) {
       if (e instanceof GearTaken) { setTaken(true); setPickDays(true); runQuote(); }
       else setPayError(plain(e, 'Couldn’t hold your gear. Try again.'));
@@ -226,8 +233,15 @@ export default function Review() {
                 Bring a valid ID. Return it to the same place the morning after your last day.
               </Text>
             )}
-            <Field label="Phone for the rider" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel"
-              error={touched && !phoneOk ? 'Add a phone number we can call or WhatsApp.' : undefined} />
+            {editPhone || !phoneOk ? (
+              <Field label="Phone for the rider" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel"
+                error={touched && !phoneOk ? 'Add a phone number we can call or WhatsApp.' : undefined} />
+            ) : (
+              <View style={styles.row}>
+                <Text variant="caption" tone="slate" style={{ flex: 1 }}>{`We’ll call or WhatsApp ${phone} about delivery.`}</Text>
+                <Pressable onPress={() => setEditPhone(true)} hitSlop={8} accessibilityRole="button"><Text variant="label" tone="lagoon">Change</Text></Pressable>
+              </View>
+            )}
           </View>
         </View>
 
@@ -252,6 +266,12 @@ export default function Review() {
             </Text>
           </View>
         )}
+        {/* How to pay: chosen here, so Pay goes straight to Paystack on that method. */}
+        <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
+          <Text variant="label" tone="slate">PAY WITH</Text>
+          <PayMethods value={method} onChange={(m) => { setMethod(m); setPayError(''); }} />
+          <Text variant="caption" tone="slate">Paystack handles the payment securely. We hold your gear for 30 minutes while you pay.</Text>
+        </View>
         {payError ? <Notice tone="problem">{payError}</Notice> : null}
         {help ? (
           <Pressable onPress={() => Linking.openURL(whatsappUrl(help, 'Hi Deloo, I have a question about a booking')).catch(() => {})} accessibilityRole="link" hitSlop={8}>

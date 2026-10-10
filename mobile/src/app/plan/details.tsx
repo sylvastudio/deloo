@@ -58,7 +58,7 @@ export default function Details() {
         )}
       </ScrollView>
       <View style={[styles.footer, { borderTopColor: c.line }]}>
-        <Button title="Size my setup" disabled={missing.length > 0} onPress={() => router.push('/plan/sizing')} />
+        <Button title="Size my setup" disabled={missing.length > 0} onPress={() => router.push('/plan/setup')} />
         {missing.length ? <Text variant="caption" tone="slate" style={{ textAlign: 'center' }}>Answer {missing.length === 1 ? 'the question' : 'the questions'} above first.</Text> : null}
       </View>
     </SafeAreaView>

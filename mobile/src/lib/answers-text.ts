@@ -1,3 +1,4 @@
+import type { ResolvedAnswers } from '@/planner';
 import type { Answers } from '@/planner/types';
 
 export const SHOOT_LABEL: Record<string, string> = {
@@ -38,12 +39,21 @@ export function answerChips(a: Partial<Answers>): { key: string; label: string; 
   return out;
 }
 
+/** Chips for what the plan assumed (not asked), so each default is one tap from being changed. */
+export function assumedChips(a: Partial<Answers>, r: Pick<ResolvedAnswers, 'people' | 'angles' | 'sound' | 'movement'>): { key: string; label: string; q: string }[] {
+  const out: { key: string; label: string; q: string }[] = [];
+  if (typeof a.people !== 'number') out.push({ key: 'people', q: 'people', label: `${r.people === 1 ? '1 person' : `${r.people} people`} · assumed` });
+  if (typeof a.angles !== 'number') out.push({ key: 'angles', q: 'angles', label: `${r.angles === 1 ? '1 camera' : `${r.angles} cameras`} · assumed` });
+  if (!set(a.sound)) out.push({ key: 'sound', q: 'sound', label: `${SOUND[r.sound]} · assumed` });
+  if (typeof a.movement !== 'boolean') out.push({ key: 'movement', q: 'movement', label: `${r.movement ? 'Moving shots' : 'Static shots'} · assumed` });
+  return out;
+}
+
 /** Required before sizing (user-flows F2 step 4); the rest gets safe defaults with a "We assumed…" note. */
 export const REQUIRED: { key: keyof Answers; q: string; label: string }[] = [
   { key: 'shootType', q: 'type', label: 'What you’re shooting' },
   { key: 'location', q: 'where', label: 'Indoors or outdoors' },
   { key: 'startsAt', q: 'when', label: 'Which days you need it' },
-  { key: 'area', q: 'area', label: 'Where in Lagos' },
 ];
 
 export function missingRequired(a: Partial<Answers>) {

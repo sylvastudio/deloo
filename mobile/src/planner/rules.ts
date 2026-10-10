@@ -18,7 +18,7 @@ export const LEVELS: Level[] = ['good', 'better', 'best'];
 // Defaults per shoot type, used when an answer is "Not sure" or missing
 // ---------------------------------------------------------------------------------------------
 
-const DEFAULT_PEOPLE: Record<ShootType, number> = {
+export const DEFAULT_PEOPLE: Record<ShootType, number> = {
   podcast: 2, interview: 2, content: 1, music_video: 1, short_film: 2, photo: 1, event: 1, other: 1,
 };
 const DEFAULT_ANGLES: Record<ShootType, number> = {

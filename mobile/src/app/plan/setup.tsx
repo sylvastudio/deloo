@@ -3,15 +3,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { answerChips } from '@/lib/answers-text';
+import { answerChips, assumedChips } from '@/lib/answers-text';
 import { draftFromPlan, setBookingDraft } from '@/lib/booking-draft';
 import { cachedSettings, checkFree, isOffline, loadSettings, plain, type Settings } from '@/lib/bookings';
 import { naira } from '@/lib/format';
 import { lagosToday } from '@/ui/date-range';
 import { lineTitle, needLabel } from '@/lib/line-text';
 import { usePlan } from '@/lib/plan';
-import { applyChoices, PROTECTION_RATE, saveEvent, usePlanResult, type ChosenLine } from '@/lib/plan-result';
-import { RULES_VERSION } from '@/planner';
+import { applyChoices, completeAnswers, PROTECTION_RATE, saveEvent, usePlanResult, type ChosenLine } from '@/lib/plan-result';
+import { resolveAnswers, RULES_VERSION } from '@/planner';
 import type { Group, Level } from '@/planner/types';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
@@ -40,7 +40,7 @@ export default function Setup() {
   const level = draft.level;
   const setup = setups.find((s) => s.level === level) ?? setups[1];
   const result = useMemo(() => (matches ? applyChoices(matches[level], draft) : null), [matches, level, draft]);
-  const chips = answerChips(draft.answers);
+  const chips = [...answerChips(draft.answers), ...assumedChips(draft.answers, resolveAnswers(completeAnswers(draft.answers)))];
   const when = typeof draft.answers.startsAt === 'string' && draft.answers.startsAt !== 'unsure' ? DAY.format(new Date(draft.answers.startsAt)) : null;
   // A saved plan whose date has come and gone: treat it as having no date (bookings start tomorrow).
   const first = result ? draftFromPlan(result, draft).first : undefined;

@@ -35,7 +35,7 @@ export default function Plan() {
     update({ rawText: words });
     const read = readShoot(words);
     answer(read);
-    router.push(missingRequired(read).length ? '/plan/details' : '/plan/sizing');
+    router.push(missingRequired(read).length ? '/plan/details' : '/plan/setup');
     setText('');
   }
 

@@ -175,10 +175,23 @@ export function setActiveHold(h: ActiveHold | null) {
 // ---------------------------------------------------------------------------
 export const PAY_RETURN = 'deloo://pay';
 
-export function startPayment(bookingId: string) {
+/**
+ * How the renter wants to pay. Card, transfer and USSD open Paystack on just that method; USDT is
+ * shown as coming soon (not wired to any processor yet).
+ */
+export type PayMethod = 'card' | 'bank_transfer' | 'ussd' | 'usdt';
+export const PAY_METHODS: { key: PayMethod; label: string; note: string; soon?: boolean }[] = [
+  { key: 'card', label: 'Card', note: 'Visa, Mastercard, Verve. Quickest.' },
+  { key: 'bank_transfer', label: 'Bank transfer', note: 'Paystack gives you an account number to send to.' },
+  { key: 'ussd', label: 'USSD', note: 'Dial a code from your bank’s phone line.' },
+  { key: 'usdt', label: 'USDT', note: 'Pay in crypto. Coming soon.', soon: true },
+];
+
+export function startPayment(bookingId: string, method?: PayMethod) {
   // Web: Paystack sends the whole page back to <app origin>/pay?reference=… instead of deloo://pay.
   return api<{ authorization_url: string; reference: string }>('/api/paystack/init', {
     booking_id: bookingId, ...(Platform.OS === 'web' ? { return_to: 'web' } : {}),
+    ...(method && method !== 'usdt' ? { channel: method } : {}),
   });
 }
 export type Verify = { paid: boolean; booking_status?: BookingStatus; needs_refund: boolean; paystack_status?: string; error?: string };

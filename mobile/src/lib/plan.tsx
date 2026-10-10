@@ -47,7 +47,8 @@ export function usePlan() {
 
 const KEEP_CHOICES = new Set(['startsAt', 'endsAt', 'area', 'budget']);
 
-export const QUESTION_KEYS = ['shootType', 'people', 'angles', 'location', 'sound', 'movement', 'startsAt', 'area', 'budget'] as const;
+/** What the question flow asks (app/plan/ask QUESTIONS); everything else has per-shoot defaults. */
+export const QUESTION_KEYS = ['shootType', 'location', 'startsAt'] as const;
 
 export function PlanProvider({ children }: PropsWithChildren) {
   const [draft, setDraft] = useState<Draft>(read);
