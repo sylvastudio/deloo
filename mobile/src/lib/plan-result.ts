@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { matchSetup, rentalDays, sizeSetups } from '@/planner';
+import { matchSetup, rentalDays, sizeSetups, swapId, swapTarget } from '@/planner';
 import type { Alternative, Answers, CatalogueItem, CategoryKey, Level, LineMatch, Offer, SetupMatch } from '@/planner/types';
+import { addDays, lagosToday } from '@/ui/date-range';
+import { shootWindow } from './intake';
 import type { Draft } from './plan';
 import { supabase } from './supabase';
 
+export { swapId, swapTarget };
+
 type ItemRow = {
   id: string; vendor_id: string; category_key: string; name: string; specs: Record<string, unknown>; day_rate_kobo: number;
-  deposit_kobo: number; technician_required: boolean; risk_tier: number; vendors: { name: string; areas: string[]; approved_at: string | null } | null;
+  deposit_kobo: number; technician_required: boolean; risk_tier: number; photos: string[] | null; vendors: { name: string; areas: string[]; approved_at: string | null } | null;
 };
 
 const cache = new Map<string, { at: number; items: CatalogueItem[] }>();
@@ -21,7 +25,7 @@ export async function loadCatalogue(startsAt?: string, endsAt?: string): Promise
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < 60_000) return hit.items;
   const [{ data: items, error }, free] = await Promise.all([
-    supabase.from('items').select('id, vendor_id, category_key, name, specs, day_rate_kobo, deposit_kobo, technician_required, risk_tier, vendors(name, areas, approved_at)').eq('active', true),
+    supabase.from('items').select('id, vendor_id, category_key, name, specs, day_rate_kobo, deposit_kobo, technician_required, risk_tier, photos, vendors(name, areas, approved_at)').eq('active', true),
     startsAt && endsAt ? supabase.rpc('free_units', { p_from: startsAt, p_to: endsAt }) : Promise.resolve({ data: null, error: null }),
   ]);
   if (error) throw new Error('Couldn’t load gear. Check your connection.');
@@ -34,6 +38,7 @@ export async function loadCatalogue(startsAt?: string, endsAt?: string): Promise
       technicianRequired: i.technician_required, riskTier: (i.risk_tier as 1 | 2 | 3) ?? 1,
       // With dates: the server's count. Without: assume free (R6 labels it unchecked).
       freeUnits: startsAt && endsAt ? (n?.free ?? 0) : 99, totalUnits: n?.total ?? 1,
+      ...(i.photos?.[0] ? { photo: i.photos[0] } : {}),
     };
   });
   cache.set(key, { at: Date.now(), items: out });
@@ -47,6 +52,7 @@ export function completeAnswers(a: Partial<Answers>): Answers {
     shootType: a.shootType ?? 'unsure', location: a.location ?? 'unsure', timeOfDay: a.timeOfDay ?? 'unsure',
     people: a.people ?? 'unsure', angles: a.angles ?? 'unsure', sound: a.sound ?? 'unsure', movement: a.movement ?? 'unsure',
     startsAt: a.startsAt ?? 'unsure', endsAt: a.endsAt ?? 'unsure', area: a.area ?? 'unsure', budget: a.budget ?? 'options',
+    budgetKobo: a.budgetKobo, delivery: a.delivery, days: a.days, pinnedNames: a.pinnedNames,
   };
 }
 
@@ -56,14 +62,6 @@ export type Result = { match: SetupMatch; lines: ChosenLine[]; rentalKobo: numbe
 
 export const PROTECTION_RATE = 0.07;
 
-/** The alternative a saved swap points at: by its item id (survives date changes), or an old saved index. */
-export function swapTarget(alternatives: Alternative[], saved: string | undefined): Alternative | undefined {
-  if (saved === undefined) return undefined;
-  if (/^\d+$/.test(saved)) return alternatives[Number(saved)];
-  return alternatives.find((a) => a.offers[0]?.itemId === saved);
-}
-/** What a swap is saved as: the alternative's first item. */
-export const swapId = (alt: Alternative) => alt.offers[0]?.itemId ?? '';
 
 /** Applies swaps (line key → alternative's item id) and removals, and recomputes the totals. */
 export function applyChoices(match: SetupMatch, draft: Pick<Draft, 'swaps' | 'removed'>): Result {
@@ -96,8 +94,8 @@ export function usePlanResult(draft: Draft) {
   const matches = useMemo(() => {
     if (!catalogue) return null;
     const days = rentalDays(startsAt, endsAt);
-    return Object.fromEntries(setups.map((s) => [s.level, matchSetup(s, catalogue, { area: answers.area, days, protectionRate: PROTECTION_RATE })])) as Record<Level, SetupMatch>;
-  }, [catalogue, setups, answers.area, startsAt, endsAt]);
+    return Object.fromEntries(setups.map((s) => [s.level, matchSetup(s, catalogue, { area: answers.area, days, protectionRate: PROTECTION_RATE, pinned: answers.pinnedNames })])) as Record<Level, SetupMatch>;
+  }, [catalogue, setups, answers.area, answers.pinnedNames, startsAt, endsAt]);
 
   return { answers, setups, matches, datesKnown: !!(startsAt && endsAt), error, retry: () => { cache.clear(); setCatalogue(null); loadCatalogue(startsAt, endsAt).then(setCatalogue).catch((e: Error) => setError(e.message)); } };
 }
@@ -128,4 +126,115 @@ export async function saveEvent(draft: Draft, matches: Record<Level, SetupMatch>
     })));
   }
   return ev.id;
+}
+
+// ---------------------------------------------------------------------------------------------
+// "Free if you shift a day" (0016 nearest_free_windows)
+// ---------------------------------------------------------------------------------------------
+
+export type Want = { itemId: string; units: number };
+export type FreeWindow = { first: string; last: string };
+
+/**
+ * What a plan needs to be whole: lines that got everything keep their chosen gear; short lines
+ * want what would fill them (the nearby_date alternative's listings). Removed lines are skipped.
+ */
+export function wantedItems(lines: (LineMatch & { chosen: Offer[]; removed: boolean })[]): Want[] {
+  const by = new Map<string, number>();
+  for (const l of lines) {
+    if (l.removed) continue;
+    const have = l.chosen.reduce((n, o) => n + o.units, 0);
+    const wants: Want[] = have >= l.line.qty ? l.chosen.map((o) => ({ itemId: o.itemId, units: o.units }))
+      : (l.alternatives.find((a) => a.kind === 'nearby_date')?.wants ?? l.chosen.map((o) => ({ itemId: o.itemId, units: o.units })));
+    for (const w of wants) by.set(w.itemId, (by.get(w.itemId) ?? 0) + w.units);
+  }
+  return [...by].map(([itemId, units]) => ({ itemId, units }));
+}
+
+const freeCache = new Map<string, { at: number; window: FreeWindow | null }>();
+
+/**
+ * The nearest window of the same length (within 3 days either side, never before tomorrow) where all
+ * of `wants` is free, other than the current one. null while loading, when none, or offline.
+ */
+export function useNearestFree(wants: Want[] | null, first: string | undefined, days: number): FreeWindow | null {
+  const key = wants && first ? `${first}|${days}|${wants.map((w) => `${w.itemId}x${w.units}`).sort().join(',')}` : '';
+  const [found, setFound] = useState<{ key: string; window: FreeWindow | null } | null>(null);
+  useEffect(() => {
+    if (!key || !wants?.length || !first) return;
+    const hit = freeCache.get(key);
+    if (hit && Date.now() - hit.at < 60_000) { setFound({ key, window: hit.window }); return; }
+    let live = true;
+    supabase.rpc('nearest_free_windows', { p_items: wants.map((w) => w.itemId), p_qty: wants.map((w) => w.units), p_days: days, p_around: first, p_radius: 3 })
+      .then(({ data, error }) => {
+        if (error) return; // older database without 0016, or offline: no banner
+        const row = ((data as { first: string; last: string; missing: number }[] | null) ?? []).find((r) => r.missing === 0 && r.first !== first && r.first > lagosToday());
+        const window = row ? { first: row.first, last: row.last } : null;
+        freeCache.set(key, { at: Date.now(), window });
+        if (live) setFound({ key, window });
+      });
+    return () => { live = false; };
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  return found?.key === key ? found.window : null;
+}
+
+const SHORT_DAY = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', timeZone: 'UTC' });
+const MONTH = new Intl.DateTimeFormat('en-GB', { month: 'short', timeZone: 'UTC' });
+/** "Sun 19 – Tue 21 Oct", or "Sun 19 Oct" for one day. */
+export function windowLabel(w: FreeWindow): string {
+  const d = (ymd: string) => new Date(`${ymd}T00:00:00Z`);
+  const end = `${SHORT_DAY.format(d(w.last))} ${MONTH.format(d(w.last))}`;
+  if (w.first === w.last) return end;
+  const sameMonth = w.first.slice(0, 7) === w.last.slice(0, 7);
+  return `${SHORT_DAY.format(d(w.first))}${sameMonth ? '' : ` ${MONTH.format(d(w.first))}`} – ${end}`;
+}
+
+/** The plan's dates moved to `w` (same convention as the free-text reader). */
+export const windowAnswers = (w: FreeWindow) => shootWindow(w.first, w.last);
+
+// ---------------------------------------------------------------------------------------------
+// AI fallback reader (app/api/plan/read, behind AI_READ=on on the server)
+// ---------------------------------------------------------------------------------------------
+
+const API = (process.env.EXPO_PUBLIC_API_URL ?? 'https://deloo.space').replace(/\/$/, '');
+const SLANG = /\b(abeg|wahala|dey|una|oga|sha|wetin|biko|na im|e go|pls|plz|u|ur|gonna|wanna|asap|tmrw|wknd|owambe|abi|sef|jare|nau)\b/i;
+
+/** Ask the server's reader when the phone's rules left required answers empty, or the words are long or slangy. */
+export function wantsAiRead(text: string, missingRequired: number): boolean {
+  return missingRequired > 0 || text.length > 140 || SLANG.test(text);
+}
+
+/**
+ * The server reader's answers for `text`, as planner answers, or null (off, offline, slow: 7 s, signed out).
+ * Never throws. The caller merges only answers that are still empty.
+ */
+export async function aiRead(text: string): Promise<Partial<Answers> | null> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return null;
+    const clean = text.replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, '[email]').replace(/\+?\d[\d\s-]{8,}\d/g, '[phone]');
+    const res = await fetch(`${API}/api/plan/read`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ text: clean, today: lagosToday(), tz: 'Africa/Lagos' }), signal: AbortSignal.timeout(7000),
+    });
+    if (!res.ok) return null;
+    const { answers: r } = (await res.json()) as { answers?: Record<string, unknown> };
+    if (!r || typeof r !== 'object') return null;
+    const out: Partial<Answers> = {};
+    for (const k of ['shootType', 'location', 'timeOfDay', 'sound', 'area', 'budget', 'delivery'] as const) {
+      if (typeof r[k] === 'string') (out as Record<string, unknown>)[k] = r[k];
+    }
+    for (const k of ['people', 'angles', 'days', 'budgetKobo'] as const) if (typeof r[k] === 'number') out[k] = r[k] as number;
+    if (typeof r.movement === 'boolean') out.movement = r.movement;
+    if (Array.isArray(r.pinnedNames)) out.pinnedNames = r.pinnedNames.filter((n): n is string => typeof n === 'string');
+    if (typeof r.first === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.first)) {
+      const first = r.first < addDays(lagosToday(), 1) ? addDays(lagosToday(), 1) : r.first;
+      const last = typeof r.last === 'string' && r.last >= first ? r.last : first;
+      Object.assign(out, shootWindow(first, last));
+    }
+    return out;
+  } catch {
+    return null;
+  }
 }
