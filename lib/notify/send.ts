@@ -6,7 +6,8 @@ import { compose, type NotifyRow } from "./templates";
 /**
  * Sends due rows from the public.notifications outbox (supabase/migrations/0017). Email through Resend
  * (https://resend.com/docs/api-reference/emails/send-email), from the deloo.space domain the auth emails
- * already use. Env: RESEND_API_KEY (secret), NOTIFY_FROM (optional, default "Deloo <hello@deloo.space>").
+ * already use. Booking messages are written by lib/notify/templates.ts; 'custom' ones carry the subject
+ * and body staff wrote in /admin/messages. Env: RESEND_API_KEY (secret), NOTIFY_FROM (optional, default "Deloo <hello@deloo.space>").
  */
 const RESEND = "https://api.resend.com/emails";
 
@@ -31,6 +32,9 @@ export async function sendDue(limit = 50): Promise<RunResult> {
         err = `Channel ${r.channel} isn't sent yet`;
       } else if (!r.email) {
         err = "No email address on the account";
+      } else if (r.kind === "custom" && !(r.payload?.body ?? "").trim()) {
+        // Written by staff in the portal (0021); nothing to send without a body.
+        err = "The message is empty";
       } else {
         const m = compose(r);
         const res = await fetch(RESEND, {
