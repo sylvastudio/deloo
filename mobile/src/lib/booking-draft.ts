@@ -1,10 +1,11 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
-import { windowDays } from '@/ui/date-range';
+import { addDays, lagosToday, rentalWindow, windowDays } from '@/ui/date-range';
 import { displayName } from './catalog';
 import { needLabel } from './line-text';
 import type { Draft } from './plan';
 import type { Result } from './plan-result';
+import { supabase } from './supabase';
 
 /**
  * What the renter is about to book: one basket, one date range (PRD R-14: one booking per bag).
@@ -92,3 +93,77 @@ export function draftFromPlan(result: Result, plan: Draft): BookingDraft {
   const area = typeof a.area === 'string' && a.area !== 'unsure' ? a.area : undefined;
   return { lines: [...by.values()], first, last, eventId: plan.eventId, notIncluded, area, from: { kind: 'plan' } };
 }
+
+// ---------------------------------------------------------------------------------------------
+// The bag: the same draft, filled one item at a time from the Gear tab. One date range for the bag.
+// ---------------------------------------------------------------------------------------------
+
+/** Units in the bag ("3 items"). */
+export const bagCount = (d: BookingDraft | null) => (d?.lines ?? []).reduce((n, l) => n + l.qty, 0);
+
+/** The bag's days, when it has gear and days that can still be booked (from tomorrow). */
+export function bagDays(d: BookingDraft | null): { first: string; last: string } | undefined {
+  if (!d?.lines.length || !d.first || !d.last) return undefined;
+  return d.first >= addDays(lagosToday(), 1) ? { first: d.first, last: d.last } : undefined;
+}
+
+/** Days to start from when the renter hasn't picked any: the bag's, else the plan's (if still bookable). */
+export function prefillDays(d: BookingDraft | null, plan?: Draft['answers']): { first?: string; last?: string } {
+  const bag = bagDays(d);
+  if (bag) return bag;
+  const s = plan?.startsAt, e = plan?.endsAt;
+  const w = windowDays(typeof s === 'string' && s !== 'unsure' ? s : undefined, typeof e === 'string' && e !== 'unsure' ? e : undefined);
+  return w.first && w.last && w.first >= addDays(lagosToday(), 1) ? w : {};
+}
+
+/** Adding gear on these days would change the bag's days (the renter is asked first). */
+export function daysClash(d: BookingDraft | null, first: string, last: string) {
+  const days = bagDays(d);
+  return !!days && (days.first !== first || days.last !== last);
+}
+
+/**
+ * Puts lines in the bag on these days, which become the bag's days. An item already there takes the
+ * new quantity. An empty bag starts from this item.
+ */
+export function addToBag(add: DraftLine[], first: string, last: string, fromItemId: string) {
+  const d = getBookingDraft();
+  if (!d?.lines.length) { setBookingDraft({ lines: add, first, last, from: { kind: 'item', itemId: fromItemId } }); return; }
+  const lines = [...d.lines];
+  for (const l of add) {
+    const at = lines.findIndex((x) => x.itemId === l.itemId);
+    if (at >= 0) lines[at] = { ...lines[at], qty: l.qty }; else lines.push(l);
+  }
+  setBookingDraft({ ...d, lines, first, last });
+}
+
+/** Gear shown around the bag (suggestions, the Gear tab). `free` is counted only when days are given. */
+export type ShelfItem = {
+  id: string; name: string; brand: string; model: string; category_key: string; specs: Record<string, unknown>;
+  day_rate_kobo: number; photos: string[]; units: number; free?: number;
+};
+
+const shelfCache = new Map<string, { at: number; items: ShelfItem[] }>();
+
+/** The live catalogue (one small query) plus free units on the days (0008 free_units). Cached a minute. */
+export async function loadShelf(first?: string, last?: string): Promise<ShelfItem[]> {
+  const key = `${first ?? ''}|${last ?? ''}`;
+  const hit = shelfCache.get(key);
+  if (hit && Date.now() - hit.at < 60_000) return hit.items;
+  const w = first && last ? rentalWindow(first, last) : undefined;
+  const [{ data, error }, free] = await Promise.all([
+    supabase.from('items').select('id, name, brand, model, category_key, specs, day_rate_kobo, photos, units(count)').eq('active', true),
+    w ? supabase.rpc('free_units', { p_from: w.startsAt, p_to: w.endsAt }) : Promise.resolve({ data: null, error: null }),
+  ]);
+  if (error) throw error;
+  if (free.error) throw free.error;
+  const counts = new Map(((free.data as { item_id: string; free: number }[] | null) ?? []).map((r) => [r.item_id, r.free]));
+  const items = ((data ?? []) as unknown as (Omit<ShelfItem, 'units' | 'free'> & { units: { count: number }[] })[]).map((i): ShelfItem => ({
+    ...i, name: displayName(i.name), specs: i.specs ?? {}, units: i.units[0]?.count ?? 0, free: w ? counts.get(i.id) ?? 0 : undefined,
+  }));
+  shelfCache.set(key, { at: Date.now(), items });
+  return items;
+}
+
+/** A shelf item as the planner's complements see it. */
+export const asGear = (i: ShelfItem) => ({ id: i.id, category: i.category_key, name: i.name, specs: i.specs, dayRateKobo: i.day_rate_kobo, freeUnits: i.free });
