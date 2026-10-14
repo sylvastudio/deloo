@@ -1,8 +1,21 @@
 import Link from "next/link";
 import { LoaderCircle, type LucideIcon } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
+import { isValidElement, type ComponentProps, type ReactElement, type ReactNode } from "react";
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
+
+/**
+ * An icon prop on a client component (Submit, Drawer). Server components must pass a rendered element
+ * (`icon={<Plus />}`): a lucide component itself is a function and can't cross into a client component,
+ * which crashes the whole page. Client callers may still pass the component.
+ */
+export type IconProp = LucideIcon | ReactElement;
+export function iconNode(icon: IconProp | undefined): ReactNode {
+  if (!icon) return null;
+  if (isValidElement(icon)) return icon;
+  const Icon = icon;
+  return <Icon aria-hidden="true" />;
+}
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "accent" | "danger-ghost";
 export type ButtonSize = "sm" | "md" | "lg";

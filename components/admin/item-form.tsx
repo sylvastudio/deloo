@@ -61,7 +61,7 @@ export function ItemForm({ item, categories, action, canEdit, canPrice, submitLa
         <Switch name="active" defaultChecked={item.active ?? true} disabled={ro} label="Listed: renters can book it"
           confirmOff={`Hide ${item.name ?? "this item"} from renters? It stops showing in the app. Existing bookings aren’t affected.`} />
       )}
-      {canEdit && <div className="actions"><Submit icon={Save}>{submitLabel}</Submit></div>}
+      {canEdit && <div className="actions"><Submit icon={<Save aria-hidden="true" />}>{submitLabel}</Submit></div>}
     </ActionForm>
   );
 }

@@ -44,7 +44,7 @@ export default async function StaffPage() {
       <PageHead crumbs={[{ href: "/admin/settings", label: "Settings" }]} title="Staff and roles"
         meta={<span>{active} active · {rows.length - active} off</span>}
         actions={
-          <Drawer trigger={{ label: "Add staff", icon: UserPlus, variant: "primary", size: "md" }} title="Add staff" description="They need a Deloo account first (sign up in the app with that email).">
+          <Drawer trigger={{ label: "Add staff", icon: <UserPlus aria-hidden="true" />, variant: "primary", size: "md" }} title="Add staff" description="They need a Deloo account first (sign up in the app with that email).">
             <ActionForm action={addStaff} className="grid gap-4" resetOnSuccess>
               <Field label="Email"><input className="control" name="email" type="email" required autoComplete="off" /></Field>
               <Field label="Role">
@@ -54,7 +54,7 @@ export default async function StaffPage() {
               </Field>
               <Field label="Display name" note="optional"><input className="control" name="display_name" placeholder="Tunde" /></Field>
               <Field label="Phone" note="riders: matches their jobs"><input className="control" name="phone" inputMode="tel" /></Field>
-              <div className="actions"><Submit icon={UserPlus}>Add staff</Submit></div>
+              <div className="actions"><Submit icon={<UserPlus aria-hidden="true" />}>Add staff</Submit></div>
             </ActionForm>
           </Drawer>
         } />

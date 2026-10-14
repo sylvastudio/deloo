@@ -148,7 +148,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                             <ActionForm action={recheckPayment} className="grid gap-2"
                               confirm={`Re-check ${p.reference} with Paystack? If Paystack says it succeeded, the booking is confirmed (or a refund is queued if the gear is gone).`}>
                               <input type="hidden" name="reference" value={p.reference} />
-                              <Submit variant="secondary" icon={RefreshCw}>Re-check with Paystack</Submit>
+                              <Submit variant="secondary" icon={<RefreshCw aria-hidden="true" />}>Re-check with Paystack</Submit>
                             </ActionForm>
                           ) : <p className="hint">Finance, Admin and Owner can re-check payments with Paystack.</p>}
                         </Drawer>

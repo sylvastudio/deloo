@@ -1,10 +1,9 @@
 "use client";
-import type { LucideIcon } from "lucide-react";
 import { unstable_rethrow } from "next/navigation";
 import { useActionState, useEffect, useRef, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import type { ActionResult } from "@/lib/admin/action-result";
-import { btnClass, cx, Spinner, type ButtonSize, type ButtonVariant } from "./ui/button";
+import { btnClass, cx, iconNode, Spinner, type ButtonSize, type ButtonVariant, type IconProp } from "./ui/button";
 import { useConfirm, useDrawer, type ConfirmOptions } from "./ui/dialog";
 import { useToast } from "./ui/toast";
 
@@ -141,15 +140,15 @@ export function ActionForm({ action, children, confirm, confirmTone, confirmLabe
  * Submit button that shows a spinner (keeping its label) while the action runs. Pass `className` for
  * the old class-based styling, or `variant`/`size`/`icon`.
  */
-export function Submit({ children, className, disabled, name, value, title, variant, size, icon: Icon, block }: {
+export function Submit({ children, className, disabled, name, value, title, variant, size, icon, block }: {
   children: ReactNode; className?: string; disabled?: boolean; name?: string; value?: string; title?: string;
-  variant?: ButtonVariant; size?: ButtonSize; icon?: LucideIcon; block?: boolean;
+  variant?: ButtonVariant; size?: ButtonSize; icon?: IconProp; block?: boolean;
 }) {
   const { pending } = useFormStatus();
   const cls = className ?? btnClass(variant, size, cx(block && "btn-block"));
   return (
     <button type="submit" className={cls} disabled={disabled || pending} aria-busy={pending || undefined} name={name} value={value} title={title}>
-      {pending ? <Spinner /> : Icon ? <Icon aria-hidden="true" /> : null}
+      {pending ? <Spinner /> : iconNode(icon)}
       {children}
     </button>
   );

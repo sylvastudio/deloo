@@ -76,7 +76,7 @@ export function MessageList({ rows, canSend, names, showBooking = true }: {
                     {(r.status === "failed" || r.status === "cancelled") && (
                       <ActionForm action={retryMessage} confirm={`Send "${p.subject}" to ${r.full_name || "this renter"} again?`}>
                         <input type="hidden" name="id" value={r.id} />
-                        <Submit variant="secondary" size="sm" icon={RotateCcw}>Retry</Submit>
+                        <Submit variant="secondary" size="sm" icon={<RotateCcw aria-hidden="true" />}>Retry</Submit>
                       </ActionForm>
                     )}
                     {r.status === "queued" && (
@@ -101,7 +101,7 @@ export function MessageList({ rows, canSend, names, showBooking = true }: {
 export function SendNow({ label = "Send now" }: { label?: string }) {
   return (
     <ActionForm action={sendNow} className="grid gap-1">
-      <div className="actions"><Submit variant="secondary" size="sm" icon={Send} title="Send everything that's due now, instead of waiting for the next run">{label}</Submit></div>
+      <div className="actions"><Submit variant="secondary" size="sm" icon={<Send aria-hidden="true" />} title="Send everything that's due now, instead of waiting for the next run">{label}</Submit></div>
     </ActionForm>
   );
 }

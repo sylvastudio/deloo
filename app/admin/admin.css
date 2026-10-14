@@ -587,6 +587,8 @@ a.tile:hover, a.kpi:hover { border-color: var(--border-strong); background: var(
 
 /* ---------- Dialogs and drawers (native <dialog>: modal, inert background, Esc) ---------- */
 .adm-dialog {
+  /* Tailwind's preflight zeroes margin on every element, which kills the UA's dialog centering. */
+  margin: auto;
   width: min(460px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); padding: 0; border: 1px solid var(--border); border-radius: var(--r-4);
   background: var(--raised); color: var(--fg); box-shadow: var(--shadow-pop); overflow: auto;
 }

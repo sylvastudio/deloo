@@ -40,7 +40,7 @@ type Db = Awaited<ReturnType<typeof createClient>>;
 type Q = any;
 
 /** Apply a saved view to a bookings query. Returns whether the view lists oldest first. */
-function applyView(q: Q, view: string, today: string): { q: Q; ascending: boolean } {
+function applyView(q: Q, view: string, today: string): { q: Q; ascending: boolean; by?: "created_at" } {
   const now = new Date();
   switch (view as View) {
     case "live": return { q: q.in("status", LIVE_STATUSES), ascending: true };
@@ -58,7 +58,8 @@ function applyView(q: Q, view: string, today: string): { q: Q; ascending: boolea
     case "overdue": return { q: q.in("status", ["delivered", "out_for_delivery"]).lt("ends_at", now.toISOString()), ascending: true };
     case "to_inspect": return { q: q.eq("status", "collected"), ascending: true };
     case "disputed": return { q: q.eq("status", "disputed"), ascending: false };
-    default: return { q, ascending: false };
+    // Unfiltered list: newest bookings first.
+    default: return { q, ascending: false, by: "created_at" };
   }
 }
 
@@ -108,12 +109,12 @@ export default async function BookingsPage({ searchParams }: { searchParams: Pro
     "id, ref, renter_id, status, starts_at, ends_at, days, total_kobo, delivery, delivery_slot, rider_name, contact_phone, needs_refund, hold_expires_at, booking_items(item_name, kind, units(tag))",
     { count: "exact" },
   ));
-  const { q: listQ, ascending } = applyView(base, view, today);
+  const { q: listQ, ascending, by = "starts_at" } = applyView(base, view, today);
   const [lo, hi] = rangeOf(page);
   const countOf = (v: string) => applyView(narrow(db.from("bookings").select("id", { count: "exact", head: true })), v, today).q;
   const viewKeys = Object.keys(VIEWS) as View[];
   const [res, ...counts] = await Promise.all([
-    listQ.order("starts_at", { ascending }).range(lo, hi),
+    listQ.order(by, { ascending }).range(lo, hi),
     countOf(""),
     ...viewKeys.map((k) => countOf(k)),
   ]);

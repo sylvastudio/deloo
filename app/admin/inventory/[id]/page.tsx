@@ -119,7 +119,7 @@ export default async function ItemPage({ params, searchParams }: { params: Promi
                       {n === 0 ? <Chip tone="info">Cover</Chip> : edit && (
                         <ActionForm action={changeItemPhoto} inlineResult={false}>
                           <input type="hidden" name="item_id" value={id} /><input type="hidden" name="path" value={p} /><input type="hidden" name="op" value="cover" />
-                          <Submit variant="ghost" size="sm" icon={Star}>Make cover</Submit>
+                          <Submit variant="ghost" size="sm" icon={<Star aria-hidden="true" />}>Make cover</Submit>
                         </ActionForm>
                       )}
                       {edit && (
@@ -137,11 +137,11 @@ export default async function ItemPage({ params, searchParams }: { params: Promi
 
           <Section title="Units" description={`${activeUnits} of ${units.length} can be booked. Each unit is one physical piece of gear.`}
             actions={edit ? (
-              <Drawer trigger={{ label: "Add unit", icon: Plus, variant: "secondary", size: "sm" }} title="Add a unit" description={item.name}>
+              <Drawer trigger={{ label: "Add unit", icon: <Plus aria-hidden="true" />, variant: "secondary", size: "sm" }} title="Add a unit" description={item.name}>
                 <ActionForm action={addUnit} className="grid gap-4" resetOnSuccess>
                   <input type="hidden" name="item_id" value={id} />
                   <UnitFields edit price={price} upcoming={0} />
-                  <div className="actions"><Submit icon={Plus}>Add unit</Submit></div>
+                  <div className="actions"><Submit icon={<Plus aria-hidden="true" />}>Add unit</Submit></div>
                 </ActionForm>
               </Drawer>
             ) : undefined}>

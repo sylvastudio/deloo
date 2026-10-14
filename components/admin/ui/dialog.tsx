@@ -1,7 +1,7 @@
 "use client";
-import { CircleAlert, HelpCircle, X, type LucideIcon } from "lucide-react";
+import { CircleAlert, HelpCircle, X } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { btnClass, cx, type ButtonSize, type ButtonVariant } from "./button";
+import { btnClass, cx, iconNode, type ButtonSize, type ButtonVariant, type IconProp } from "./button";
 
 // ---------------------------------------------------------------------------------------------------
 // Confirm dialog: replaces window.confirm. Native <dialog> + showModal(): the page behind is inert,
@@ -82,7 +82,7 @@ export function useConfirm(): (o: ConfirmOptions) => Promise<boolean> {
 const DrawerCtx = createContext<{ close: () => void } | null>(null);
 export const useDrawer = () => useContext(DrawerCtx);
 
-export type DrawerTrigger = { label: string; icon?: LucideIcon; variant?: ButtonVariant; size?: ButtonSize; iconOnly?: boolean; className?: string };
+export type DrawerTrigger = { label: string; icon?: IconProp; variant?: ButtonVariant; size?: ButtonSize; iconOnly?: boolean; className?: string };
 
 export function Drawer({ trigger, title, description, children, open: openProp, onOpenChange }: {
   trigger?: DrawerTrigger; title: ReactNode; description?: ReactNode; children: ReactNode;
@@ -104,14 +104,13 @@ export function Drawer({ trigger, title, description, children, open: openProp, 
 
   const ctx = useMemo(() => ({ close: () => setOpen(false) }), [setOpen]);
   const T = trigger;
-  const Icon = T?.icon;
 
   return (
     <>
       {T && (
         <button type="button" className={btnClass(T.variant ?? "secondary", T.size ?? "sm", cx(T.iconOnly && "icon-btn", T.iconOnly && (T.variant ?? "ghost") === "ghost" && "neutral", T.className))}
           onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label={T.iconOnly ? T.label : undefined} title={T.iconOnly ? T.label : undefined}>
-          {Icon && <Icon aria-hidden="true" />}{!T.iconOnly && T.label}
+          {iconNode(T.icon)}{!T.iconOnly && T.label}
         </button>
       )}
       <dialog ref={ref} className="adm-drawer" aria-labelledby={`${id}-t`} onClose={() => setOpen(false)}

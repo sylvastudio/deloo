@@ -81,9 +81,9 @@ export default async function SettingsPage() {
       </Section>
 
       <Section title="Delivery zones" description="Where we deliver and what it costs."
-        actions={edit ? <Drawer trigger={{ label: "Add zone", icon: Plus, variant: "secondary", size: "sm" }} title="Add a delivery zone"><ZoneForm /></Drawer> : undefined}>
+        actions={edit ? <Drawer trigger={{ label: "Add zone", icon: <Plus aria-hidden="true" />, variant: "secondary", size: "sm" }} title="Add a delivery zone"><ZoneForm /></Drawer> : undefined}>
         {zRes.error ? <ErrorState what="delivery zones" error={zRes.error.message} /> : zones.length === 0 ? (
-          <EmptyState icon={MapPin} title="No delivery zones" action={edit ? <Drawer trigger={{ label: "Add the first zone", icon: Plus, variant: "primary", size: "md" }} title="Add a delivery zone"><ZoneForm /></Drawer> : undefined}>
+          <EmptyState icon={MapPin} title="No delivery zones" action={edit ? <Drawer trigger={{ label: "Add the first zone", icon: <Plus aria-hidden="true" />, variant: "primary", size: "md" }} title="Add a delivery zone"><ZoneForm /></Drawer> : undefined}>
             Until there is one, renters can only pick up.
           </EmptyState>
         ) : (
