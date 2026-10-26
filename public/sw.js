@@ -1,7 +1,8 @@
 /* Deloo service worker (Phase 2).
    Pages are network-first (they depend on who is signed in), with /offline as the fallback.
    Build assets and icons are cache-first. Supabase API calls are never cached. */
-var VERSION = "deloo-v1";
+// Bump when cached files change (icons, offline page): activate deletes every older cache.
+var VERSION = "deloo-v2";
 var PRECACHE = ["/offline", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", function (e) {

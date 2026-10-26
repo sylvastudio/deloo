@@ -8,7 +8,10 @@
     <meta name="robots" content="noindex, nofollow" />
     <title>%WEB_TITLE%</title>
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <!-- ?v= busts browser favicon caches; bump it when the icon changes (scripts/make-icons.mjs). -->
+    <link rel="icon" href="/favicon.ico?v=2" sizes="48x48" />
+    <link rel="icon" href="/icons/icon-192.png?v=2" type="image/png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=2" />
     <!-- Just the boot wordmark's letters in the brand display face; the app loads its own fonts. -->
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700&text=deloo.&display=swap" />
