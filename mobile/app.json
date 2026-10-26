@@ -8,7 +8,7 @@
     "scheme": "deloo",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "bundleIdentifier": "space.deloo.app"
     },
     "android": {
@@ -23,6 +23,9 @@
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.RECORD_AUDIO"
+      ],
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW"
       ],
       "runtimeVersion": {
         "policy": "appVersion"
