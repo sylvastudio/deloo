@@ -1,7 +1,7 @@
 "use client";
 import { CircleAlert, HelpCircle, X } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
-import { btnClass, cx, iconNode, type ButtonSize, type ButtonVariant, type IconProp } from "./button";
+import { btnClass, cx, iconNode, type ButtonSize, type ButtonVariant } from "./button";
 
 // ---------------------------------------------------------------------------------------------------
 // Confirm dialog: replaces window.confirm. Native <dialog> + showModal(): the page behind is inert,
