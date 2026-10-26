@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LoaderCircle, type LucideIcon } from "lucide-react";
-import { isValidElement, type ComponentProps, type ReactElement, type ReactNode } from "react";
+import { type ComponentProps, type ReactElement, type ReactNode } from "react";
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
 
@@ -12,8 +12,13 @@ export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Bool
 export type IconProp = LucideIcon | ReactElement;
 export function iconNode(icon: IconProp | undefined): ReactNode {
   if (!icon) return null;
-  if (isValidElement(icon)) return icon;
-  const Icon = icon;
+  // Only a component (a function, or a forwardRef object like every lucide icon) gets rendered here.
+  // Anything else is already a node: an element, or the lazy wrapper React's server payload uses for an
+  // element passed as a prop. isValidElement is false for that wrapper, and rendering it as <Icon />
+  // throws "Element type is invalid … got: object", which broke Settings.
+  const component = typeof icon === "function" || (typeof icon === "object" && "render" in icon);
+  if (!component) return icon as ReactNode;
+  const Icon = icon as LucideIcon;
   return <Icon aria-hidden="true" />;
 }
 
