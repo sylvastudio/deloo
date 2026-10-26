@@ -23,8 +23,9 @@ const FAQ: { q: string; a: string[] }[] = [
     q: 'What does Deloo Protection cover?',
     a: [
       'Protection is part of every booking. It costs 10–20% of the rental, depending on the gear (cameras 20%, lenses and lights 15%, audio and stands 10%).',
-      'It covers accidental damage during your rental, up to a limit: Protection pays most of the repair or replacement cost.',
-      'It doesn’t cover careless loss, theft without a police report, water damage or missing accessories. Those are charged at the gear’s replacement value.',
+      'Accidental damage: you pay the repair cost, but never more than 10% of the item’s value (at least ₦15,000). For a ₦4.9m camera that’s ₦490,000 at most.',
+      'Robbery or burglary reported to the police within 24 hours: you pay 30% of the item’s value (verified renters, once in 12 months).',
+      'Theft with no police report, careless loss, gear not returned, water damage or misuse: you pay the full replacement value. Missing accessories are charged at their own price.',
     ],
   },
   {

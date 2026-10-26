@@ -8,6 +8,8 @@ import { RiderHandover } from "@/components/admin/handover-capture";
 import { Callout, ErrorState, PageHead, Section, StatusChip, Tag } from "@/components/admin/ui";
 import { pageStaff } from "@/lib/admin/auth";
 import { evidenceCoverage, loadEvidence, riderOwns } from "@/lib/admin/data";
+import { isDispatchMove, NOT_VERIFIED_LABEL, trustShort } from "@/lib/admin/kyc";
+import { requiredTrust } from "@/lib/admin/kyc-data";
 import { addDays, fmtRental, fmtWeekday, lagosDay } from "@/lib/admin/format";
 import { can, maskPhone, maskText } from "@/lib/admin/roles";
 import { canMove, collectTooEarly, STATUS_LABEL, type BookingStatus, type HandoverKind } from "@/lib/admin/status";
@@ -44,7 +46,10 @@ export default async function JobDetail({ params }: { params: Promise<{ id: stri
   if (error) return <div className="adm-page narrow"><ErrorState what="this job" error={error.message} /></div>;
   if (!b || !riderOwns(staff, b)) notFound();
 
-  const { data: p } = await db.from("profiles").select("full_name, phone").eq("id", b.renter_id).maybeSingle();
+  const [{ data: p }, required] = await Promise.all([
+    db.from("profiles").select("full_name, phone, trust_level").eq("id", b.renter_id).maybeSingle(),
+    requiredTrust(db, [id]),
+  ]);
   const lines = (b.booking_items as Line[]).filter((i) => i.kind === "rental");
   const ids = (i: Line) => {
     const u = one(i.units);
@@ -61,6 +66,8 @@ export default async function JobDetail({ params }: { params: Promise<{ id: stri
   const [cov, evidence] = await Promise.all([step ? evidenceCoverage(db, id, step.kind) : Promise.resolve(null), loadEvidence(db, [id])]);
   // Riders collect on the last rental day or later (ops can take gear back early).
   const tooEarly = step?.to === "collected" ? collectTooEarly(staff.role, b.ends_at as string) : null;
+  // ID gate: the database refuses the trip out (or the handover at base) while trust < required_trust.
+  const unverified = !!step && isDispatchMove(status, step.to, b.delivery as string) && trustShort(p?.trust_level as number | undefined, required.get(id));
   const phone = (b.contact_phone as string) || p?.phone || "";
   const name = p?.full_name ?? "Renter";
   const pii = can(staff.role, "pii.view");
@@ -132,7 +139,8 @@ export default async function JobDetail({ params }: { params: Promise<{ id: stri
       {step && allowed && cov ? (
         <RiderHandover key={`${id}-${step.kind}`} bookingId={id} bookingRef={b.ref ?? "this booking"} units={units} kind={step.kind} to={step.to}
           toLabel={STATUS_LABEL[step.to]} actionLabel={step.label} hint={step.hint} covered={[...cov.covered]}
-          blocked={tooEarly ? `Collection opens on ${fmtWeekday(tooEarly)}, the last rental day. If the renter wants to return early, ask ops.` : null} />
+          blocked={unverified ? `${NOT_VERIFIED_LABEL}. The renter’s ID isn’t verified for this gear yet. Don’t hand anything over; ask ops.`
+            : tooEarly ? `Collection opens on ${fmtWeekday(tooEarly)}, the last rental day. If the renter wants to return early, ask ops.` : null} />
       ) : (
         <Callout tone="info" title={!capture ? "View only" : step ? "This step needs ops" : status === "confirmed" ? "Ops prepares this booking first" : "Nothing left to do on this job"}>
           {can(staff.role, "bookings.view")

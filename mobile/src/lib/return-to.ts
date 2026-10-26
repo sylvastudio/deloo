@@ -25,3 +25,12 @@ if (Platform.OS === 'web' && typeof window !== 'undefined') {
   if (window.location.pathname === '/') { try { sessionStorage.removeItem(KEY); } catch { /* ignore */ } }
   else rememberReturn(window.location.pathname + window.location.search);
 }
+
+/**
+ * A `?return=` param a flow should go back to when it finishes (verify → Review, booking): only an
+ * in-app path, never another site. Falls back when missing or odd.
+ */
+export function safeReturn(param: string | string[] | undefined, fallback: string): string {
+  const v = Array.isArray(param) ? param[0] : param;
+  return v && v.startsWith('/') && !v.startsWith('//') ? v : fallback;
+}

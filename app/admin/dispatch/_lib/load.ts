@@ -1,5 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { trustShort } from "@/lib/admin/kyc";
+import { requiredTrust } from "@/lib/admin/kyc-data";
 import { nextAction, type NextAction, type NextActionCtx } from "@/lib/admin/next-action";
 import { HANDOVER_KINDS, type BookingStatus, type HandoverKind } from "@/lib/admin/status";
 import { one } from "@/lib/admin/types";
@@ -25,6 +27,11 @@ export type OpsInfo = {
   items: { name: string; tag: string }[];
   renter: { name: string; phone: string };
   zone: string;
+  /**
+   * The renter's trust is below the booking's required_trust and it hasn't gone out yet: the database
+   * refuses the trip out (or the handover at base) with 'not_verified' until ID verification clears.
+   */
+  unverified: boolean;
 };
 
 const chunks = <T,>(xs: T[], n = 150) => Array.from({ length: Math.ceil(xs.length / n) }, (_, i) => xs.slice(i * n, i * n + n));
@@ -51,13 +58,14 @@ export async function loadOps(db: SupabaseClient, rows: OpsRow[], now = new Date
   type Refund = { booking_id: string; status: string; amount_kobo: number; purpose: string; created_at: string };
   type Pay = { booking_id: string; status: string; flags: string[] | null };
 
-  const [items, hands, media, refunds, pays, people] = await Promise.all([
+  const [items, hands, media, refunds, pays, people, required] = await Promise.all([
     inAll<Item>(ids, (p) => db.from("booking_items").select("booking_id, unit_id, kind, item_name, units(tag)").in("booking_id", p)),
     inAll<Hand>(ids, (p) => db.from("handovers").select("id, booking_id, kind, party, result, created_at").in("booking_id", p)),
     inAll<Media>(ids, (p) => db.from("handover_media").select("handover_id, unit_id").in("booking_id", p).eq("media_type", "photo")),
     inAll<Refund>(ids, (p) => db.from("refunds").select("booking_id, status, amount_kobo, purpose, created_at").in("booking_id", p)),
     inAll<Pay>(ids, (p) => db.from("payments").select("booking_id, status, flags").in("booking_id", p)),
-    inAll<{ id: string; full_name: string; phone: string }>(renterIds, (p) => db.from("profiles").select("id, full_name, phone").in("id", p)),
+    inAll<{ id: string; full_name: string; phone: string; trust_level: number }>(renterIds, (p) => db.from("profiles").select("id, full_name, phone, trust_level").in("id", p)),
+    requiredTrust(db, ids),
   ]);
 
   const unitsByHandover = new Map<string, Set<string>>();
@@ -91,6 +99,7 @@ export async function loadOps(db: SupabaseClient, rows: OpsRow[], now = new Date
       items: lines.map((i) => ({ name: i.item_name, tag: one(i.units)?.tag ?? "" })),
       renter: { name: p?.full_name ?? "Renter", phone: b.contact_phone || p?.phone || "" },
       zone: one(b.delivery_zones)?.name ?? "",
+      unverified: (b.status === "confirmed" || b.status === "preparing") && trustShort(p?.trust_level, required.get(b.id)),
     });
   }
   return out;

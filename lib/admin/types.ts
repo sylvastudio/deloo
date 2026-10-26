@@ -30,6 +30,8 @@ export type BookingRow = {
   cancel_reason: string;
   not_included: unknown;
   created_at: string;
+  /** Trust tier the renter needs (snapshotted by create_hold, migration 0023). Undefined before 0023. */
+  required_trust?: number | null;
 };
 
 export type BookingItemRow = {

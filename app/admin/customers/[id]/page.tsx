@@ -4,12 +4,15 @@ import { notFound } from "next/navigation";
 import { setBlocked } from "@/app/admin/_actions/people";
 import { ActionForm, Submit } from "@/components/admin/action-form";
 import { EvidenceGallery } from "@/components/admin/evidence-gallery";
+import { KycHistory, KycStatusChip } from "@/components/admin/kyc";
 import {
   Chip, DescriptionList, Drawer, EmptyState, ErrorState, Field, IconLink, PageHead, Section, StatusChip, Timeline,
 } from "@/components/admin/ui";
 import { pageStaff } from "@/lib/admin/auth";
 import { loadEvidence, namesFor } from "@/lib/admin/data";
-import { fmtDateTime, fmtRental, naira } from "@/lib/admin/format";
+import { fmtDateTime, fmtRental, naira, nowMs } from "@/lib/admin/format";
+import { kycIdTypeLabel, KYC_METHOD_LABEL } from "@/lib/admin/kyc";
+import { KYC_SUBMISSION_COLUMNS, type KycSubmissionRow } from "@/lib/admin/kyc-data";
 import { can, maskPhone, maskText } from "@/lib/admin/roles";
 import { PAID_STATUSES, type BookingStatus } from "@/lib/admin/status";
 import { one, type ProfileRow } from "@/lib/admin/types";
@@ -49,13 +52,25 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
     }
   }
 
+  // ID verification (migration 0023): profile columns for every staff role that sees customers; the
+  // submissions and their documents for reviewers only (owner/admin/ops, as RLS and storage allow).
+  const reviewer = can(staff.role, "kyc.review");
+  type Kyc = { kyc_status: string; kyc_reason: string | null; kyc_verified_at: string | null; kyc_expires_at: string | null; kyc_method: string | null; kyc_id_type: string | null; kyc_name: string | null };
+  const [kycRes, subsRes] = await Promise.all([
+    db.from("profiles").select("kyc_status, kyc_reason, kyc_verified_at, kyc_expires_at, kyc_method, kyc_id_type, kyc_name").eq("id", id).maybeSingle(),
+    reviewer ? db.from("kyc_submissions").select(KYC_SUBMISSION_COLUMNS).eq("profile_id", id).order("created_at", { ascending: false }).limit(20) : Promise.resolve({ data: [], error: null }),
+  ]);
+  const kyc = kycRes.error ? null : (kycRes.data as Kyc | null);
+  const kycSubs = (subsRes.data ?? []) as unknown as KycSubmissionRow[];
+  const kycExpired = !!kyc?.kyc_expires_at && Date.parse(kyc.kyc_expires_at) < nowMs();
+
   const ids = bookings.map((b) => b.id);
   const [evidence, notesRes] = await Promise.all([
     loadEvidence(db, ids.slice(0, 40)),
     ids.length ? db.from("booking_notes").select("id, booking_id, author_id, body, created_at").in("booking_id", ids).order("created_at", { ascending: false }).limit(50) : Promise.resolve({ data: [], error: null }),
   ]);
   const notes = (notesRes.data ?? []) as { id: string; booking_id: string; author_id: string | null; body: string; created_at: string }[];
-  const names = await namesFor(db, notes.map((n) => n.author_id));
+  const names = await namesFor(db, [...notes.map((n) => n.author_id), ...kycSubs.map((k) => k.reviewed_by)]);
   const refs = new Map(bookings.map((b) => [b.id, { id: b.id, ref: b.ref ?? b.id.slice(0, 8) }]));
   const unitLabels = new Map<string, string>();
   for (const b of bookings) for (const i of b.booking_items) if (i.unit_id) unitLabels.set(i.unit_id, `${i.item_name}${one(i.units)?.tag ? ` · ${one(i.units)!.tag}` : ""}`);
@@ -69,7 +84,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
       <PageHead crumbs={[{ href: "/admin/customers", label: "Customers" }]} title={profile.full_name || "No name"}
         meta={<>
           {profile.blocked && <Chip tone="bad">Blocked</Chip>}
-          {profile.trust_level > 0 && <Chip tone="good">Trusted, tier {profile.trust_level}</Chip>}
+          {profile.trust_level > 1 && <Chip tone="good">Trusted, tier {profile.trust_level}</Chip>}
           <span>Joined {fmtDateTime(profile.created_at)}</span>
           <span className="tabular">{paid.length} paid booking{paid.length === 1 ? "" : "s"} · {naira(paid.reduce((s, b) => s + b.total_kobo, 0))}</span>
         </>}
@@ -77,7 +92,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
           {pii && profile.phone && <IconLink icon={Phone} label={`Call ${first}`} href={telLink(profile.phone)} variant="secondary" />}
           {wa && <IconLink icon={MessageCircle} label={`WhatsApp ${first}`} href={wa} variant="secondary" />}
           {can(staff.role, "customers.block") && (
-            <Drawer trigger={{ label: profile.blocked ? "Unblock" : "Block", icon: profile.blocked ? ShieldCheck : Ban, variant: profile.blocked ? "secondary" : "danger-ghost", size: "md" }}
+            <Drawer trigger={{ label: profile.blocked ? "Unblock" : "Block", icon: profile.blocked ? <ShieldCheck aria-hidden="true" /> : <Ban aria-hidden="true" />, variant: profile.blocked ? "secondary" : "danger-ghost", size: "md" }}
               title={profile.blocked ? `Unblock ${first}` : `Block ${first} from booking`}
               description={profile.blocked ? "They can place new holds again." : "They can’t place new holds. Existing bookings aren’t changed."}>
               <ActionForm action={setBlocked} className="grid gap-4" confirmTone={profile.blocked ? "default" : "danger"}
@@ -123,6 +138,32 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
         </div>
 
         <div className="stack">
+          <Section title="ID verification" id="kyc"
+            actions={reviewer && (kyc?.kyc_status === "pending" || kyc?.kyc_status === "needs_more")
+              ? <Link className="btn btn-secondary btn-sm" href={`/admin/customers/verification${kyc.kyc_status === "needs_more" ? "?view=more" : ""}`}>Open in the queue</Link> : undefined}>
+            {kycRes.error ? <ErrorState what="ID verification" error={kycRes.error.message} /> : (
+              <>
+                <DescriptionList items={[
+                  ["Status", <span key="s" className="flex flex-wrap items-center gap-2"><KycStatusChip status={kyc?.kyc_status} />{kycExpired && <Chip tone="bad">Expired</Chip>}</span>],
+                  ["Trust tier", <span key="t">Tier {profile.trust_level}</span>],
+                  ["Method", kyc?.kyc_method ? KYC_METHOD_LABEL[kyc.kyc_method] ?? kyc.kyc_method : null],
+                  ["ID type", kycIdTypeLabel(kyc?.kyc_id_type)],
+                  ["Name on ID", kyc?.kyc_name ?? null],
+                  ["Verified", kyc?.kyc_verified_at ? fmtDateTime(kyc.kyc_verified_at) : null],
+                  ["Expires", kyc?.kyc_expires_at ? fmtDateTime(kyc.kyc_expires_at) : null],
+                  ...(kyc?.kyc_reason && (kyc.kyc_status === "needs_more" || kyc.kyc_status === "rejected") ? [["Reason sent", kyc.kyc_reason] as [string, string]] : []),
+                ]} />
+                {reviewer ? (
+                  subsRes.error ? <ErrorState what="submissions" error={subsRes.error.message} /> : (
+                    <div className="grid gap-2">
+                      <p className="kicker">Submissions</p>
+                      <KycHistory subs={kycSubs} names={names} canView empty="No ID submitted yet." />
+                    </div>
+                  )
+                ) : <p className="hint">ID documents and past submissions are visible to owner, admin and ops only.</p>}
+              </>
+            )}
+          </Section>
           <Section title="Contact">
             <DescriptionList items={[
               ["Phone", profile.phone ? <span className="mono">{maskPhone(staff.role, profile.phone)}</span> : null],

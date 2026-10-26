@@ -10,6 +10,7 @@ import {
 import { checkFree, isOffline, itemCalendar, plain, type CalendarDay } from '@/lib/bookings';
 import { CATEGORY_META, displayName } from '@/lib/catalog';
 import { dayLabel, daysText, naira, rangeLabel } from '@/lib/format';
+import { useKyc } from '@/lib/kyc';
 import { itemPhotoUrl } from '@/lib/photos';
 import { usePlan } from '@/lib/plan';
 import { rememberReturn } from '@/lib/return-to';
@@ -63,6 +64,9 @@ export default function ItemDetail() {
   // first/last come in the link (from the Gear tab's days, or back after signing in), so days aren't lost.
   const { id, first: firstParam, last: lastParam } = useLocalSearchParams<{ id: string; first?: string; last?: string }>();
   const { session } = useSession();
+  const kyc = useKyc();
+  // Not verified yet (and nothing sent): cameras and lenses say the ID check is coming (UX §3, step 1).
+  const idCheckAhead = kyc.kyc_status === 'none' || kyc.kyc_status === 'needs_more' || (kyc.kyc_status === 'verified' && kyc.trust_level < 2);
   const { draft: bag } = useBookingDraft();
   const { draft: plan } = usePlan();
   // No days in the link: start from the bag's days, else the plan's.
@@ -245,6 +249,12 @@ export default function ItemDetail() {
           <Text variant="caption" tone="slate">
             Deloo Protection: {Math.round(protectionRateFor(item.category_key) * 100)}% of the rental (damage cover){item.deposit_kobo > 0 ? ` · refundable deposit ${naira(item.deposit_kobo)}${total > 1 ? ' each' : ''}` : ''}{total > 1 ? ` · ${total} in stock` : ''}.
           </Text>
+          {idCheckAhead && (item.category_key === 'camera' || item.category_key === 'lens') ? (
+            <View style={styles.idLine}>
+              <Icon name="shield" size={14} color={c.slate} />
+              <Text variant="caption" tone="slate">ID check needed once</Text>
+            </View>
+          ) : null}
           <WhatsCovered />
 
           {figures(item.specs).length ? (
@@ -416,6 +426,7 @@ function Legend({ dot, label }: { dot: string; label: string }) {
 }
 
 const styles = StyleSheet.create({
+  idLine: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   content: { padding: space.xl, gap: space.md, paddingBottom: space.xxxl },
   photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.xl },
   thumb: { width: 72, height: 72, borderRadius: radius.md },

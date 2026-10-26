@@ -4,6 +4,7 @@ import { Chip, Empty, ErrorBox, PageHead, Section, StatusChip } from "@/componen
 import s from "@/components/admin/ops.module.css";
 import { pageStaff } from "@/lib/admin/auth";
 import { addDays, dayStart, fmtWeekday, lagosDay } from "@/lib/admin/format";
+import { NOT_VERIFIED_LABEL } from "@/lib/admin/kyc";
 import { relDay, slotOrder } from "@/lib/admin/next-action";
 import { can, maskPhone, maskText } from "@/lib/admin/roles";
 import { waLink } from "@/lib/admin/whatsapp";
@@ -38,6 +39,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
   const d0 = dayStart(day), d1 = dayStart(addDays(day, 1));
   const canEdit = can(staff.role, "bookings.edit");
   const pii = can(staff.role, "pii.view");
+  const reviewer = can(staff.role, "kyc.review");
   const db = await createClient();
 
   const [outRes, inRes, ridersRes, settingsRes, weekOut, weekIn] = await Promise.all([
@@ -132,7 +134,12 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
                   </td>
                 )}
                 <td className="small">
-                  {a.anchor ? <Link href={`/admin/bookings/${x.b.id}${a.anchor}`}><Chip tone={a.severity}>{a.label}</Chip></Link> : <Chip tone={a.severity}>{a.label}</Chip>}
+                  <div className="flex flex-wrap gap-1">
+                    {x.dir === "out" && x.info.unverified && (
+                      <Link href={reviewer ? "/admin/customers/verification" : `/admin/customers/${x.b.renter_id}#kyc`}><Chip tone="bad">{NOT_VERIFIED_LABEL}</Chip></Link>
+                    )}
+                    {a.anchor ? <Link href={`/admin/bookings/${x.b.id}${a.anchor}`}><Chip tone={a.severity}>{a.label}</Chip></Link> : <Chip tone={a.severity}>{a.label}</Chip>}
+                  </div>
                 </td>
                 <td><StatusChip status={x.b.status} /></td>
               </tr>
@@ -195,6 +202,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
                           <li key={`${x.dir}-${x.b.id}`}>
                             <span className={`${s.dir} ${x.dir === "out" ? s.dirOut : s.dirIn}`}>{x.dir === "out" ? "Out" : "In"}</span>{" "}
                             {x.slot || "Any time"} · <Link className="mono" href={`/admin/bookings/${x.b.id}`}>{x.b.ref}</Link> · {maskText(staff.role, area(x.b.address)) || x.info.zone}
+                            {x.dir === "out" && x.info.unverified && <> <Chip tone="bad">Not verified</Chip></>}
                           </li>
                         ))}
                       </ol>
@@ -218,6 +226,7 @@ export default async function DispatchPage({ searchParams }: { searchParams: Pro
                         <li key={`${x.dir}-${x.b.id}`}>
                           <span className={`${s.dir} ${x.dir === "out" ? s.dirOut : s.dirIn}`}>{x.dir === "out" ? "Out" : "In"}</span>{" "}
                           {x.slot || "Any time"} · <Link className="mono" href={`/admin/bookings/${x.b.id}`}>{x.b.ref}</Link> · {x.info.zone || "No zone"}
+                          {x.dir === "out" && x.info.unverified && <> <Chip tone="bad">Not verified</Chip></>}
                         </li>
                       ))}
                     </ol>

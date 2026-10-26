@@ -1,6 +1,6 @@
 "use client";
 import {
-  CalendarDays, CalendarRange, ChartLine, ChevronRight, CreditCard, Ellipsis, LayoutDashboard, LogOut, Mail, Monitor, Moon, Package, Route,
+  CalendarDays, CalendarRange, ChartLine, ChevronRight, CreditCard, Ellipsis, IdCard, LayoutDashboard, LogOut, Mail, Monitor, Moon, Package, Route,
   Search, Settings, Sun, Truck, Undo2, UserCog, Users, type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -11,7 +11,7 @@ import { ToastProvider } from "./ui/toast";
 
 const ICONS = {
   dashboard: LayoutDashboard, jobs: Truck, dispatch: Route, bookings: CalendarDays, availability: CalendarRange, inventory: Package,
-  payments: CreditCard, refunds: Undo2, customers: Users, messages: Mail, staff: UserCog, demand: ChartLine, settings: Settings,
+  payments: CreditCard, refunds: Undo2, customers: Users, verification: IdCard, messages: Mail, staff: UserCog, demand: ChartLine, settings: Settings,
 } satisfies Record<string, LucideIcon>;
 
 export type NavIcon = keyof typeof ICONS;

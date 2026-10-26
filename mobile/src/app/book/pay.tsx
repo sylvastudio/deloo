@@ -255,7 +255,7 @@ export default function Pay() {
           ) : (
             <View style={[styles.card, { backgroundColor: c.greenTint, borderColor: c.greenTint }]}>
               <View style={styles.row}><Icon name="shield" size={18} color={c.greenInk} /><Text variant="bodyStrong" style={{ color: c.greenInk }}>Deloo Protection (damage cover)</Text></View>
-              <Text variant="caption">Covers accidental damage during your rental, up to a limit. Not careless loss, theft without a police report, water damage or missing accessories.</Text>
+              <Text variant="caption">Accidental damage: you never pay more than 10% of the item’s value. Theft with no police report, careless loss, water damage or gear not returned: full value.</Text>
             </View>
           )}
           {phase === 'ready' || phase === 'unfinished' ? <PayMethods value={method} onChange={chooseMethod} /> : null}

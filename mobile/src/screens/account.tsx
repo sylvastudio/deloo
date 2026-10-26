@@ -5,6 +5,7 @@ import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { bookingDays, cachedSettings, isActive, listBookings, loadSettings, stageOf, stageTone, STAGE_LABEL, type Booking } from '@/lib/bookings';
 import { rangeLabel, whatsappUrl } from '@/lib/format';
+import { KYC_LABEL, useKyc } from '@/lib/kyc';
 import { useSession, VENDOR_MODE } from '@/lib/session';
 import { radius, space, touch } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
@@ -100,6 +101,34 @@ export function Row({ icon, label, detail, onPress, last }: { icon: IconName; la
   );
 }
 
+/** The ID check status under the name: quiet when verified, a chip otherwise. Opens verify/index. */
+function VerifyStatus() {
+  const c = useColors();
+  const kyc = useKyc();
+  const status = kyc.kyc_status === 'verified' && kyc.trust_level < 2 ? 'none' : kyc.kyc_status;
+  const hint = {
+    none: 'We ask for ID only when a booking needs it.',
+    pending: 'We usually check within 2 hours.',
+    needs_more: 'We need a clearer photo.',
+    verified: '',
+    rejected: 'Chat with us if you have questions.',
+  }[status];
+  const tone = status === 'pending' || status === 'needs_more' ? 'limited' : status === 'rejected' ? 'unavailable' : 'neutral';
+  return (
+    <Pressable onPress={go('/verify')} accessibilityRole="button" accessibilityLabel={`ID check: ${KYC_LABEL[status]}`}
+      hitSlop={4} style={styles.verify}>
+      {status === 'verified' ? <>
+        <Icon name="check" size={16} color={c.green} />
+        <Text variant="caption" tone="slate" style={{ flex: 1 }}>ID verified</Text>
+      </> : <>
+        <Badge label={KYC_LABEL[status]} status={tone} />
+        <Text variant="caption" tone="slate" style={{ flex: 1 }} numberOfLines={1}>{hint}</Text>
+        <Icon name="chevron" size={16} color={c.faint} />
+      </>}
+    </Pressable>
+  );
+}
+
 const open = (url: string) => () => Linking.openURL(url).catch(() => {});
 const go = (to: Href) => () => router.push(to);
 
@@ -110,7 +139,7 @@ function initials(name: string) {
 
 /**
  * Account tab: who you are, your next booking, help, the legal pages, the waitlists, sign out and
- * delete. No verification tiers here: we ask for ID only when a booking needs it.
+ * delete. The ID check shows as one status line; we ask for ID only when a booking needs it.
  */
 export function AccountScreen() {
   const c = useColors();
@@ -138,10 +167,7 @@ export function AccountScreen() {
           <Text variant="label" tone="lagoon">Edit</Text>
         </Pressable>
       </View>
-      <View style={styles.verify}>
-        <Icon name="shield" size={18} color={c.slate} />
-        <Text variant="caption" tone="slate" style={{ flex: 1 }}>We’ll ask for ID only if a booking needs it.</Text>
-      </View>
+      <VerifyStatus />
 
       {next && mode === 'renter' ? <NextBookingCard b={next} /> : null}
 
@@ -198,7 +224,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   avatar: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center' },
   edit: { minHeight: touch, justifyContent: 'center', paddingHorizontal: space.sm },
-  verify: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: -space.sm },
+  verify: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: -space.sm, minHeight: 40 },
   next: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
   group: { borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.lg, paddingVertical: space.md, minHeight: touch + 8 },

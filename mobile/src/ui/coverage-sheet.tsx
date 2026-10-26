@@ -8,18 +8,32 @@ import { Button } from './button';
 import { Icon, type IconName } from './icon';
 import { Text } from './text';
 
+/** The most a renter pays, as a share of the item's replacement value (founder, 26 Oct 2026). */
+export const DAMAGE_CAP = 0.1;
+export const DAMAGE_MIN_KOBO = 1_500_000;
+export const ROBBERY_SHARE = 0.3;
+
 const SECTIONS: { title: string; icon?: IconName; tone: 'green' | 'red' | 'ink'; lines: string[] }[] = [
-  { title: 'Covered', icon: 'check', tone: 'green', lines: ['Accidental damage during your rental: a drop, a knock, a fault that isn’t from misuse.'] },
   {
-    title: 'Not covered', icon: 'close', tone: 'red',
-    lines: ['Careless loss, like leaving it in a taxi', 'Theft without a police report', 'Water damage', 'Missing accessories: batteries, chargers, caps, cables'],
+    title: 'Accidental damage', icon: 'check', tone: 'green',
+    lines: ['A drop, a knock, a fault that isn’t from misuse.', 'You pay the repair cost, but never more than 10% of the item’s value (at least ₦15,000). For a ₦4.9m camera, that’s ₦490,000 at most.'],
   },
-  { title: 'What you pay', tone: 'ink', lines: ['Protection pays most of the repair or replacement cost of accidental damage, up to a limit.', 'We show you before-and-after photos and you can reply before anything is charged.'] },
   {
-    title: 'How claims work', tone: 'ink',
-    lines: ['If gear is stolen, report it to the police and send us the report.', 'Careless loss, or theft without a police report, is charged at the gear’s replacement value.'],
+    title: 'Robbery or burglary', icon: 'shield', tone: 'ink',
+    lines: ['Report it to the police within 24 hours and send us the report.', 'You pay 30% of the item’s value. This applies to verified renters, once in 12 months.'],
   },
+  {
+    title: 'You pay the full value', icon: 'close', tone: 'red',
+    lines: ['Theft with no police report', 'Careless loss, like leaving it in a taxi', 'Gear that isn’t returned', 'Water damage or misuse'],
+  },
+  { title: 'Missing accessories', tone: 'ink', lines: ['Batteries, chargers, caps and cables are charged at their own price.'] },
+  { title: 'Before anything is charged', tone: 'ink', lines: ['We show you the before-and-after photos and you can reply first.'] },
 ];
+
+/** The most a renter pays if one unit is damaged by accident: 10% of its value, at least ₦15,000. */
+export function damageCapKobo(valueKobo: number) {
+  return Math.max(DAMAGE_MIN_KOBO, Math.round(valueKobo * DAMAGE_CAP));
+}
 
 /** "What's covered": Deloo Protection in plain words, as a bottom sheet. */
 export function CoverageSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -43,7 +57,7 @@ export function CoverageSheet({ visible, onClose }: { visible: boolean; onClose:
                   {s.icon ? <Icon name={s.icon} size={18} color={colour[s.tone]} /> : null}
                   <Text variant="bodyStrong" style={{ color: colour[s.tone] }}>{s.title}</Text>
                 </View>
-                {s.lines.map((l) => <Text key={l} variant="caption">{s.lines.length > 1 && s.title === 'Not covered' ? `• ${l}` : l}</Text>)}
+                {s.lines.map((l) => <Text key={l} variant="caption">{s.tone === 'red' ? `• ${l}` : l}</Text>)}
               </View>
             ))}
           </ScrollView>

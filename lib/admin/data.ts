@@ -101,6 +101,8 @@ export function riderOwns(staff: Staff, b: { rider_name: string; rider_phone: st
 /** Turn a Postgres/PostgREST error into something staff can act on. */
 export function friendlyError(e: { message?: string; code?: string } | null | undefined): string {
   if (!e) return "Something went wrong.";
+  if (/not_verified/.test(e.message ?? "")) return "The renter’s ID isn’t verified for this gear yet, so it can’t leave base. Review their ID under Customers → Verification.";
+  if (/verify_needed|trust3_needed/.test(e.message ?? "")) return "The renter needs ID verification for this booking.";
   if (e.code === "23P01") return "That overlaps a booking or block on this unit.";
   if (e.code === "42501" || /row-level security/i.test(e.message ?? "")) return e.message && !/row-level security/i.test(e.message) ? e.message : "Your role can’t do that.";
   if (e.code === "23505") return "That already exists.";

@@ -34,7 +34,8 @@ export type Capability =
   | "staff.manage"
   | "messages.view"      // emails to renters (outbox) and their previews
   | "messages.send"      // write a one-off email, retry or cancel one
-  | "pii.view";          // unmasked phone numbers and addresses
+  | "pii.view"           // unmasked phone numbers and addresses
+  | "kyc.review";        // renters' ID documents and selfies, and the verify decision (storage RLS: owner/admin/ops)
 
 const MATRIX: Record<Capability, StaffRole[]> = {
   "dashboard": ["owner", "admin", "ops", "finance", "readonly"],
@@ -60,6 +61,7 @@ const MATRIX: Record<Capability, StaffRole[]> = {
   "messages.view": ["owner", "admin", "ops", "finance", "readonly"],
   "messages.send": ["owner", "admin", "ops"],
   "pii.view": ["owner", "admin", "ops", "rider", "finance"],
+  "kyc.review": ["owner", "admin", "ops"],
 };
 
 export const can = (role: StaffRole, cap: Capability) => MATRIX[cap].includes(role);

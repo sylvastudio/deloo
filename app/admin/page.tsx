@@ -4,6 +4,7 @@ import s from "@/components/admin/ops.module.css";
 import { area, loadOps, OPS_COLUMNS, type OpsInfo, type OpsRow } from "@/app/admin/dispatch/_lib/load";
 import { pageStaff } from "@/lib/admin/auth";
 import { addDays, dayStart, fmtWeekday, lagosDay } from "@/lib/admin/format";
+import { NOT_VERIFIED_LABEL } from "@/lib/admin/kyc";
 import { slotOrder, type Severity } from "@/lib/admin/next-action";
 import { can, maskText } from "@/lib/admin/roles";
 import { LIVE_STATUSES } from "@/lib/admin/status";
@@ -90,6 +91,7 @@ export default async function TodayInbox() {
   const isDelivery = (t: Trip) => t.b.delivery !== "pickup";
   const noRider = trips.filter((t) => isDelivery(t) && !t.b.rider_name.trim());
   const noUnit = trips.filter((t) => t.dir === "out" && (t.info.ctx.units?.assigned ?? 0) < (t.info.ctx.units?.total ?? 0));
+  const unverified = uniq(trips.filter((t) => t.dir === "out" && t.info.unverified), (t) => t.b.id);
   const outToday = trips.filter((t) => t.dir === "out" && t.day === today);
   const inToday = trips.filter((t) => t.dir === "in" && t.day === today);
   const lateInspect = collectedRows.filter((b) => {
@@ -114,6 +116,7 @@ export default async function TodayInbox() {
     { key: "holds", n: (holds.data ?? []).length, text: `${plural((holds.data ?? []).length, "hold")} expiring in 15 min`, tone: "warn", href: "/admin/bookings?view=holds_expiring", action: "Nudge renters", refs: refsOf((holds.data ?? []) as { id: string; ref: string }[], "#renter") },
     { key: "norider", n: uniq(noRider, (t) => `${t.dir}${t.b.id}`).length, text: `${plural(uniq(noRider, (t) => `${t.dir}${t.b.id}`).length, "job")} today or tomorrow with no rider`, tone: noRider.some((t) => t.day === today) ? "bad" : "warn", href: `/admin/dispatch?day=${noRiderDay}`, action: "Assign riders", refs: tripRefs(noRider, "#delivery") },
     { key: "nounit", n: uniq(noUnit, (t) => t.b.id).length, text: `${plural(uniq(noUnit, (t) => t.b.id).length, "booking")} going out with units missing`, tone: noUnit.some((t) => t.day === today) ? "bad" : "warn", href: noUnit[0] ? `/admin/bookings/${noUnit[0].b.id}#gear` : "/admin/bookings", action: "Assign units", refs: tripRefs(noUnit, "#gear") },
+    { key: "unverified", n: unverified.length, text: `${plural(unverified.length, "booking")} going out with the renter’s ID not verified`, tone: unverified.some((t) => t.day === today) ? "bad" : "warn", href: can(staff.role, "kyc.review") ? "/admin/customers/verification" : `/admin/bookings/${unverified[0]?.b.id ?? ""}`, action: "Review IDs", refs: tripRefs(unverified, "") },
     { key: "renter", n: renterProblems.length, text: `${plural(renterProblems.length, "renter handover")} marked problem`, tone: "bad", href: renterProblems[0] ? `/admin/bookings/${renterProblems[0].id}#evidence` : "/admin/bookings", action: "Review photos", refs: refsOf(renterProblems, "#evidence") },
     { key: "inspect", n: lateInspect.length, text: `${plural(lateInspect.length, "return")} not inspected after 24h`, tone: "bad", href: "/admin/bookings?view=to_inspect", action: "Inspect", refs: refsOf(lateInspect, "#inspect") },
     { key: "disputed", n: (disputed.data ?? []).length, text: `${plural((disputed.data ?? []).length, "booking")} disputed`, tone: "bad", href: "/admin/bookings?view=disputed", action: "Assess", refs: refsOf((disputed.data ?? []) as { id: string; ref: string }[], "#compare") },
@@ -197,7 +200,10 @@ export default async function TodayInbox() {
                       <td className="small">{t.b.delivery === "pickup" ? <span className="muted">At base</span> : [t.info.zone, maskText(staff.role, area(t.b.address))].filter(Boolean).join(" · ") || <span className="muted">Not set</span>}</td>
                       <td className="small">{t.b.delivery === "pickup" ? <span className="muted">None (pickup)</span> : t.b.rider_name || <Chip tone={t.day === today ? "bad" : "warn"}>No rider</Chip>}</td>
                       <td className="small">
-                        {a.anchor ? <Link href={`/admin/bookings/${t.b.id}${a.anchor}`}><Chip tone={a.severity}>{a.label}</Chip></Link> : <Chip tone={a.severity}>{a.label}</Chip>}
+                        <div className="flex flex-wrap gap-1">
+                          {t.dir === "out" && t.info.unverified && <Chip tone="bad">{NOT_VERIFIED_LABEL}</Chip>}
+                          {a.anchor ? <Link href={`/admin/bookings/${t.b.id}${a.anchor}`}><Chip tone={a.severity}>{a.label}</Chip></Link> : <Chip tone={a.severity}>{a.label}</Chip>}
+                        </div>
                       </td>
                       <td><StatusChip status={t.b.status} /></td>
                     </tr>

@@ -80,7 +80,8 @@ export type Quote = {
 };
 export type Delivery = 'pickup' | 'delivery';
 
-const rpcLines = (lines: DraftLine[]) => lines.map((l) => ({ item_id: l.itemId, qty: l.qty }));
+/** Lines as quote_booking, create_hold and kyc_gate take them. */
+export const rpcLines = (lines: DraftLine[]) => lines.map((l) => ({ item_id: l.itemId, qty: l.qty }));
 
 /**
  * A database timestamp as ms. Postgres sends microseconds ("…:25.877336+00:00"), which some browsers
@@ -144,6 +145,17 @@ export class GearTaken extends Error {
   constructor(public lines: QuoteLine[]) { super('gear_taken'); }
 }
 
+/** create_hold refused because of who's booking (docs/kyc-contract.md), with renter-facing copy. */
+export type HoldRefusal = 'verify_needed' | 'trust3_needed' | 'account_blocked';
+const REFUSAL_TEXT: Record<HoldRefusal, string> = {
+  verify_needed: 'We need a quick ID check before you book this gear. It takes 2 minutes and you only do it once.',
+  trust3_needed: 'Bookings over ₦5m need two finished rentals with us, or a quick call first. Book part of it now, or chat with us.',
+  account_blocked: 'This account can’t book right now. Chat with us on WhatsApp and we’ll sort it out.',
+};
+export class HoldRefused extends Error {
+  constructor(public code: HoldRefusal) { super(REFUSAL_TEXT[code]); }
+}
+
 export async function createHold(input: {
   lines: DraftLine[]; first: string; last: string; delivery: Delivery; zoneId?: string; address: string; phone: string;
   eventId?: string; notIncluded?: NotIncluded[];
@@ -159,6 +171,8 @@ export async function createHold(input: {
       try { lines = error.details ? (JSON.parse(error.details) as QuoteLine[]) : []; } catch { /* details are optional */ }
       throw new GearTaken(lines);
     }
+    const refusal = (Object.keys(REFUSAL_TEXT) as HoldRefusal[]).find((k) => error.message?.includes(k));
+    if (refusal) throw new HoldRefused(refusal);
     throw error;
   }
   return data as Hold;

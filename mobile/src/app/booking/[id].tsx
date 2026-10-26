@@ -9,6 +9,7 @@ import {
   type BookingDetail, type Handover, type Settings, type Stage,
 } from '@/lib/bookings';
 import { dayLabel, daysText, lagosWhen, naira, rangeLabel, whatsappUrl } from '@/lib/format';
+import { reasonText, useKyc } from '@/lib/kyc';
 import { pendingUploads, signedUrls, useHandoverJobs, waitingText, type HandoverJob } from '@/lib/handover';
 import { itemPhotoUrl } from '@/lib/photos';
 import { radius, space, touch } from '@/theme/tokens';
@@ -18,6 +19,7 @@ import { Badge } from '@/ui/chip';
 import { EmptyState, Notice, Skeleton } from '@/ui/feedback';
 import { categoryIcon, Icon } from '@/ui/icon';
 import { Text } from '@/ui/text';
+import { TextAction } from '@/ui/text-action';
 import { TopBar } from '@/ui/top-bar';
 import { CheckpointTracker, type Checkpoint } from '@/ui/tracker';
 import { slotPhrase } from '@/ui/delivery-slot';
@@ -72,6 +74,7 @@ export default function Tracker() {
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [settings, setSettings] = useState<Settings | null>(cachedSettings);
+  const kyc = useKyc();
   const jobs = useHandoverJobs();
   const myJobs = jobs.filter((j) => j.bookingId === id);
   const waiting = pendingUploads(jobs, id);
@@ -149,6 +152,24 @@ export default function Tracker() {
             <Text variant="caption">Waiting for payment. We hold your gear until {b.hold_expires_at ? lagosWhen(b.hold_expires_at) : 'the hold ends'}.</Text>
             <Text variant="label" tone="lagoon" onPress={() => router.push(`/book/pay?booking=${b.id}`)} accessibilityRole="button">Resume payment</Text>
           </View></Notice>
+        ) : null}
+        {/* ID check still open: until staff approve, the gear can't leave us. */}
+        {['hold', 'confirmed', 'preparing'].includes(b.status) && !b.needs_refund ? (
+          kyc.kyc_status === 'pending' ? (
+            <Notice tone="tip" icon="clock">We’re checking your ID. Usually under 2 hours (8am to 8pm). We’ll confirm before your gear leaves us.</Notice>
+          ) : kyc.kyc_status === 'needs_more' ? (
+            <Notice tone="warning"><View style={{ gap: 2 }}>
+              <Text variant="bodyStrong">We need a clearer photo of your ID</Text>
+              <Text variant="caption">{reasonText(kyc.kyc_reason)} Your booking stays confirmed.</Text>
+              <TextAction label="Fix it" onPress={() => router.push({ pathname: '/verify', params: { return: `/booking/${b.id}` } })} />
+            </View></Notice>
+          ) : kyc.kyc_status === 'rejected' ? (
+            <Notice tone="problem"><View style={{ gap: 2 }}>
+              <Text variant="bodyStrong" tone="red">We couldn’t verify your ID</Text>
+              <Text variant="caption">We can’t send cameras to this account. If you’ve paid, you get every naira back.</Text>
+              {help ? <TextAction label="Chat with us" icon="whatsapp" onPress={() => chat(`Hi Deloo, my ID check for booking ${b.ref ?? ''} was not approved.`)} /> : null}
+            </View></Notice>
+          ) : null
         ) : null}
 
         {!ended && b.status !== 'hold' ? <>

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { signOut } from "@/app/(auth)/actions";
 import { AdminShell, type NavGroup, type NavItem, type Theme } from "@/components/admin/nav";
 import { getStaff, homeFor, type Staff } from "@/lib/admin/auth";
+import { NAV_COUNTS_TAG } from "@/lib/admin/kyc";
 import { addDays, dayStart, lagosDay } from "@/lib/admin/format";
 import { can, ROLE_LABEL } from "@/lib/admin/roles";
 import { createServiceClient } from "@/lib/supabase/server";
@@ -15,11 +16,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-type Counts = { jobsToday: number | null; refundsQueued: number | null; paymentsAttention: number | null };
+type Counts = { jobsToday: number | null; refundsQueued: number | null; paymentsAttention: number | null; kycPending: number | null };
+const NO_COUNTS: Counts = { jobsToday: null, refundsQueued: null, paymentsAttention: null, kycPending: null };
 
 /**
  * The sidebar's numbers, shared by all staff and cached for a minute, so clicking around the portal
- * doesn't run four count queries per page. Read with the service client (no cookies in a cache);
+ * doesn't run five count queries per page. Read with the service client (no cookies in a cache);
  * which badges a role sees is decided outside, in navCounts.
  */
 const sharedCounts = unstable_cache(async (today: string) => {
@@ -28,25 +30,29 @@ const sharedCounts = unstable_cache(async (today: string) => {
   const count = async (q: PromiseLike<{ count: number | null; error: unknown }>) => {
     try { const r = await q; return r.error ? null : r.count; } catch { return null; }
   };
-  const [out, back, refunds, attention] = await Promise.all([
+  const [out, back, refunds, attention, kyc] = await Promise.all([
     count(db.from("bookings").select("id", { count: "exact", head: true }).gte("starts_at", t0).lt("starts_at", t1).in("status", ["confirmed", "preparing", "out_for_delivery"])),
     count(db.from("bookings").select("id", { count: "exact", head: true }).gt("ends_at", t0).lte("ends_at", t1).eq("status", "delivered")),
     count(db.from("refunds").select("id", { count: "exact", head: true }).in("status", ["queued", "processing"])),
     count(db.from("payments").select("id", { count: "exact", head: true }).or("status.eq.mismatch,flags.cs.{duplicate}")),
+    // ID submissions waiting for a reviewer (null before migration 0023: no badge).
+    count(db.from("profiles").select("id", { count: "exact", head: true }).eq("kyc_status", "pending")),
   ]);
-  return { out, back, refunds, attention };
-}, ["admin-nav-counts"], { revalidate: 60 });
+  return { out, back, refunds, attention, kyc };
+}, ["admin-nav-counts"], { revalidate: 60, tags: [NAV_COUNTS_TAG] });
 
 /** Badge counts for the sidebar, only the ones this role may see. */
 async function navCounts(staff: Staff): Promise<Counts> {
   const jobs = (can(staff.role, "handover.capture") || staff.role === "readonly") && staff.role !== "rider";
   const money = can(staff.role, "payments.view");
-  if (!jobs && !money) return { jobsToday: null, refundsQueued: null, paymentsAttention: null };
-  const { out, back, refunds, attention } = await sharedCounts(lagosDay());
+  const kycReview = can(staff.role, "kyc.review");
+  if (!jobs && !money && !kycReview) return NO_COUNTS;
+  const { out, back, refunds, attention, kyc } = await sharedCounts(lagosDay());
   return {
     jobsToday: !jobs || (out == null && back == null) ? null : (out ?? 0) + (back ?? 0),
     refundsQueued: money ? refunds : null,
     paymentsAttention: money ? attention : null,
+    kycPending: kycReview ? kyc : null,
   };
 }
 
@@ -72,6 +78,7 @@ function navFor(staff: Staff, c: Counts): { groups: NavGroup[]; settings?: NavIt
     ] },
     { label: "People", items: [
       ...show(can(r, "customers.view"), { href: "/admin/customers", label: "Customers", icon: "customers" as const }),
+      ...show(can(r, "kyc.review"), { href: "/admin/customers/verification", label: "Verification", icon: "verification" as const, count: c.kycPending, countTone: "warn" as const, countLabel: "IDs to review" }),
       ...show(can(r, "messages.view"), { href: "/admin/messages", label: "Messages", icon: "messages" as const }),
       ...show(can(r, "staff.manage"), { href: "/admin/settings/staff", label: "Staff", icon: "staff" as const }),
     ] },
@@ -98,7 +105,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const t = jar.get("adm-theme")?.value;
   const theme: Theme = t === "light" || t === "dark" ? t : "system";
   const rider = staff.role === "rider";
-  const { groups, settings } = navFor(staff, rider ? { jobsToday: null, refundsQueued: null, paymentsAttention: null } : await navCounts(staff));
+  const { groups, settings } = navFor(staff, rider ? NO_COUNTS : await navCounts(staff));
   return (
     <AdminShell groups={groups} settings={settings} theme={theme} rider={rider} home={homeFor(staff.role)} signOut={signOut}
       user={{ name: staff.displayName, email: staff.email, role: ROLE_LABEL[staff.role], initials: initials(staff.displayName) }}>

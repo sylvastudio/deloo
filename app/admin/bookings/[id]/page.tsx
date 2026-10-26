@@ -14,6 +14,7 @@ import { Chip, Empty, ErrorBox, PageHead, Section, StatusChip } from "@/componen
 import { pageStaff } from "@/lib/admin/auth";
 import { evidenceCoverage, loadEvidence, namesFor, riderOwns } from "@/lib/admin/data";
 import { fmtDateTime, fmtRental, fmtTime, lagosDay, naira, nairaInput } from "@/lib/admin/format";
+import { isDispatchMove, NOT_VERIFIED_LABEL, trustShort } from "@/lib/admin/kyc";
 import { nextAction, type NextActionCtx } from "@/lib/admin/next-action";
 import { can, maskPhone, maskText } from "@/lib/admin/roles";
 import {
@@ -72,7 +73,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
   const seeMoney = can(staff.role, "payments.view");
   const [itemsRes, profileRes, paymentsRes, refundsRes, notesRes, zonesRes, ridersRes, resvRes, auditRes, quoteRes] = await Promise.all([
     db.from("booking_items").select("id, booking_id, item_id, unit_id, item_name, day_rate_kobo, days, rental_kobo, deposit_kobo, kind, units(tag, serial)").eq("booking_id", id).order("created_at"),
-    db.from("profiles").select("id, full_name, phone, blocked").eq("id", b.renter_id).maybeSingle(),
+    db.from("profiles").select("id, full_name, phone, blocked, trust_level").eq("id", b.renter_id).maybeSingle(),
     db.from("payments").select("id, booking_id, purpose, reference, amount_kobo, fees_kobo, channel, status, flags, paystack_id, paid_at, created_at").eq("booking_id", id).order("created_at"),
     db.from("refunds").select("id, booking_id, payment_id, purpose, amount_kobo, method, status, provider_ref, reason, requested_by, processed_by, processed_at, created_at").eq("booking_id", id).order("created_at"),
     db.from("booking_notes").select("id, author_id, body, created_at").eq("booking_id", id).order("created_at", { ascending: false }),
@@ -86,7 +87,10 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
   const items = (itemsRes.data ?? []) as (BookingItemRow & { units: { tag: string; serial: string } | { tag: string; serial: string }[] | null })[];
   // No deposits since 0019; older bookings still show theirs.
   const hasDeposit = Number(b.deposit_kobo) > 0 || items.some((i) => Number(i.deposit_kobo) > 0);
-  const profile = profileRes.data as { full_name: string; phone: string; blocked: boolean } | null;
+  const profile = profileRes.data as { full_name: string; phone: string; blocked: boolean; trust_level: number } | null;
+  // ID gate: the database refuses the trip out (or the handover at base) while trust < required_trust.
+  const unverified = (b.status === "confirmed" || b.status === "preparing") && trustShort(profile?.trust_level, b.required_trust);
+  const verifyHref = can(staff.role, "kyc.review") ? "/admin/customers/verification" : `/admin/customers/${b.renter_id}#kyc`;
   const payments = (paymentsRes.data ?? []) as PaymentRow[];
   const refunds = (refundsRes.data ?? []) as RefundRow[];
   const notes = (notesRes.data ?? []) as { id: string; author_id: string | null; body: string; created_at: string }[];
@@ -183,6 +187,13 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
     const simple = !m.note && !missingEvidence;
     const label = primary ? na.label : m.label;
     const btn = primary ? "btn" : "btn btn-secondary btn-sm";
+    if (unverified && isDispatchMove(b.status, m.to, b.delivery)) {
+      return (
+        <button key={m.to} type="button" className={btn} disabled aria-describedby="not-verified" title={`${NOT_VERIFIED_LABEL}: the renter needs ID tier ${b.required_trust}.`}>
+          {label}
+        </button>
+      );
+    }
     if (simple) {
       return (
         <ActionForm key={m.to} action={setBookingStatus} confirm={`${m.label}? ${ref} moves to “${STATUS_LABEL[m.to]}”.`}>
@@ -278,6 +289,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           <div className={s.grow}>
             <p className="kicker">Next</p>
             <div className="flex flex-wrap items-center gap-2">
+              {unverified && <Link href={verifyHref}><Chip tone="bad">{NOT_VERIFIED_LABEL}</Chip></Link>}
               <Chip tone={na.severity}>{na.label}</Chip>
               {na.due && na.severity !== "info" && <span className="muted small">due {lagosDay(na.due) === lagosDay() ? fmtTime(na.due) : fmtDateTime(na.due)}</span>}
             </div>
@@ -291,6 +303,12 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
           )}
         </div>
         {moves.length === 0 && !inspecting && actsHere && !na.anchor && <p className="hint">No status moves available to your role from here.</p>}
+        {unverified && (
+          <p className="warn-box" id="not-verified">
+            {renterName} is at trust tier {profile?.trust_level ?? 0}; this booking needs tier {b.required_trust}. The {b.delivery === "pickup" ? "handover at base" : "trip out"} is locked until their ID is verified.{" "}
+            <Link className="link" href={verifyHref}>{can(staff.role, "kyc.review") ? "Review their ID" : "See their verification"}</Link>
+          </p>
+        )}
       </div>
 
       <div className="split">

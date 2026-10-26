@@ -12,7 +12,7 @@ const POINTS: [string, string][] = [
   ['Our own kit', 'Every camera, lens, light and mic you book on Deloo belongs to us. No middlemen, no surprise swaps.'],
   ['Checked before it leaves', 'We test, charge and photograph every piece before it goes out, so you can see the condition it left in.'],
   ['Delivered across Lagos', 'We bring it to you and collect it after your shoot, or you can pick it up yourself.'],
-  ['No deposit', 'No money held back. Every booking includes Deloo Protection (damage cover) for accidental damage during your rental, up to a limit.'],
+  ['No deposit', 'No money held back. Every booking includes Deloo Protection (damage cover) for accidental damage: you never pay more than 10% of an item’s value.'],
 ];
 
 /** A short page about who Deloo is, for people deciding whether to trust us with their shoot. */

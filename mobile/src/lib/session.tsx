@@ -3,9 +3,13 @@ import { createContext, use, useCallback, useEffect, useState, type PropsWithChi
 import { Platform } from 'react-native';
 
 import { setBookingDraft } from './booking-draft';
+import type { KycStatus } from './kyc';
 import { supabase } from './supabase';
 
-export type Profile = { full_name: string; phone: string; wants_to_rent: boolean; has_gear: boolean; trust_level: number; is_ops: boolean };
+export type Profile = { full_name: string; phone: string; wants_to_rent: boolean; has_gear: boolean; trust_level: number; is_ops: boolean;
+  /** ID check (docs/kyc-contract.md). Missing until migration 0023 is applied; read as 'none'. */
+  kyc_status?: KycStatus; kyc_reason?: string | null;
+};
 export type Vendor = { id: string; name: string; vendor_type: 'company' | 'church' | 'individual'; approved_at: string | null; role: 'owner' | 'staff' };
 export type Mode = 'renter' | 'vendor';
 
@@ -21,6 +25,15 @@ type State = {
 };
 
 const SessionContext = createContext<State | null>(null);
+
+const PROFILE_COLS = 'full_name, phone, wants_to_rent, has_gear, trust_level, is_ops';
+
+/** The profile with its ID check status; without it if the database doesn't have those columns yet (42703). */
+async function loadProfile(id: string) {
+  const res = await supabase.from('profiles').select(`${PROFILE_COLS}, kyc_status, kyc_reason`).eq('id', id).maybeSingle();
+  if (res.error?.code === '42703') return supabase.from('profiles').select(PROFILE_COLS).eq('id', id).maybeSingle();
+  return res;
+}
 
 /**
  * Deloo is renter-only for now (peer vendors are a Coming soon waitlist). The vendor screens stay in
@@ -49,7 +62,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
   const load = useCallback(async (s: Session | null) => {
     if (!s) { setSession(null); setProfile(null); setVendors([]); return; }
     const [{ data: p }, { data: m }] = await Promise.all([
-      supabase.from('profiles').select('full_name, phone, wants_to_rent, has_gear, trust_level, is_ops').eq('id', s.user.id).maybeSingle(),
+      loadProfile(s.user.id),
       supabase.from('vendor_members').select('role, vendors(id, name, vendor_type, approved_at)').eq('user_id', s.user.id),
     ]);
     setProfile(p ?? null);

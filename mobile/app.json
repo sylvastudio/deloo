@@ -51,7 +51,7 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Deloo uses the camera to photograph your gear and the condition of equipment at handover.",
+          "cameraPermission": "Deloo uses the camera to photograph equipment at handover, and for the ID photo and selfie that verify your account.",
           "photosPermission": "Deloo uses your photos to list your gear."
         }
       ]

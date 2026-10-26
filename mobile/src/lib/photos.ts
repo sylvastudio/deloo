@@ -43,14 +43,14 @@ export function itemPhotoUrl(path: string) {
 
 /** The camera permission was refused; the screen offers "Open settings". */
 export class CameraDenied extends Error {
-  constructor() { super('Allow camera access so you can photograph the gear. Open settings, then tap Camera.'); }
+  constructor(message = 'Allow camera access so you can photograph the gear. Open settings, then tap Camera.') { super(message); }
 }
 
 export type Evidence = { uri: string; mediaType: 'photo' | 'video'; width?: number; height?: number; durationS?: number };
 
-async function cameraAllowed() {
+async function cameraAllowed(message?: string) {
   const perm = await ImagePicker.requestCameraPermissionsAsync();
-  if (!perm.granted) throw new CameraDenied();
+  if (!perm.granted) throw new CameraDenied(message);
 }
 
 /**
@@ -73,6 +73,31 @@ export async function shootEvidencePhoto(): Promise<Evidence | null> {
 }
 
 const MAX_SIDE = 1600;
+
+/**
+ * ID check photo (docs/ux-kyc-protection.md §3): the ID (back camera) or a selfie holding it (front
+ * camera), shrunk like evidence photos to 1600 px JPEG 0.7. `library` is the web fallback for
+ * computers without a camera. Returns null if the person cancels.
+ */
+export async function shootIdPhoto(shot: 'id' | 'selfie', source: 'camera' | 'library' = 'camera'): Promise<Evidence | null> {
+  const opts: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1, allowsEditing: false, exif: false };
+  let res: ImagePicker.ImagePickerResult;
+  if (source === 'camera') {
+    await cameraAllowed('Allow camera access so you can photograph your ID. Open settings, then tap Camera.');
+    res = await ImagePicker.launchCameraAsync({ ...opts, cameraType: shot === 'selfie' ? ImagePicker.CameraType.front : ImagePicker.CameraType.back });
+  } else {
+    res = await ImagePicker.launchImageLibraryAsync(opts);
+  }
+  if (res.canceled || !res.assets?.[0]) return null;
+  const a = res.assets[0];
+  if (Platform.OS === 'web') {
+    try { return await shrinkOnWeb(a.uri); } catch { return { uri: a.uri, mediaType: 'photo', width: a.width, height: a.height }; }
+  }
+  const ctx = ImageManipulator.manipulate(a.uri);
+  if (Math.max(a.width, a.height) > MAX_SIDE) ctx.resize(a.width >= a.height ? { width: MAX_SIDE, height: null } : { width: null, height: MAX_SIDE });
+  const saved = await (await ctx.renderAsync()).saveAsync({ format: SaveFormat.JPEG, compress: 0.7 });
+  return { uri: saved.uri, mediaType: 'photo', width: saved.width, height: saved.height };
+}
 
 /**
  * Web: shrink with the browser's own canvas scaling. expo-image-manipulator's web resize treats a null

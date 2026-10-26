@@ -1,10 +1,11 @@
 import { SearchX, Users } from "lucide-react";
 import Link from "next/link";
+import { KycStatusChip } from "@/components/admin/kyc";
 import { ActiveFilters, Chip, EmptyState, ErrorState, FilterBar, PageHead, Pagination, Tabs } from "@/components/admin/ui";
 import { pageStaff } from "@/lib/admin/auth";
 import { safeSearch } from "@/lib/admin/data";
 import { fmtDateTime, naira } from "@/lib/admin/format";
-import { maskPhone } from "@/lib/admin/roles";
+import { can, maskPhone } from "@/lib/admin/roles";
 import { PAID_STATUSES } from "@/lib/admin/status";
 import type { ProfileRow } from "@/lib/admin/types";
 import { first, hrefWith, PAGE_SIZE, pageOf, rangeOf, type SearchParams } from "@/lib/admin/url";
@@ -38,6 +39,12 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   const staffIds = new Set(((staffRes.data ?? []) as { user_id: string }[]).map((s) => s.user_id));
 
   const stats = new Map<string, { n: number; spent: number; last: string }>();
+  // ID verification status (migration 0023). Read on its own so the list still loads without it.
+  const kyc = new Map<string, string>();
+  if (rows.length) {
+    const { data: ks, error: kErr } = await db.from("profiles").select("id, kyc_status").in("id", rows.map((r) => r.id));
+    if (!kErr) for (const k of (ks ?? []) as { id: string; kyc_status: string }[]) kyc.set(k.id, k.kyc_status);
+  }
   if (rows.length) {
     const { data: bs } = await db.from("bookings").select("renter_id, total_kobo, status, created_at").in("renter_id", rows.map((r) => r.id));
     for (const b of bs ?? []) {
@@ -51,7 +58,8 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
 
   return (
     <div className="adm-page">
-      <PageHead title="Customers" meta={count != null ? <span>{count} {blocked ? "blocked" : q ? "matching" : "renters"}</span> : undefined} />
+      <PageHead title="Customers" meta={count != null ? <span>{count} {blocked ? "blocked" : q ? "matching" : "renters"}</span> : undefined}
+        actions={can(staff.role, "kyc.review") ? <Link className="btn btn-secondary btn-sm" href="/admin/customers/verification">ID verification queue</Link> : undefined} />
       <Tabs label="Saved views" items={[
         { href: hrefWith("/admin/customers", current, { blocked: null }), label: "All", count: n(allCount), current: !blocked },
         { href: hrefWith("/admin/customers", current, { blocked: "1" }), label: "Blocked", count: n(blockedCount), current: blocked },
@@ -69,7 +77,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
         <div>
           <div className="tbl-wrap">
             <table className="tbl rows-link">
-              <thead><tr><th>Name</th><th>Phone</th><th className="num">Paid bookings</th><th className="num">Total spent</th><th>Last booking</th><th>Joined</th><th>Flags</th></tr></thead>
+              <thead><tr><th>Name</th><th>Phone</th><th className="num">Paid bookings</th><th className="num">Total spent</th><th>Last booking</th><th>Joined</th><th>ID</th><th>Flags</th></tr></thead>
               <tbody>
                 {rows.map((p) => {
                   const s = stats.get(p.id);
@@ -81,11 +89,12 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                       <td className="num money">{naira(s?.spent ?? 0)}</td>
                       <td className="nowrap">{s?.last ? fmtDateTime(s.last) : <span className="subtle">None</span>}</td>
                       <td className="nowrap">{fmtDateTime(p.created_at)}</td>
+                      <td className="nowrap">{kyc.has(p.id) ? <KycStatusChip status={kyc.get(p.id)} trust={p.trust_level} /> : <span className="subtle">Unknown</span>}</td>
                       <td>
                         <div className="flex gap-1 flex-wrap">
                           {p.blocked && <Chip tone="bad">Blocked</Chip>}
                           {staffIds.has(p.id) && <Chip tone="info">Staff</Chip>}
-                          {p.trust_level > 0 && <Chip tone="good">Trusted, tier {p.trust_level}</Chip>}
+                          {p.trust_level > 1 && kyc.get(p.id) !== "verified" && <Chip tone="good">Trusted, tier {p.trust_level}</Chip>}
                         </div>
                       </td>
                     </tr>

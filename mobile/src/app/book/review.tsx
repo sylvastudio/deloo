@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,13 +6,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { asGear, draftKey, getCheckout, loadShelf, saveCheckout, useBookingDraft, type DraftLine, type ShelfItem } from '@/lib/booking-draft';
 import { kitGaps } from '@/planner/complements';
 import {
-  cachedSettings, createHold, GearTaken, getActiveHold, isOffline, itemCalendar, loadSettings, parseTime, plain, quoteBooking, requestCancellation,
+  cachedSettings, createHold, GearTaken, HoldRefused, getActiveHold, isOffline, itemCalendar, loadSettings, parseTime, plain, quoteBooking, requestCancellation,
   setActiveHold, type ActiveHold, type Delivery, type PayMethod, type Quote, type QuoteLine, type Settings,
 } from '@/lib/bookings';
-import { WhatsCovered } from '@/ui/coverage-sheet';
+import { damageCapKobo, WhatsCovered } from '@/ui/coverage-sheet';
 import { DEFAULT_SLOT, DeliverySlotPicker, saveDeliverySlot, type DeliverySlot } from '@/ui/delivery-slot';
 import { PayMethods } from '@/ui/pay-methods';
 import { daysText, lagosTime, naira, rangeLabel, whatsappUrl } from '@/lib/format';
+import { gateCard, kycGate, reasonText, type KycGate } from '@/lib/kyc';
 import { useSession } from '@/lib/session';
 import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
@@ -57,6 +58,9 @@ export default function Review() {
   const [hold, setHold] = useState<ActiveHold | null>(getActiveHold);
   const [touched, setTouched] = useState(false);
   const seq = useRef(0);
+  // ID check for this basket (kyc_gate). undefined: loading; null: couldn't load (create_hold still checks).
+  const [gate, setGate] = useState<KycGate | null | undefined>(undefined);
+  const gateSeq = useRef(0);
 
   const key = draft ? draftKey(draft) : '';
   // Saved as they type, so going Back (or a reload) never loses the address or phone.
@@ -102,6 +106,19 @@ export default function Review() {
   }, [draft?.lines, draft?.first, draft?.last, delivery, zoneId]);
   useEffect(() => { runQuote(); }, [runQuote]);
 
+  // Same lines as the quote. Read again on focus, so coming back from verify/done unlocks Pay.
+  const runGate = useCallback(async () => {
+    if (!draft?.lines.length) { setGate(undefined); return; }
+    const mine = ++gateSeq.current;
+    try {
+      const g = await kycGate(draft.lines);
+      if (mine === gateSeq.current) setGate(g);
+    } catch {
+      if (mine === gateSeq.current) setGate(null);
+    }
+  }, [draft?.lines]);
+  useFocusEffect(useCallback(() => { runGate(); }, [runGate]));
+
   if (!draft || draft.lines.length === 0) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: c.paper }}><TopBar title="Review booking" />
@@ -127,6 +144,16 @@ export default function Review() {
     : !phoneOk ? 'Add a phone number for the rider.' : '';
   const n = draft.first && draft.last ? dayCount(draft.first, draft.last) : 0;
   const help = settings?.support_whatsapp;
+  // Pay waits for the gate; if the gate can't load, create_hold is still the guard.
+  const gateBlocks = gate === undefined || (!!gate && !gate.ok_to_pay);
+  const card = gate ? gateCard(gate) : null;
+  const gateMissing = !gate || gate.ok_to_pay ? ''
+    : card === 'needed' ? 'Verify your ID to pay.'
+    : card === 'needs_more' ? 'Send a clearer photo of your ID to pay.'
+    : card === 'tier3' ? 'Book part of this now, or ask us for a quick call.'
+    : card === 'rejected' || card === 'blocked' ? 'This account can’t book this gear. Chat with us.'
+    : card === 'pending' ? 'Bookings over ₦5m need a quick call with us too.' : '';
+  const footerNote = missing || gateMissing;
 
   function setLines(lines: DraftLine[]) { setTaken(false); update({ lines }); }
   function setDays(first: string, last: string) { setTaken(false); update({ first, last }); }
@@ -147,7 +174,7 @@ export default function Review() {
     saveCheckout({ delivery, zoneId, address: address.trim(), phone: phone.trim(), method });
     // The slot is saved on the booking right after the hold; losing it never blocks paying (staff set it).
     if (held && hold) { saveDeliverySlot(hold.booking_id, slot).catch(() => {}); toPay(hold.booking_id); return; }
-    if (!ready || !draft?.first || !draft.last) return;
+    if (!ready || gateBlocks || !draft?.first || !draft.last) return;
     setPaying(true); setPayError(''); setTaken(false);
     try {
       const h = await createHold({
@@ -160,6 +187,7 @@ export default function Review() {
       toPay(h.booking_id);
     } catch (e) {
       if (e instanceof GearTaken) { setTaken(true); setPickDays(true); runQuote(); }
+      else if (e instanceof HoldRefused) { setPayError(e.message); runGate(); }
       else setPayError(plain(e, 'Couldn’t hold your gear. Try again.'));
     } finally {
       setPaying(false);
@@ -275,13 +303,18 @@ export default function Review() {
           <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
             <Money label={`Rental · ${daysText(quote.days)}`} value={naira(quote.rental_kobo)} />
             <Money label="Deloo Protection (damage cover)" value={naira(quote.protection_kobo)} />
+            {gate?.top_item && gate.top_item.value_kobo > 0 ? (
+              <Text variant="caption" tone="slate">
+                If it’s damaged by accident, you pay at most {naira(damageCapKobo(gate.top_item.value_kobo))} for the {gate.top_item.name}.
+              </Text>
+            ) : null}
             <WhatsCovered />
             <Money label={delivery === 'delivery' ? 'Delivery and collection' : 'Pickup'} value={delivery === 'delivery' ? naira(quote.delivery_kobo) : 'Free'} />
             {quote.deposit_kobo > 0 ? <Money label="Refundable deposit" value={naira(quote.deposit_kobo)} /> : null}
             <View style={[styles.divider, { backgroundColor: c.line }]} />
             <Money label="Total today" value={naira(quote.total_kobo)} strong />
             <Text variant="caption" tone="slate">
-              Free cancellation up to 72 hours before your first day. Protection covers accidental damage during your rental, up to a limit. It doesn’t cover careless loss, theft without a police report, water damage or missing accessories. By paying you agree to{' '}
+              Free cancellation up to 72 hours before your first day. If gear is damaged by accident you never pay more than 10% of its value. Theft with no police report, careless loss, water damage or gear not returned is charged at full value. By paying you agree to{' '}
               <Text variant="caption" tone="lagoon" accessibilityRole="link" onPress={() => Linking.openURL('https://deloo.space/terms').catch(() => {})}>Deloo’s rental terms</Text>.
             </Text>
           </View>
@@ -292,6 +325,10 @@ export default function Review() {
           <PayMethods value={method} onChange={(m) => { setMethod(m); setPayError(''); }} />
           <Text variant="caption" tone="slate">Paystack handles the payment securely. We hold your gear for 30 minutes while you pay.</Text>
         </View>
+        {!held && gate && card ? (
+          <VerifyCard gate={gate} card={card} help={help} lines={draft.lines.length}
+            onVerify={() => router.push({ pathname: '/verify', params: { return: '/book/review' } })} />
+        ) : null}
         {payError ? <Notice tone="problem">{payError}</Notice> : null}
         {help ? (
           <Pressable onPress={() => Linking.openURL(whatsappUrl(help, 'Hi Deloo, I have a question about a booking')).catch(() => {})} accessibilityRole="link" hitSlop={8}>
@@ -300,12 +337,93 @@ export default function Review() {
         ) : null}
       </ScrollView>
       <View style={[styles.footer, { borderTopColor: c.line, backgroundColor: c.paper }]}>
-        {!held && missing && quote ? <Text variant="caption" tone={touched ? 'red' : 'slate'}>{missing}</Text> : null}
+        {!held && footerNote && quote ? <Text variant="caption" tone={touched ? 'red' : 'slate'}>{footerNote}</Text> : null}
         <Button
           title={held && hold ? `Continue to pay ${naira(hold.total_kobo)}` : quote ? `Pay ${naira(quote.total_kobo)}` : 'Pay'}
-          loading={paying} disabled={held ? false : !quote || offline} onPress={pay} />
+          loading={paying} disabled={held ? false : !quote || offline || gateBlocks} onPress={pay} />
       </View>
     </SafeAreaView>
+  );
+}
+
+/**
+ * The ID check card above Pay (docs/ux-kyc-protection.md §3, "Verification card on Review"): one quiet
+ * line when verified; otherwise what's needed and the one next step.
+ */
+function VerifyCard({ gate, card, help, lines, onVerify }: {
+  gate: KycGate; card: NonNullable<ReturnType<typeof gateCard>>; help?: string; lines: number; onVerify: () => void;
+}) {
+  const c = useColors();
+  const chat = (text: string) => help && Linking.openURL(whatsappUrl(help, text)).catch(() => {});
+  if (card === 'verified') {
+    return (
+      <View style={styles.verified} accessible accessibilityLabel="ID verified">
+        <Icon name="check" size={16} color={c.green} />
+        <Text variant="caption" tone="slate">ID verified</Text>
+      </View>
+    );
+  }
+  const worth = naira(gate.basket_value_kobo, true);
+  const chatLink = (label: string, text: string) => (help ? (
+    <Pressable onPress={() => chat(text)} accessibilityRole="link" hitSlop={8} style={styles.cardLink}>
+      <Icon name="whatsapp" size={16} color={c.lagoon} /><Text variant="label" tone="lagoon">{label}</Text>
+    </Pressable>
+  ) : null);
+  // Above ₦5m: two finished rentals or a staff call first. Shown on its own (tier 2) or under the ID step.
+  const tier3 = gate.required === 3 && gate.trust < 3 ? (
+    <View style={{ gap: space.xs }}>
+      {card === 'tier3' ? <Text variant="bodyStrong">{`This booking is worth ${worth}`}</Text> : null}
+      <Text variant="caption" tone="slate">
+        {`Bookings over ₦5m need two finished rentals with us, or a quick call first.${gate.top_item && lines > 1 ? ` Book the ${gate.top_item.name} now and add the rest on your next rental.` : ''}`}
+      </Text>
+      {chatLink('Ask for a quick call', `Hi Deloo, I'd like a quick call so I can book gear worth ${worth}.`)}
+    </View>
+  ) : null;
+
+  let body: React.ReactNode;
+  switch (card) {
+    case 'needed':
+      body = <>
+        <Text variant="bodyStrong">Quick ID check</Text>
+        <Text variant="caption" tone="slate">{`This kit is worth ${worth}, so we check everyone’s ID once. It takes 2 minutes and you only do it once.`}</Text>
+        <Button title="Verify my ID" onPress={onVerify} style={{ marginTop: space.xs }} />
+      </>;
+      break;
+    case 'pending':
+      body = <>
+        <Text variant="bodyStrong">ID sent, we’re checking</Text>
+        <Text variant="caption" tone="slate">You can pay now. We’ll confirm before your gear leaves us. If we can’t verify you, you get every naira back.</Text>
+      </>;
+      break;
+    case 'needs_more':
+      body = <>
+        <Text variant="bodyStrong">We need a clearer photo</Text>
+        <Text variant="caption" tone="slate">{reasonText(gate.kyc_reason)}</Text>
+        <Button title="Fix it" onPress={onVerify} style={{ marginTop: space.xs }} />
+      </>;
+      break;
+    case 'rejected':
+      body = <>
+        <Text variant="caption">We couldn’t verify your ID, so we can’t rent cameras to this account.</Text>
+        {chatLink('Questions? Chat with us', 'Hi Deloo, my ID check was not approved. Can you help?')}
+      </>;
+      break;
+    case 'blocked':
+      body = <>
+        <Text variant="caption">This account can’t book right now.</Text>
+        {chatLink('Chat with us on WhatsApp', 'Hi Deloo, my account can’t book. Can you help?')}
+      </>;
+      break;
+    case 'tier3':
+      body = null;
+      break;
+  }
+  return (
+    <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
+      {body}
+      {tier3 && body ? <View style={[styles.divider, { backgroundColor: c.line }]} /> : null}
+      {tier3}
+    </View>
   );
 }
 
@@ -430,5 +548,7 @@ const styles = StyleSheet.create({
   addMore: { flexDirection: 'row', alignItems: 'center', gap: space.xs, alignSelf: 'flex-start', paddingTop: space.xs },
   gapOption: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: space.sm },
   divider: { height: StyleSheet.hairlineWidth, marginVertical: space.xs },
+  verified: { flexDirection: 'row', alignItems: 'center', gap: space.xs, paddingHorizontal: space.xs },
+  cardLink: { flexDirection: 'row', alignItems: 'center', gap: space.xs, alignSelf: 'flex-start', minHeight: 44 },
   footer: { gap: space.sm, paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: space.lg, borderTopWidth: StyleSheet.hairlineWidth },
 });

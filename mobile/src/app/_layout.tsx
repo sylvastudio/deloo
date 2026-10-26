@@ -83,6 +83,11 @@ function Navigator() {
         <Stack.Screen name="booking/cancel" options={{ presentation: 'formSheet', sheetAllowedDetents: [0.75, 1], sheetCornerRadius: 24, sheetGrabberVisible: true }} />
         {/* deloo://pay?reference=… from Paystack's return page; forwards to the pay screen. */}
         <Stack.Screen name="pay" options={{ animation: 'none' }} />
+        {/* ID check (docs/kyc-contract.md): Review, Me and a booking open it; done returns with ?return=. */}
+        <Stack.Screen name="verify/index" />
+        <Stack.Screen name="verify/id" />
+        <Stack.Screen name="verify/selfie" />
+        <Stack.Screen name="verify/done" options={{ animation: 'fade', gestureEnabled: false }} />
       </Stack.Protected>
       <Stack.Protected guard={ready}>
         <Stack.Screen name="coming-soon" />

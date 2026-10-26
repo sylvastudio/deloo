@@ -5,6 +5,7 @@ import Animated, { ReduceMotion, ZoomIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getBookingDraft, setBookingDraft } from '@/lib/booking-draft';
+import { useKyc } from '@/lib/kyc';
 import { usePlan } from '@/lib/plan';
 import { bookingDays, cachedSettings, getBooking, PAID, plain, setActiveHold, type BookingDetail } from '@/lib/bookings';
 import { dayLabel, daysText, naira, rangeLabel } from '@/lib/format';
@@ -77,6 +78,7 @@ export default function Success() {
   const [error, setError] = useState('');
   const { reset: resetPlan } = usePlan();
   const [calNote, setCalNote] = useState('');
+  const kyc = useKyc();
 
   const load = useCallback(async () => {
     setError('');
@@ -154,6 +156,12 @@ export default function Success() {
           <Text tone="slate" style={{ textAlign: 'center' }}>
             {b.ref} · {rangeLabel(days.first, days.last)} · {daysText(b.days)}{'\n'}Paid {naira(paid)}{b.deposit_kobo > 0 ? `, including a ${naira(b.deposit_kobo)} refundable deposit` : ', including Deloo Protection (damage cover)'}.
           </Text>
+          {kyc.kyc_status === 'pending' ? (
+            <View style={styles.idLine}>
+              <Icon name="clock" size={16} color={c.slate} />
+              <Text variant="caption" tone="slate" style={{ flexShrink: 1 }}>We’re checking your ID. Usually under 2 hours.</Text>
+            </View>
+          ) : null}
           <View style={[styles.card, { backgroundColor: c.surface, borderColor: c.line }]}>
             <Text variant="bodyStrong">What happens next</Text>
             <View accessibilityRole="list" style={{ gap: space.sm }}>
@@ -185,5 +193,6 @@ const styles = StyleSheet.create({
   card: { alignSelf: 'stretch', borderRadius: radius.lg, borderWidth: 1, padding: space.lg, gap: space.md },
   step: { flexDirection: 'row', gap: space.sm, alignItems: 'flex-start' },
   num: { minWidth: 16 },
+  idLine: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   footer: { padding: space.xl, gap: space.sm },
 });
