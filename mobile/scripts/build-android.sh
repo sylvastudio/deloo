@@ -41,14 +41,25 @@ if [[ -z "$BUILD_ID" ]]; then
 fi
 echo "Build: https://expo.dev/accounts/sylva-studio/projects/deloo/builds/$BUILD_ID"
 
+# Progress: EAS gives no percentage, so the bar is an estimate. Queue time is unknown (free tier), and a
+# build usually takes about 12 minutes once it starts; the bar stops at 95% until EAS says FINISHED.
+START=$(date +%s); BUILD_START=""
+bar() { # $1 = percent, $2 = label
+  local n=$(( $1 * 30 / 100 )); printf '\r  [%-30s] %3d%%  %s   ' "$(printf '%*s' "$n" '' | tr ' ' '#')" "$1" "$2"
+}
 while :; do
   J="$(npx eas-cli build:view "$BUILD_ID" --json)"
   STATUS="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])' <<<"$J")"
+  NOW=$(date +%s); T=$(( NOW - START )); CLOCK="$(printf '%d:%02d' $((T / 60)) $((T % 60)))"
   case "$STATUS" in
-    FINISHED) break ;;
-    ERRORED|CANCELED) echo "Build $STATUS. See the logs at the link above."; exit 1 ;;
-    *) echo "  ${STATUS}…"; sleep 30 ;;
+    FINISHED) bar 100 "Built ($CLOCK)"; echo; break ;;
+    ERRORED|CANCELED) echo; echo "Build $STATUS. See the logs at the link above."; exit 1 ;;
+    IN_PROGRESS)
+      BUILD_START="${BUILD_START:-$NOW}"; B=$(( NOW - BUILD_START )); P=$(( 5 + B * 90 / 720 )); (( P > 95 )) && P=95
+      bar "$P" "Building, $((B / 60)) min (total $CLOCK)" ;;
+    *) bar 2 "Waiting in Expo's queue ($CLOCK)" ;;
   esac
+  sleep 20
 done
 
 URL="$(python3 -c 'import json,sys; a=json.load(sys.stdin)["artifacts"]; print(a.get("applicationArchiveUrl") or a["buildUrl"])' <<<"$J")"
