@@ -130,7 +130,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                         </div>
                       </td>
                       <td className="shrink above">
-                        <Drawer trigger={{ label: `Details for ${p.reference}`, icon: Ellipsis, variant: "ghost", iconOnly: true }} title="Payment" description={<span className="mono">{p.reference}</span>}>
+                        <Drawer trigger={{ label: `Details for ${p.reference}`, icon: <Ellipsis aria-hidden="true" />, variant: "ghost", iconOnly: true }} title="Payment" description={<span className="mono">{p.reference}</span>}>
                           <DescriptionList items={[
                             ["Status", <PaymentStatusChip key="s" status={p.status} />],
                             ["Amount", <span key="a" className="tabular">{naira(p.amount_kobo)}</span>],

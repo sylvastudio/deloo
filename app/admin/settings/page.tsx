@@ -100,7 +100,7 @@ export default async function SettingsPage() {
                     <td><Chip tone={z.active ? "good" : "hollow"}>{z.active ? "On" : "Off"}</Chip></td>
                     {edit && (
                       <td className="shrink">
-                        <Drawer trigger={{ label: `Edit ${z.name}`, icon: Pencil, variant: "ghost", iconOnly: true }} title={`Edit ${z.name}`}><ZoneForm z={z} /></Drawer>
+                        <Drawer trigger={{ label: `Edit ${z.name}`, icon: <Pencil aria-hidden="true" />, variant: "ghost", iconOnly: true }} title={`Edit ${z.name}`}><ZoneForm z={z} /></Drawer>
                       </td>
                     )}
                   </tr>

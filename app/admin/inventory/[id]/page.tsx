@@ -168,7 +168,7 @@ export default async function ItemPage({ params, searchParams }: { params: Promi
                             {up.length > 2 && <span className="sub">+{up.length - 2} more</span>}
                           </td>
                           <td className="shrink">
-                            <Drawer trigger={{ label: edit ? `Edit unit ${u.tag || u.serial}` : `Unit ${u.tag || u.serial}`, icon: Pencil, variant: "ghost", iconOnly: true }}
+                            <Drawer trigger={{ label: edit ? `Edit unit ${u.tag || u.serial}` : `Unit ${u.tag || u.serial}`, icon: <Pencil aria-hidden="true" />, variant: "ghost", iconOnly: true }}
                               title={`Unit ${u.tag || u.serial || ""}`} description={item.name}>
                               <ActionForm action={saveUnit} className="grid gap-4">
                                 <input type="hidden" name="unit_id" value={u.id} />

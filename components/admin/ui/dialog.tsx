@@ -1,6 +1,6 @@
 "use client";
 import { CircleAlert, HelpCircle, X } from "lucide-react";
-import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { btnClass, cx, iconNode, type ButtonSize, type ButtonVariant, type IconProp } from "./button";
 
 // ---------------------------------------------------------------------------------------------------
@@ -82,7 +82,9 @@ export function useConfirm(): (o: ConfirmOptions) => Promise<boolean> {
 const DrawerCtx = createContext<{ close: () => void } | null>(null);
 export const useDrawer = () => useContext(DrawerCtx);
 
-export type DrawerTrigger = { label: string; icon?: IconProp; variant?: ButtonVariant; size?: ButtonSize; iconOnly?: boolean; className?: string };
+// Drawers are opened from server pages, which can only pass a rendered icon (<Plus />): a component
+// (Plus) can't cross to the client and crashes the page. The type refuses it so tsc catches it.
+export type DrawerTrigger = { label: string; icon?: ReactElement; variant?: ButtonVariant; size?: ButtonSize; iconOnly?: boolean; className?: string };
 
 export function Drawer({ trigger, title, description, children, open: openProp, onOpenChange }: {
   trigger?: DrawerTrigger; title: ReactNode; description?: ReactNode; children: ReactNode;

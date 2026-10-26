@@ -84,7 +84,7 @@ export default async function StaffPage() {
                       <td className="nowrap">{fmtDateTime(r.created_at)}</td>
                       <td className="shrink">
                         {!lockedOwner && (
-                          <Drawer trigger={{ label: `Edit ${name}`, icon: Pencil, variant: "ghost", iconOnly: true }} title={name} description={emails.get(r.user_id)}>
+                          <Drawer trigger={{ label: `Edit ${name}`, icon: <Pencil aria-hidden="true" />, variant: "ghost", iconOnly: true }} title={name} description={emails.get(r.user_id)}>
                             <ActionForm action={updateStaff} className="grid gap-4">
                               <input type="hidden" name="user_id" value={r.user_id} />
                               {self && <Callout tone="info">You can’t change your own role or turn yourself off. Ask another owner.</Callout>}
