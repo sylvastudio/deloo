@@ -34,11 +34,11 @@ export default function Welcome() {
             key={WORDS[i]}
             entering={FadeInDown.duration(380).reduceMotion(ReduceMotion.System)}
             exiting={FadeOutUp.duration(260).reduceMotion(ReduceMotion.System)}
-            style={[type.hero, styles.word, { color: c.marigold }]}>
+            style={[type.hero, styles.big, styles.word, { color: c.marigold }]}>
             {WORDS[i]}
           </Animated.Text>
         </View>
-        <Text style={[type.hero, { color: c.onBrand }]}>for your shoot,{'\n'}sorted.</Text>
+        <Text style={[type.hero, styles.big, { color: c.onBrand }]}>for your shoot,{'\n'}sorted.</Text>
         <Text style={[type.body, { color: c.onBrand, opacity: 0.85, marginTop: space.lg }]}>
           Tell us about your shoot. We’ll recommend the right kit from Deloo’s own gear and check it’s free on your dates.
         </Text>
@@ -60,8 +60,10 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   top: { paddingHorizontal: space.xl, paddingTop: space.lg },
   middle: { flex: 1, justifyContent: 'center', paddingHorizontal: space.xl },
-  wordBox: { height: 54, overflow: 'hidden', marginBottom: space.xs },
+  wordBox: { height: 56, overflow: 'hidden', marginBottom: space.xs },
   word: { position: 'absolute' },
+  // The one place type goes big: light 44 reads as calm rather than loud.
+  big: { fontSize: 44, lineHeight: 50, letterSpacing: -1.4 },
   browse: { textAlign: 'center', paddingVertical: space.sm, textDecorationLine: 'underline' },
   bottom: { paddingHorizontal: space.xl, paddingBottom: space.lg, gap: space.md },
 });

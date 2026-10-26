@@ -59,31 +59,45 @@ export type Palette = { [K in keyof typeof palette.light]: string };
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 } as const;
 export const radius = { sm: 8, md: 14, lg: 20, xl: 28, pill: 999 } as const;
 
-/** Font family names registered in the root layout (useFonts keys). */
+/**
+ * Font family names registered in the root layout (useFonts keys). One family, Inter, in light
+ * and regular weights: the calm, airy feel of the ChatGPT and Claude apps (Söhne / Styrene are
+ * licensed; Inter is the closest open face). Keys keep their old names so screens don't change.
+ */
 export const fonts = {
-  display: 'BricolageGrotesque_600SemiBold',
-  displayBold: 'BricolageGrotesque_700Bold',
-  body: 'AtkinsonHyperlegibleNext_400Regular',
-  bodyMedium: 'AtkinsonHyperlegibleNext_500Medium',
-  bodyBold: 'AtkinsonHyperlegibleNext_700Bold',
+  light: 'Inter_300Light',
+  display: 'Inter_400Regular',
+  displayBold: 'Inter_500Medium',
+  body: 'Inter_400Regular',
+  bodyMedium: 'Inter_500Medium',
+  bodyBold: 'Inter_600SemiBold',
 } as const;
 
-/** Type scale. Line heights are explicit so Android and iOS render the same. */
+/**
+ * Type scale. Large type is light with slight negative tracking; reading text is 16/24 (1.5),
+ * as in ChatGPT and Claude. Line heights are explicit so Android and iOS render the same.
+ */
 export const type = {
-  hero: { fontFamily: fonts.displayBold, fontSize: 40, lineHeight: 44, letterSpacing: -0.8 },
-  title: { fontFamily: fonts.display, fontSize: 28, lineHeight: 34, letterSpacing: -0.4 },
-  heading: { fontFamily: fonts.display, fontSize: 20, lineHeight: 26, letterSpacing: -0.2 },
-  body: { fontFamily: fonts.body, fontSize: 16, lineHeight: 23 },
-  bodyStrong: { fontFamily: fonts.bodyMedium, fontSize: 16, lineHeight: 23 },
-  label: { fontFamily: fonts.bodyMedium, fontSize: 14, lineHeight: 19 },
+  hero: { fontFamily: fonts.light, fontSize: 34, lineHeight: 40, letterSpacing: -0.9 },
+  title: { fontFamily: fonts.light, fontSize: 28, lineHeight: 34, letterSpacing: -0.6 },
+  heading: { fontFamily: fonts.bodyMedium, fontSize: 18, lineHeight: 24, letterSpacing: -0.25 },
+  body: { fontFamily: fonts.body, fontSize: 16, lineHeight: 24, letterSpacing: -0.1 },
+  bodyStrong: { fontFamily: fonts.bodyMedium, fontSize: 16, lineHeight: 24, letterSpacing: -0.1 },
+  label: { fontFamily: fonts.bodyMedium, fontSize: 14, lineHeight: 20, letterSpacing: -0.05 },
   caption: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18 },
-  number: { fontFamily: fonts.displayBold, fontSize: 34, lineHeight: 38, letterSpacing: -0.6 },
+  number: { fontFamily: fonts.light, fontSize: 32, lineHeight: 38, letterSpacing: -0.8, fontVariant: ['tabular-nums'] as ('tabular-nums')[] },
 } as const;
 
 export type TypeVariant = keyof typeof type;
 
 /** Minimum touch target (Material: 48dp). */
 export const touch = 48;
+
+/**
+ * Control heights, after ChatGPT / Claude: 44 for buttons and fields (hit area padded to 48 by
+ * hitSlop where needed), 36 for chips, 52 for the composer's resting height.
+ */
+export const control = { button: 48, field: 48, chip: 36, composer: 52, row: 56 } as const;
 
 /**
  * Largest system font scale each variant follows. Display sizes stop at 1.6x so a 40pt total

@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, View, type PressableProps } from 'react-native';
 
-import { radius, space, touch } from '@/theme/tokens';
+import { control, radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Text } from './text';
 
@@ -40,6 +40,6 @@ export function Button({
 }
 
 const styles = StyleSheet.create({
-  base: { minHeight: touch + 6, borderRadius: radius.pill, paddingHorizontal: space.xl, paddingVertical: space.sm, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  base: { minHeight: control.button, borderRadius: radius.pill, paddingHorizontal: space.xl - 4, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
 });

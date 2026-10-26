@@ -7,13 +7,14 @@ import { readShoot } from '@/lib/intake';
 import { QUESTION_KEYS, usePlan } from '@/lib/plan';
 import { useSession } from '@/lib/session';
 import { NextBookingCard, useNextBooking } from '@/screens/account';
-import { radius, space, type } from '@/theme/tokens';
+import { radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
-import { Button } from '@/ui/button';
 import { Chip } from '@/ui/chip';
+import { Composer } from '@/ui/composer';
 import { Icon } from '@/ui/icon';
 import { Screen } from '@/ui/layout';
 import { Text } from '@/ui/text';
+import { TextAction } from '@/ui/text-action';
 
 // Every example has days, so tapping one goes straight to a priced, checked setup.
 const EXAMPLES = ['3-person podcast in Lekki this Saturday, two cameras', 'Music video Fri to Sun in VI, under 100k', 'Wedding next sat, need delivery to Ajah'];
@@ -49,38 +50,29 @@ export default function Plan() {
     <Screen kicker={first ? `Hi ${first}` : undefined} title="What are you shooting?">
       {next ? <NextBookingCard b={next} /> : null}
 
-      <View style={[styles.start, { backgroundColor: c.brand }]}>
-        <Text style={[type.heading, { color: c.onBrand }]}>Tell us about it the way you’d tell a friend.</Text>
-        <View style={[styles.inputRow, { backgroundColor: c.surface }]}>
-          <TextInput
-            ref={input} value={text} onChangeText={setText} multiline placeholder="e.g. A podcast with 3 people, Saturday in Lekki"
-            placeholderTextColor={c.faint} style={[type.body, styles.input, { color: c.ink }]} accessibilityLabel="Describe your shoot"
-          />
-{/* Voice is the phone keyboard's mic; there's no such thing in a desktop browser. */}
-          {Platform.OS !== 'web' ? (
-          <Pressable
-            accessibilityRole="button" accessibilityLabel="Describe it by voice"
-            onPress={() => { setVoiceTip(true); input.current?.focus(); }}
-            style={[styles.mic, { backgroundColor: c.marigold }]} android_ripple={{ color: '#00000022', borderless: true }}>
-            <Icon name="mic" size={24} color={c.onMarigold} />
-          </Pressable>
-          ) : null}
-        </View>
-        {voiceTip ? <Text variant="caption" style={{ color: c.onBrand }}>Tap the mic on your keyboard and talk. We’ll read what you say.</Text> : null}
-        {text.trim() ? (
-          <Button kind="accent" title="Suggest my kit" onPress={size} />
-        ) : (
-          <View style={styles.examples}>
-            {EXAMPLES.map((e) => (
-              <Pressable key={e} onPress={() => setText(e)} style={styles.example} accessibilityRole="button" accessibilityLabel={`Use example: ${e}`}>
-                <Text variant="caption" style={{ color: c.onBrand }}>{e}</Text>
+      <View style={{ gap: space.md }}>
+        <Composer
+          inputRef={input} value={text} onChangeText={setText} onSend={size} sendLabel="Suggest my kit"
+          placeholder="Describe your shoot the way you’d tell a friend"
+          // Voice is the phone keyboard's mic; there's no such thing in a desktop browser.
+          onMic={Platform.OS !== 'web' ? () => { setVoiceTip(true); input.current?.focus(); } : undefined}
+        />
+        {voiceTip ? <Text variant="caption" tone="slate">Tap the mic on your keyboard and talk. We’ll read what you say.</Text> : null}
+        {!text.trim() ? (
+          <View style={[styles.examples, { borderColor: c.line }]}>
+            {EXAMPLES.map((e, i) => (
+              <Pressable
+                key={e} onPress={() => setText(e)} accessibilityRole="button" accessibilityLabel={`Use example: ${e}`}
+                android_ripple={{ color: c.raised }}
+                style={({ pressed }) => [styles.example, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.line }, pressed && { backgroundColor: c.raised }]}>
+                <Text tone="slate" style={{ flex: 1 }}>{e}</Text>
+                <Icon name="chevron" size={16} color={c.faint} />
               </Pressable>
             ))}
           </View>
-        )}
+        ) : null}
+        <TextAction label="Or answer a few quick questions" onPress={() => { reset(); router.push('/plan/ask/type'); }} />
       </View>
-
-      <Button kind="secondary" title="Or answer a few quick questions" onPress={() => { reset(); router.push('/plan/ask/type'); }} />
 
       {answered > 0 ? (
         <Pressable
@@ -111,12 +103,8 @@ export default function Plan() {
 }
 
 const styles = StyleSheet.create({
-  start: { borderRadius: radius.xl, padding: space.xl, gap: space.lg },
-  inputRow: { flexDirection: 'row', alignItems: 'flex-end', borderRadius: radius.lg, padding: space.sm, paddingLeft: space.lg, gap: space.sm },
-  input: { flex: 1, minHeight: 72, maxHeight: 160, paddingTop: space.sm, textAlignVertical: 'top' },
-  mic: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  examples: { gap: space.sm },
-  example: { borderWidth: 1, borderColor: '#ffffff55', borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: 6, alignSelf: 'flex-start' },
+  examples: { borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
+  example: { flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 48, paddingHorizontal: space.lg, paddingVertical: space.md },
   resume: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
   browse: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
 });

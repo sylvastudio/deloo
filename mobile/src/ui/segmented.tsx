@@ -30,5 +30,5 @@ export function Segmented<T extends string>({
 
 const styles = StyleSheet.create({
   track: { flexDirection: 'row', borderRadius: radius.md, padding: 4, gap: 4 },
-  option: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: space.sm, borderRadius: radius.md - 4, minHeight: 48, borderWidth: 1 },
+  option: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: space.sm, borderRadius: radius.md - 4, minHeight: 44, borderWidth: StyleSheet.hairlineWidth },
 });

@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useGutter } from '@/theme/gutter';
-import { radius, space, type } from '@/theme/tokens';
+import { control, radius, space, type } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Text } from './text';
 
@@ -83,9 +83,9 @@ export function Gap({ size = space.lg }: { size?: number }) {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { paddingTop: space.lg, paddingBottom: space.xl, gap: space.lg, flexGrow: 1 },
-  header: { gap: space.sm, marginBottom: space.sm },
+  header: { gap: space.xs + 2, marginBottom: space.sm },
   footer: { paddingTop: space.md, paddingBottom: space.lg, gap: space.sm, borderTopWidth: StyleSheet.hairlineWidth },
   card: { borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, padding: space.lg, gap: space.sm },
-  input: { minHeight: 54, borderWidth: 1.5, borderRadius: radius.md, paddingHorizontal: space.lg },
+  input: { minHeight: control.field, borderWidth: 1, borderRadius: radius.md - 2, paddingHorizontal: space.md + 2, paddingVertical: space.sm + 2 },
   noOutline: { outlineStyle: 'none', outlineWidth: 0 } as object,
 });

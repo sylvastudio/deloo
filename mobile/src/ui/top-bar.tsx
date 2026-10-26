@@ -39,7 +39,7 @@ export function TopBar({
 }
 
 const styles = StyleSheet.create({
-  bar: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.sm, minHeight: 56 },
+  bar: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.sm, minHeight: 52 },
   back: { width: touch, height: touch, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill },
   middle: { flex: 1, paddingHorizontal: space.xs },
   segments: { flexDirection: 'row', gap: 4 },

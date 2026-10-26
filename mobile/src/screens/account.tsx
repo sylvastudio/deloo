@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
   avatar: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center' },
   edit: { minHeight: touch, justifyContent: 'center', paddingHorizontal: space.sm },
   verify: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: -space.sm },
-  next: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg, borderRadius: radius.lg, borderWidth: 1.5, overflow: 'hidden' },
+  next: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
   group: { borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.lg, paddingVertical: space.md, minHeight: touch + 8 },
   confirmRow: { flexDirection: 'row', gap: space.sm, marginTop: space.sm },

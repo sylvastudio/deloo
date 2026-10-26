@@ -112,5 +112,5 @@ function Option({ label, title, sub, price, days = 1, selected, onPress, status,
 
 const styles = StyleSheet.create({
   content: { padding: space.xl, gap: space.md, paddingBottom: space.xxxl },
-  option: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.lg, borderWidth: 1.5, overflow: 'hidden' },
+  option: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
 });

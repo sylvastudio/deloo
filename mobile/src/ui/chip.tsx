@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { fonts, radius, space } from '@/theme/tokens';
+import { control, fonts, radius, space } from '@/theme/tokens';
 import { useColors } from '@/theme/use-colors';
 import { Text } from './text';
 
@@ -13,7 +13,7 @@ export function Chip({ label, selected, onPress }: { label: string; selected?: b
       accessibilityState={{ selected: !!selected }}
       disabled={!onPress}
       onPress={() => { Haptics.selectionAsync().catch(() => {}); onPress?.(); }}
-      hitSlop={4}
+      hitSlop={6}
       style={[styles.chip, { backgroundColor: selected ? c.ink : c.surface, borderColor: selected ? c.ink : c.line }]}>
       <Text variant="label" style={{ color: selected ? c.paper : c.ink }}>{label}</Text>
     </Pressable>
@@ -40,7 +40,7 @@ export function Badge({ label, status = 'neutral' }: { label: string; status?: S
 }
 
 const styles = StyleSheet.create({
-  chip: { paddingHorizontal: space.lg, minHeight: 40, justifyContent: 'center', borderRadius: radius.pill, borderWidth: 1 },
+  chip: { paddingHorizontal: space.md + 2, minHeight: control.chip, justifyContent: 'center', borderRadius: radius.pill, borderWidth: StyleSheet.hairlineWidth },
   badge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 3, borderRadius: radius.pill },
   dot: { width: 6, height: 6, borderRadius: 3 },
 });

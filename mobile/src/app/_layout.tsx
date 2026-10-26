@@ -1,7 +1,4 @@
-import {
-  AtkinsonHyperlegibleNext_400Regular, AtkinsonHyperlegibleNext_500Medium, AtkinsonHyperlegibleNext_700Bold,
-} from '@expo-google-fonts/atkinson-hyperlegible-next';
-import { BricolageGrotesque_600SemiBold, BricolageGrotesque_700Bold, useFonts } from '@expo-google-fonts/bricolage-grotesque';
+import { Inter_300Light, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, useFonts } from '@expo-google-fonts/inter';
 import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -23,8 +20,7 @@ const WEB = Platform.OS === 'web';
 
 export default function Root() {
   const [fontsLoaded] = useFonts({
-    BricolageGrotesque_600SemiBold, BricolageGrotesque_700Bold,
-    AtkinsonHyperlegibleNext_400Regular, AtkinsonHyperlegibleNext_500Medium, AtkinsonHyperlegibleNext_700Bold,
+    Inter_300Light, Inter_400Regular, Inter_500Medium, Inter_600SemiBold,
   });
   const dark = useIsDark();
   const p = dark ? palette.dark : palette.light;
