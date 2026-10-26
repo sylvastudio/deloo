@@ -47,7 +47,7 @@ while :; do
   case "$STATUS" in
     FINISHED) break ;;
     ERRORED|CANCELED) echo "Build $STATUS. See the logs at the link above."; exit 1 ;;
-    *) echo "  $STATUS…"; sleep 30 ;;
+    *) echo "  ${STATUS}…"; sleep 30 ;;
   esac
 done
 
